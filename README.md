@@ -14,7 +14,14 @@ remotes::install_github('atgenomix/oncoexpr')
 library(oncoexpr)
 ```
 
-Note: A spark connection is necessary for 'oncoExprAppSpark' shiny app.
+Note: A spark connection is necessary for 'RNAseqShinyAppSpark' shiny app.
 ```R
-oncoExprAppSpark()
+RNAseqShinyAppSpark()
 ```
+
+## Update!!
+
+add new functions for RNAseq shinyApp for normcount and exacttest from WDL (RNAseq pipeline)   
+
+functions: RNAseqShinyAppSpark, ggvolcano_custom, generate_colData_random
+normcount and exacttest are generated from edgeR WDL
