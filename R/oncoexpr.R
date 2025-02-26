@@ -3527,147 +3527,132 @@ ggvolcano_custom <- function(   df       ,
 RNAseqShinyAppSpark <- function(){
     ui <- fluidPage(
         navbarPage("RNAseq App (Beta)",
-            tabPanel("Spark DB browser",
-                tags$style(".shinybusy-overlay {opacity: 0.7; background-color: #7c7c7c;}"),
-                add_busy_spinner(
-                    spin = "fading-circle",
-                    position = "full-page",
-                    timeout = 1000
-                ),
-                sidebarLayout(
-                    sidebarPanel(
-                        wellPanel(
-                            h4("Spark DB Data"),
-                            actionButton("connect", "Connect"),
-                            dbBrowserUI("dbBrowser1"),
-                            actionButton("get_tbl", "Get"),
-                            actionButton("mae_start", "Send")
-                        )
-                    ),
-                    mainPanel(
-                        tabsetPanel(
-                            tabPanel("SparkConnection",
-                                verbatimTextOutput("conn_status")
-                            ),
-                            tabPanel("Normcount Table",
-                                DT::dataTableOutput("normcount_table")
-                            ),
-                            tabPanel("Exacttest Table",
-                                DT::dataTableOutput("exacttest_table")
-                            )
-                        )
-                    )
-                )
-            ),
-            
             tabPanel("Gene Expression (RNA-seq)",
-                    tabsetPanel(
-                        tabPanel("Gene Expression Profile",
-                            fluidRow(
-                                column(
-                                    width = 12,
-                                    br(),
-                                    actionButton("run_wide_conversion", "Convert to Wide Table"),
-                                    br(), br(),
-                                    DT::dataTableOutput("wide_table_dt", width = "100%")
-                                )
-                            )
-                        ),
+                tags$style(".shinybusy-overlay {opacity: 0.7; background-color: #7c7c7c;}"),
+                     add_busy_spinner(
+                         spin = "fading-circle",
+                         position = "full-page",
+                         timeout = 1000
+                 ),
 
-                        tabPanel("Differential Expression Analysis",
-                                        sidebarLayout(
-                                            sidebarPanel(
-                                                sliderInput("lfc_cut", "Fold Change Threshold (log2):", 
-                                                            min = 0, max = 3, value = 1, step = 0.1),
-                                                sliderInput("pval_cut", "p-value Threshold:", 
-                                                            min = 0.001, max = 0.1, value = 0.05, step = 0.001),
-                                                sliderInput("pointSize", "Point Size:", 
-                                                            min = 1, max = 5, value = 2, step = 0.5),
-                                                sliderInput("ptAlpha", "Transparent:", 
-                                                            min = 0.1, max = 1, value = 0.6, step = 0.1),
-                                                sliderInput("labelSize", "Gene Label Size:", 
-                                                            min = 1, max = 6, value = 3, step = 0.5),
-                                                numericInput("topN", "Label N number of Genes (0 is no labeling):", 
-                                                            value = 0, min = 0, max = 100),
-                                                checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
-                                                actionButton("run_DEG", "Run DEG analysis")
-                                            ),
+                layout_sidebar(
+                    sidebar = sidebar(
+                        h4("Spark DB Data"),
+                        actionButton("connect", "Connect"),
+                        dbBrowserUI("dbBrowser1"),
+                        actionButton("get_tbl", "Get"),
+                        actionButton("mae_start", "Send")
 
-                                            mainPanel(
-                                                tabsetPanel(
-                                                    tabPanel("Volcano Plot interaction",
-                                                        plotOutput("volcano_plot", height = "600px")
+                    ),
+                     mainPanel(
+                            tabsetPanel(
+                                tabPanel("Gene Expression Profile",
+                                    fluidRow(
+                                        column(
+                                            width = 12,
+                                            #actionButton("run_wide_conversion", "Convert to Wide Table"),
+                                            DT::dataTableOutput("wide_table_dt", width = "100%")
+                                        )
+                                    )
+                                ),
+
+                                tabPanel("Differential Expression Analysis",
+                                                sidebarLayout(
+                                                    sidebarPanel(
+                                                        sliderInput("lfc_cut", "Fold Change Threshold (log2):", 
+                                                                    min = 0, max = 3, value = 1, step = 0.1),
+                                                        sliderInput("pval_cut", "p-value Threshold:", 
+                                                                    min = 0.001, max = 0.1, value = 0.05, step = 0.001),
+                                                        sliderInput("pointSize", "Point Size:", 
+                                                                    min = 1, max = 5, value = 2, step = 0.5),
+                                                        sliderInput("ptAlpha", "Transparent:", 
+                                                                    min = 0.1, max = 1, value = 0.6, step = 0.1),
+                                                        sliderInput("labelSize", "Gene Label Size:", 
+                                                                    min = 1, max = 6, value = 3, step = 0.5),
+                                                        numericInput("topN", "Label N number of Genes (0 is no labeling):", 
+                                                                    value = 0, min = 0, max = 100),
+                                                        checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
+                                                        actionButton("run_DEG", "Run DEG analysis")
                                                     ),
-                                                    tabPanel("DEG Table", 
-                                                        DT::dataTableOutput('DEG_table',width="100%")
+
+                                                    mainPanel(
+                                                        tabsetPanel(
+                                                            tabPanel("Volcano Plot interaction",
+                                                                plotOutput("volcano_plot", height = "600px")
+                                                            ),
+                                                            tabPanel("DEG Table", 
+                                                                DT::dataTableOutput('DEG_table',width="100%")
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            
+                                        
+                                        
+
+                                ),
+                                tabPanel("Target Gene Expression",
+                                    sidebarPanel(
+                                        textInput("geneList", "Target Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2,AKT1,PIK3CA,ERBB3,CCND1,SF3B1,FGFR1,FBXW7,TP53,BRCA1,BRCA2"),
+                                        actionButton(inputId = "targetGeneID", label = "Confirm"),width=2
+                                        ),
+                                    mainPanel(
+                                        tabsetPanel(
+                                            tabPanel("Target Gene Expr. Table", DT::dataTableOutput('target_gene_table', width="100%", height = "600px")),
+                                        )
+                                    )
+                                ),
+                                tabPanel("Gene-enriched Analysis", 
+                                sidebarPanel(
+                                    #sliderInput("top_gene_number", "Gene number", min = 3, max = 20000, value = 500, step = 1),
+                                    actionButton(inputId = "generate_genelist", label = "Generate Gene List"),
+                                    actionButton(inputId = "generate_go", label = "Analysis"),
+                                    width=2
+                                    ),
+                                mainPanel(
+                                    tabsetPanel(
+                                        id = "mainTabs",
+                                        
+                                        # Sub1 tab
+                                        tabPanel("Enrichment",
+                                            fluidRow(
+                                                column(12,
+                                                    # Upper section tabs for Sub1
+                                                    h4("T"),
+                                                    tabsetPanel(
+                                                        id = "sub1Upper",
+                                                        tabPanel("MF", plotOutput("T_MF")),
+                                                        tabPanel("BP", plotOutput("T_BP")),
+                                                        tabPanel("CC", plotOutput("T_CC")),
+                                                        tabPanel("KEGG", plotOutput("T_KEGG"))
+                                                    )
+                                                )
+                                            ),
+                                            fluidRow(
+                                                column(12,
+                                                    # Lower section tabs for Sub1
+                                                    h4("NT"),
+                                                    tabsetPanel(
+                                                        id = "sub1Lower",
+                                                        tabPanel("MF", plotOutput("NT_MF")),
+                                                        tabPanel("BP", plotOutput("NT_BP")),
+                                                        tabPanel("CC", plotOutput("NT_CC")),
+                                                        tabPanel("KEGG", plotOutput("NT_KEGG"))
+                                                        
                                                     )
                                                 )
                                             )
-                                        )
-                                    
-                                
-                                
 
-                        ),
-                        tabPanel("Target Gene Expression",
-                            sidebarPanel(
-                                textInput("geneList", "Target Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2,AKT1,PIK3CA,ERBB3,CCND1,SF3B1,FGFR1,FBXW7,TP53,BRCA1,BRCA2"),
-                                actionButton(inputId = "targetGeneID", label = "Confirm"),width=2
-                                ),
-                            mainPanel(
-                                tabsetPanel(
-                                    tabPanel("Target Gene Expr. Table", DT::dataTableOutput('target_gene_table', width="100%", height = "600px")),
-                                )
-                            )
-                        )
-                    )
-            ),
-            tabPanel("Gene-enriched Analysis", 
-                        sidebarPanel(
-                            sliderInput("top_gene_number", "Gene number", min = 3, max = 20000, value = 500, step = 1),
-                            actionButton(inputId = "generate_genelist", label = "Generate Gene List"),
-                            actionButton(inputId = "generate_go", label = "Analysis"),
-                            width=2
-                            ),
-                        mainPanel(
-                            tabsetPanel(
-                                id = "mainTabs",
-                                
-                                # Sub1 tab
-                                tabPanel("Enrichment",
-                                    fluidRow(
-                                        column(12,
-                                            # Upper section tabs for Sub1
-                                            h4("T"),
-                                            tabsetPanel(
-                                                id = "sub1Upper",
-                                                tabPanel("MF", plotOutput("T_MF")),
-                                                tabPanel("BP", plotOutput("T_BP")),
-                                                tabPanel("CC", plotOutput("T_CC")),
-                                                tabPanel("KEGG", plotOutput("T_KEGG"))
-                                            )
-                                        )
-                                    ),
-                                    fluidRow(
-                                        column(12,
-                                            # Lower section tabs for Sub1
-                                            h4("NT"),
-                                            tabsetPanel(
-                                                id = "sub1Lower",
-                                                tabPanel("MF", plotOutput("NT_MF")),
-                                                tabPanel("BP", plotOutput("NT_BP")),
-                                                tabPanel("CC", plotOutput("NT_CC")),
-                                                tabPanel("KEGG", plotOutput("NT_KEGG"))
-                                                
-                                            )
                                         )
                                     )
-
                                 )
                             )
+
                         )
                     )
-
+                    
+                )
+            )
         )
     )
     
@@ -3947,7 +3932,7 @@ RNAseqShinyAppSpark <- function(){
         downGeneList <- reactiveVal(NULL)
 
         observeEvent(input$generate_genelist, {
-                    req(DEG_table(),input$top_gene_number)
+                    req(DEG_table())
                     DEG_table <- DEG_table()
 
                     DEG_table_filtered <- DEG_table[DEG_table$PValue<0.05, ]
@@ -3955,12 +3940,16 @@ RNAseqShinyAppSpark <- function(){
                     gene_list_symbol <- sorted_DEG$GeneSymbol
                     print(dim(DEG_table_filtered))
                     print(gene_list_symbol)
+
                     #topGeneList(gene_list_symbol[1:input$top_gene_number, "SYMBOL"])
                     #downGeneList(gene_list_symbol[(nrow(gene_list_symbol)-input$top_gene_number):nrow(gene_list_symbol), "SYMBOL"])
-                    topGeneList(gene_list_symbol) #選所有顯著差異基因
-                    downGeneList(gene_list_symbol) 
-                    print(topGeneList())
-                    print(downGeneList())
+                    topGeneList( DEG_table[DEG_table$PValue<0.05 & sign(DEG_table_filtered[,"logFC"]) == 1, "GeneSymbol"]) #選所有顯著差異基因
+                    downGeneList( DEG_table[DEG_table$PValue<0.05 & sign(DEG_table_filtered[,"logFC"]) == -1, "GeneSymbol"]) 
+                    print(head(topGeneList()))
+                    print("topGeneList")
+                    print(head(downGeneList()))
+                    print("downGeneList")
+
 
         })
 
