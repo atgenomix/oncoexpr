@@ -1683,7 +1683,7 @@ dbBrowserUI <- function(id) {
       choices = character(0)  # 初始給空
     ),
     # 動態顯示對應資料表選項
-    uiOutput(ns("table_selector"))
+    #uiOutput(ns("table_selector"))
   )
 }
 
@@ -1713,28 +1713,29 @@ dbBrowserServer <- function(id, sc) {
     })
     
     # 動態生成 "選擇資料表" 的下拉選單
-    output$table_selector <- renderUI({
-      req(input$selected_db)
-      # 切換到使用者選擇的 database
-      DBI::dbExecute(sc, paste0("USE ", input$selected_db))
+    # output$table_selector <- renderUI({
+    #   req(input$selected_db)
+    #   # 切換到使用者選擇的 database
+    #   DBI::dbExecute(sc, paste0("USE ", input$selected_db))
       
-      tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", input$selected_db))
-      # 假設欄位名為 tableName
-      tbls <- tbl_list_query$tableName
-      if (length(tbls) == 0) {
-        selectInput(ns("selected_table"), "Choose Table:", choices = NULL)
-      } else {
-        selectInput(ns("selected_table"), "Choose Table:", choices = tbls, selected = tbls[1])
-      }
-    })
-    
+    #   tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", input$selected_db))
+    #   # 假設欄位名為 tableName
+    #   tbls <- tbl_list_query$tableName
+    #   if (length(tbls) == 0) {
+    #     selectInput(ns("selected_table"), "Choose Table:", choices = NULL)
+    #   } else {
+    #     selectInput(ns("selected_table"), "Choose Table:", choices = tbls, selected = tbls[1])
+    #   }
+    # })
+
+
     # 為了讓主應用拿到目前選擇的 DB & Table，回傳 reactive
-    selected_db    <- reactive({ input$selected_db    })
-    selected_table <- reactive({ input$selected_table })
+     selected_db    <- reactive({ input$selected_db    })
+    # selected_table <- reactive({ input$selected_table })
     
     return(list(
-      selected_db    = selected_db,
-      selected_table = selected_table
+      selected_db    = selected_db
+      #selected_table = selected_table
     ))
   })
 }
@@ -3538,7 +3539,7 @@ RNAseqShinyAppSpark <- function(){
                 layout_sidebar(
                     sidebar = sidebar(
                         h4("Spark DB Data"),
-                        actionButton("connect", "Connect"),
+                        #actionButton("connect", "Connect"),
                         dbBrowserUI("dbBrowser1"),
                         actionButton("get_tbl", "Get"),
                         actionButton("mae_start", "Send")
@@ -3659,7 +3660,7 @@ RNAseqShinyAppSpark <- function(){
     server <- function(input, output, session) {
         sc <- reactiveVal(NULL)
         
-        observeEvent(input$connect, {
+        observe({
             master <- "sc://localhost:15002"
             method <- "spark_connect"
             version <- "3.5"
@@ -3692,7 +3693,7 @@ RNAseqShinyAppSpark <- function(){
         })
         
         observeEvent(input$get_tbl, {
-            req(results$db_info$selected_table())
+            req(results$db_info$selected_db())
             print("成功取得資料庫名稱")
             selected_db_name <- results$db_info$selected_db()
             print(paste0("使用的資料庫：", selected_db_name))
