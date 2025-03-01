@@ -3541,8 +3541,8 @@ RNAseqShinyAppSpark <- function(){
                         h4("Spark DB Data"),
                         #actionButton("connect", "Connect"),
                         dbBrowserUI("dbBrowser1"),
-                        actionButton("get_tbl", "Get"),
-                        actionButton("mae_start", "Send")
+                        actionButton("get_tbl", "Confirm DataBase"),
+                        #actionButton("mae_start", "Send")
 
                     ),
                      mainPanel(
@@ -3759,7 +3759,7 @@ RNAseqShinyAppSpark <- function(){
         })
 
 
-        observeEvent(input$mae_start,{
+        observeEvent(input$get_tbl,{ #mae_start to get_tbl
             req(results$coldata, results$normcount_data, results$exacttest_data)
             DEG_table(results$exacttest_data)
             wide_data(results$normcount_data)
@@ -3959,6 +3959,7 @@ RNAseqShinyAppSpark <- function(){
     for_run <- shinyApp(ui = ui, server = server)
     runApp(for_run)
 }
+
 
 #' @title generate pseudo colData with random classification
 #' @description generate random classification for colData
