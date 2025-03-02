@@ -2041,8 +2041,10 @@ demo_oncoExprAppSpark <- function(){
 }
 
 
-
-
+#' @title shiny app for RNAseq for public use
+#' @description start the RNAseq shiny app with spark connection for shiny proxy at the seqslab console
+#' @return start the UI and Server for analysis
+#' @export
 RNAseqShinyAppSpark <- function(){
     ui <- fluidPage(
         navbarPage("RNAseq App (Beta)",
