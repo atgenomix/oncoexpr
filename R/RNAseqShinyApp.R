@@ -1,3 +1,33 @@
+#' @import edgeR
+#' @import limma
+#' @import MultiAssayExperiment
+#' @import SummarizedExperiment
+#' @import pcaPP
+#' @import reshape2
+#' @import stringr
+#' @import readxl
+#' @import ggplot2
+#' @import tidyr
+#' @import tibble
+#' @import viridis
+#' @import RColorBrewer
+#' @import pheatmap
+#' @import ggrepel
+#' @import readr
+#' @import dplyr
+#' @import sparklyr
+#' @import org.Hs.eg.db
+#' @import enrichplot
+#' @import clusterProfiler
+#' @import DBI
+#' @import shinybusy
+#' @import shiny
+#' @import bslib
+#' @import DT
+#' @importFrom ggpubr color_palette
+#' @importFrom enrichplot color_palette
+#' @importFrom DT dataTableOutput renderDataTable
+
 
 
 #' @title shiny app for this analysis 
