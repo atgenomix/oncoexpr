@@ -661,7 +661,7 @@ oncoExprAppSpark <- function(host_ = NULL, port_ = NULL){
     #以下用dbBrowserServer取代
     selected_db <- ""
     sc <- spark_connect(
-      master = "sc://localhost:15002",
+      master = "sc://172.18.0.1:15002", #localhost 改成172.18.0.1
       method = "spark_connect",
       version = "3.5"
     )
