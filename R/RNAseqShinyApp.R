@@ -2254,7 +2254,7 @@ RNAseqShinyAppSpark <- function(){
             print(tbls)
             
             # 篩選出符合條件的 table
-            prefix <- c("normcount", "exacttest", "coldata")
+            prefix <- c("normcountgene", "exacttestgene", "coldata")
             tbls_with_prefix <- tbls[sapply(tbls, function(x) {
                 any(sapply(prefix, function(p) grepl(paste0("^", p), x, ignore.case = TRUE)))
             })]
