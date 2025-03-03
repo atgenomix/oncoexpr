@@ -2275,9 +2275,15 @@ RNAseqShinyAppSpark <- function(){
                 query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
                 results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
             }
+            
             colnames(results$exacttest_data)[which(colnames(results$exacttest_data)=="genes")] <- "GeneSymbol"
-            colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
-            results$coldata <- colData
+            # colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
+            # results$coldata <- colData
+            coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls_with_prefix, ignore.case = TRUE)]
+            if(length(coldata_tbls) > 0){
+                query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+                results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+            }
         })
         
         output$normcount_table <- DT::renderDataTable({
