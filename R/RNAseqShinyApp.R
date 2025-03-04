@@ -1302,9 +1302,9 @@ demo_oncoExprAppSpark <- function(){
                                    sidebarLayout(
                                      sidebarPanel(
                                        sliderInput("lfc_cut", "Fold Change Threshold (log2):", 
-                                                   min = 0, max = 3, value = 1, step = 0.1),
+                                                   min = 0, max = 10, value = 1, step = 0.1),
                                        sliderInput("pval_cut", "p-value Threshold:", 
-                                                   min = 0.001, max = 0.1, value = 0.05, step = 0.001),
+                                                   min = 0.001, max = 1, value = 0.05, step = 0.001),
                                        sliderInput("pointSize", "Point Size:", 
                                                    min = 1, max = 5, value = 2, step = 0.5),
                                        sliderInput("ptAlpha", "Transparent:", 
@@ -1312,7 +1312,7 @@ demo_oncoExprAppSpark <- function(){
                                        sliderInput("labelSize", "Gene Label Size:", 
                                                    min = 1, max = 6, value = 3, step = 0.5),
                                        numericInput("topN", "Label N number of Genes (0 is no labeling):", 
-                                                    value = 0, min = 0, max = 100),
+                                                    value = 10, min = 0, max = 1000),
                                        checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
                                        actionButton("run_limma", "Run limma analysis")
                                      ),
@@ -2087,7 +2087,9 @@ RNAseqShinyAppSpark <- function(){
                  ),
 
                 layout_sidebar(
+                    full_screen = TRUE,
                     sidebar = sidebar(
+                        style = "min-height: 600px; overflow-y: auto;",
                         h4("Spark DB Data"),
                         #actionButton("connect", "Connect"),
                         dbBrowserUI("dbBrowser1"),
@@ -2111,9 +2113,9 @@ RNAseqShinyAppSpark <- function(){
                                                 sidebarLayout(
                                                     sidebarPanel(
                                                         sliderInput("lfc_cut", "Fold Change Threshold (log2):", 
-                                                                    min = 0, max = 3, value = 1, step = 0.1),
+                                                                    min = 0, max = 10, value = 1, step = 0.1),
                                                         sliderInput("pval_cut", "p-value Threshold:", 
-                                                                    min = 0.001, max = 0.1, value = 0.05, step = 0.001),
+                                                                    min = 0.001, max = 1, value = 0.05, step = 0.001),
                                                         sliderInput("pointSize", "Point Size:", 
                                                                     min = 1, max = 5, value = 2, step = 0.5),
                                                         sliderInput("ptAlpha", "Transparent:", 
@@ -2121,7 +2123,7 @@ RNAseqShinyAppSpark <- function(){
                                                         sliderInput("labelSize", "Gene Label Size:", 
                                                                     min = 1, max = 6, value = 3, step = 0.5),
                                                         numericInput("topN", "Label N number of Genes (0 is no labeling):", 
-                                                                    value = 0, min = 0, max = 100),
+                                                                    value = 100, min = 0, max = 1000),
                                                         checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
                                                         actionButton("run_DEG", "Run DEG analysis")
                                                     ),
@@ -2141,8 +2143,51 @@ RNAseqShinyAppSpark <- function(){
                                         
                                         
 
-                                ),
-                                tabPanel("Target Gene Expression",
+                                ),tabPanel("Gene-enriched Analysis", 
+                                            sidebarPanel(
+                                                #sliderInput("top_gene_number", "Gene number", min = 3, max = 20000, value = 500, step = 1),
+                                                actionButton(inputId = "generate_genelist", label = "Generate Gene List"),
+                                                actionButton(inputId = "generate_go", label = "Analysis"),
+                                                width=2
+                                                ),
+                                            mainPanel(
+                                                tabsetPanel(
+                                                    id = "mainTabs",
+                                                    
+                                                    # Sub1 tab
+                                                    tabPanel("Enrichment",
+                                                        fluidRow(
+                                                            column(12,
+                                                                # Upper section tabs for Sub1
+                                                                h4("UPregulated DEGs"),
+                                                                tabsetPanel(
+                                                                    id = "sub1Upper",
+                                                                    tabPanel("MF", plotOutput("G1_MF")),
+                                                                    tabPanel("BP", plotOutput("G1_BP")),
+                                                                    tabPanel("CC", plotOutput("G1_CC")),
+                                                                    tabPanel("KEGG", plotOutput("G1_KEGG"))
+                                                                )
+                                                            )
+                                                        ),
+                                                        fluidRow(
+                                                            column(12,
+                                                                # Lower section tabs for Sub1
+                                                                h4("DOWNregulated DEGs"),
+                                                                tabsetPanel(
+                                                                    id = "sub1Lower",
+                                                                    tabPanel("MF", plotOutput("G2_MF")),
+                                                                    tabPanel("BP", plotOutput("G2_BP")),
+                                                                    tabPanel("CC", plotOutput("G2_CC")),
+                                                                    tabPanel("KEGG", plotOutput("G2_KEGG"))
+                                                                    
+                                                                )
+                                                            )
+                                                        )
+
+                                                    )
+                                                )
+                                            )
+                                ),tabPanel("Target Gene Expression",
                                     sidebarPanel(
                                         textInput("geneList", "Target Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2,AKT1,PIK3CA,ERBB3,CCND1,SF3B1,FGFR1,FBXW7,TP53,BRCA1,BRCA2"),
                                         actionButton(inputId = "targetGeneID", label = "Confirm"),width=2
@@ -2152,52 +2197,7 @@ RNAseqShinyAppSpark <- function(){
                                             tabPanel("Target Gene Expr. Table", DT::dataTableOutput('target_gene_table', width="100%", height = "600px")),
                                         )
                                     )
-                                ),
-                                tabPanel("Gene-enriched Analysis", 
-                                sidebarPanel(
-                                    #sliderInput("top_gene_number", "Gene number", min = 3, max = 20000, value = 500, step = 1),
-                                    actionButton(inputId = "generate_genelist", label = "Generate Gene List"),
-                                    actionButton(inputId = "generate_go", label = "Analysis"),
-                                    width=2
-                                    ),
-                                mainPanel(
-                                    tabsetPanel(
-                                        id = "mainTabs",
-                                        
-                                        # Sub1 tab
-                                        tabPanel("Enrichment",
-                                            fluidRow(
-                                                column(12,
-                                                    # Upper section tabs for Sub1
-                                                    h4("T"),
-                                                    tabsetPanel(
-                                                        id = "sub1Upper",
-                                                        tabPanel("MF", plotOutput("T_MF")),
-                                                        tabPanel("BP", plotOutput("T_BP")),
-                                                        tabPanel("CC", plotOutput("T_CC")),
-                                                        tabPanel("KEGG", plotOutput("T_KEGG"))
-                                                    )
-                                                )
-                                            ),
-                                            fluidRow(
-                                                column(12,
-                                                    # Lower section tabs for Sub1
-                                                    h4("NT"),
-                                                    tabsetPanel(
-                                                        id = "sub1Lower",
-                                                        tabPanel("MF", plotOutput("NT_MF")),
-                                                        tabPanel("BP", plotOutput("NT_BP")),
-                                                        tabPanel("CC", plotOutput("NT_CC")),
-                                                        tabPanel("KEGG", plotOutput("NT_KEGG"))
-                                                        
-                                                    )
-                                                )
-                                            )
-
-                                        )
-                                    )
                                 )
-                            )
 
                         )
                     )
@@ -2211,7 +2211,9 @@ RNAseqShinyAppSpark <- function(){
         sc <- reactiveVal(NULL)
         
         observe({
-            master <- "sc://172.18.0.1:15002"
+            #master <- "sc://172.18.0.1:15002" #for proxy
+            master <- "sc://localhost:15002"
+
             method <- "spark_connect"
             version <- "3.5"
             connection <<- sparklyr::spark_connect(master = master, method = method, version = version )
@@ -2254,7 +2256,7 @@ RNAseqShinyAppSpark <- function(){
             print(tbls)
             
             # 篩選出符合條件的 table
-            prefix <- c("normcountgene", "exacttestgene", "coldata")
+            prefix <- c("normcountsgene", "exacttestgene", "coldata")
             tbls_with_prefix <- tbls[sapply(tbls, function(x) {
                 any(sapply(prefix, function(p) grepl(paste0("^", p), x, ignore.case = TRUE)))
             })]
@@ -2268,7 +2270,7 @@ RNAseqShinyAppSpark <- function(){
                 results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
             }
             colnames(results$normcount_data)[1] <- "GeneSymbol"
-
+            
             # 取得 exacttest 資料表 (同理)
             exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls_with_prefix, ignore.case = TRUE)]
             if(length(exacttest_tbls) > 0){
@@ -2277,13 +2279,15 @@ RNAseqShinyAppSpark <- function(){
             }
             
             colnames(results$exacttest_data)[which(colnames(results$exacttest_data)=="genes")] <- "GeneSymbol"
-            # colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
-            # results$coldata <- colData
-            coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls_with_prefix, ignore.case = TRUE)]
-            if(length(coldata_tbls) > 0){
-                query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-                results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
-            }
+            colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
+            #colData$subCode <- c(rep("HBR", 3), rep("UHR", 3))
+            results$coldata <- colData
+            print(colData)
+            #coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls_with_prefix, ignore.case = TRUE)]
+            #if(length(coldata_tbls) > 0){
+            #    query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+            #    results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+            #}
         })
         
         output$normcount_table <- DT::renderDataTable({
@@ -2389,6 +2393,104 @@ RNAseqShinyAppSpark <- function(){
             reactive_volcano_plot()
             
         })
+
+        
+        topGeneList <- reactiveVal(NULL)
+        downGeneList <- reactiveVal(NULL)
+
+        observeEvent(input$generate_genelist, {
+                    req(DEG_table())
+                    DEG_table <- DEG_table()
+
+                    DEG_table_filtered <- DEG_table[DEG_table$PValue < input$"pval_cut" & abs(DEG_table[,"logFC"]) > input$lfc_cut, ]
+                    sorted_DEG <- DEG_table_filtered[order(DEG_table_filtered[,"logFC"], decreasing=TRUE),]
+                    gene_list_symbol <- sorted_DEG$GeneSymbol
+                    print(dim(DEG_table_filtered))
+                    print(gene_list_symbol)
+                    #topGeneList(gene_list_symbol[1:input$top_gene_number, "SYMBOL"])
+                    #downGeneList(gene_list_symbol[(nrow(gene_list_symbol)-input$top_gene_number):nrow(gene_list_symbol), "SYMBOL"])
+                    topGeneList( DEG_table[DEG_table$PValue < input$"pval_cut" & sign(DEG_table_filtered[,"logFC"]) == 1, "GeneSymbol"]) #選所有顯著差異基因
+                    downGeneList( DEG_table[DEG_table$PValue < input$"pval_cut" & sign(DEG_table_filtered[,"logFC"]) == -1, "GeneSymbol"]) 
+                    print(head(topGeneList()))
+                    print("topGeneList")
+                    print(head(downGeneList()))
+                    print("downGeneList")
+                    gene_list_string <- paste(c(topGeneList(),downGeneList() ), collapse = ",")
+                    updateTextInput(session, "geneList", value = gene_list_string)
+
+
+        })
+
+        observeEvent(input$generate_go, {
+                req(topGeneList(),downGeneList(),settingMAE())                
+                mae <- settingMAE()
+                sample_info <- colData(mae[["RNAseq"]])
+                #groups_list <- unique(sample_info[, "subCode"])
+                groups_list <- c("G1", "G2")
+                group1_fc_gene_profile <- topGeneList()
+                group2_fc_gene_profile <- downGeneList()
+                for(n in seq_len(length(groups_list)) ){
+                    col <- groups_list[n]
+                    print(col)
+                    print(n)
+                    gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+                    print(head(gene_list))
+                    print("setting ok")
+                    for( mode in c("CC", "BP", "MF")){
+                        print(mode)
+                        VAR <- paste0(col,"_", mode, "GO")
+                        print(VAR)
+                        result <- go_enrich_dotplot( 
+                            gene_list_ = unique(gene_list), 
+                            save_path_ = NULL,
+                            save_filename_ = NULL, 
+                            mode_ = mode, 
+                            showCategory_ = 10
+                        )
+
+                        assign(VAR, result, envir = .GlobalEnv)
+
+                    }
+
+                }
+                output$G1_MF <- renderPlot({G1_MFGO})
+                output$G1_BP <- renderPlot({G1_BPGO})
+                output$G1_CC <- renderPlot({G1_CCGO})
+                output$G2_MF <- renderPlot({G2_MFGO})
+                output$G2_BP <- renderPlot({G2_BPGO})
+                output$G2_CC <- renderPlot({G2_CCGO})
+                
+                
+        })
+
+        observeEvent(input$generate_go, {
+                req(topGeneList(),downGeneList(),settingMAE())
+                mae <- settingMAE()
+                sample_info <- colData(mae[["RNAseq"]])
+                #groups_list <- unique(sample_info[,"subCode"]) 
+                groups_list <- c("G1", "G2")
+                group1_fc_gene_profile <- topGeneList()
+                group2_fc_gene_profile <- downGeneList()
+                #prefixSample <- input$prefixSample
+                for(n in seq_len(length(groups_list)) ){
+                    col <- groups_list[n]
+                    gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+                    print(col)
+                    VAR <- paste0(col,"_","KEGG")
+                    result <- kegg_enrich_dotplot ( 
+                        gene_list_ = unique(gene_list), 
+                        save_path_ = NULL,
+                        save_filename_ = NULL, 
+                        showCategory_ = 10
+                    )
+
+                    assign(VAR, result, envir = .GlobalEnv)
+                }
+
+                output$G1_KEGG <- renderPlot({G1_KEGG})
+                output$G2_KEGG <- renderPlot({G2_KEGG})
+
+        })
         observeEvent(input$targetGeneID, {
                     req(settingMAE(), wide_data())
                     mae <- settingMAE()
@@ -2411,104 +2513,6 @@ RNAseqShinyAppSpark <- function(){
                     output$target_gene_table <- DT::renderDataTable({DT::datatable(targetGeneExpr)})
         })
 
-
-        observeEvent(input$generate_go, {
-                req(topGeneList(),downGeneList(),settingMAE())                
-                mae <- settingMAE()
-                sample_info <- colData(mae[["RNAseq"]])
-                groups_list <- unique(sample_info[, "subCode"]) 
-                group1_fc_gene_profile <- topGeneList()
-                group2_fc_gene_profile <- downGeneList()
-                for(n in seq_len(length(groups_list)) ){
-                    col <- groups_list[n]
-                    print(col)
-                    print(n)
-                    gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-                    print(head(gene_list))
-                    print("setting ok")
-                    for( mode in c("CC", "BP", "MF")){
-                        print(mode)
-                        VAR <- paste0(col,"_", mode, "GO")
-                        print(VAR)
-                        assign(VAR, go_enrich_dotplot( 
-                        
-                                                        gene_list_= unique(gene_list), 
-                                                        save_path_ = NULL,
-                                                        save_filename_ = NULL, 
-                                                        mode_ = mode, 
-                                                        showCategory_ = 10), envir=.GlobalEnv
-                        
-                        )
-
-                    }
-
-                }
-
-
-                output$T_MF <- renderPlot({T_MFGO})
-                output$T_BP <- renderPlot({T_BPGO})
-                output$T_CC <- renderPlot({T_CCGO})
-                output$NT_MF <- renderPlot({NT_MFGO})
-                output$NT_BP <- renderPlot({NT_BPGO})
-                output$NT_CC <- renderPlot({NT_CCGO})
-                
-                
-        })
-
-        observeEvent(input$generate_go, {
-                req(topGeneList(),downGeneList(),settingMAE())
-                mae <- settingMAE()
-                sample_info <- colData(mae[["RNAseq"]])
-                groups_list <- unique(sample_info[,"subCode"]) 
-                group1_fc_gene_profile <- topGeneList()
-                group2_fc_gene_profile <- downGeneList()
-                #prefixSample <- input$prefixSample
-                for(n in seq_len(length(groups_list)) ){
-                    print(col)
-                    col <- groups_list[n]
-                    gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-
-                    print(col)
-                    VAR <- paste0(col,"_","KEGG")
-
-                    assign(VAR, kegg_enrich_dotplot ( 
-                                                        gene_list_ = unique(gene_list), 
-                                                        save_path_ = NULL,
-                                                        save_filename_ = NULL, 
-                                                        showCategory_ = 10
-                                )
-                    )
-                }
-
-                output$T_KEGG <- renderPlot({T_KEGG})
-                output$NT_KEGG <- renderPlot({NT_KEGG})
-
-        })
-
-        topGeneList <- reactiveVal(NULL)
-        downGeneList <- reactiveVal(NULL)
-
-        observeEvent(input$generate_genelist, {
-                    req(DEG_table())
-                    DEG_table <- DEG_table()
-
-                    DEG_table_filtered <- DEG_table[DEG_table$PValue<0.05, ]
-                    sorted_DEG <- DEG_table_filtered[order(DEG_table_filtered[,"logFC"], decreasing=TRUE),]
-                    gene_list_symbol <- sorted_DEG$GeneSymbol
-                    print(dim(DEG_table_filtered))
-                    print(gene_list_symbol)
-
-                    #topGeneList(gene_list_symbol[1:input$top_gene_number, "SYMBOL"])
-                    #downGeneList(gene_list_symbol[(nrow(gene_list_symbol)-input$top_gene_number):nrow(gene_list_symbol), "SYMBOL"])
-                    topGeneList( DEG_table[DEG_table$PValue<0.05 & sign(DEG_table_filtered[,"logFC"]) == 1, "GeneSymbol"]) #選所有顯著差異基因
-                    downGeneList( DEG_table[DEG_table$PValue<0.05 & sign(DEG_table_filtered[,"logFC"]) == -1, "GeneSymbol"]) 
-                    print(head(topGeneList()))
-                    print("topGeneList")
-                    print(head(downGeneList()))
-                    print("downGeneList")
-
-
-        })
 
     }
     
