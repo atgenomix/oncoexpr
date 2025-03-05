@@ -438,7 +438,7 @@ dbBrowserUI <- function(id) {
     # 可以是 fluidRow/sidebarPanel/... 依您需要排版
     selectInput(
       inputId = ns("selected_db"),
-      label   = "Choose Database:",
+      label   = "",
       choices = character(0)  # 初始給空
     ),
     # 動態顯示對應資料表選項
@@ -489,7 +489,7 @@ dbBrowserServer <- function(id, sc) {
 
 
     # 為了讓主應用拿到目前選擇的 DB & Table，回傳 reactive
-     selected_db    <- reactive({ input$selected_db    })
+     selected_db    <- reactive({ input$selected_db })
     # selected_table <- reactive({ input$selected_table })
     
     return(list(
