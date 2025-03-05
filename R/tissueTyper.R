@@ -62,23 +62,23 @@ TissueTyper <- function(selectMode = FALSE, geneList_ = NULL , group1_ , group2_
   print("準備繪製成heatmap")
   color_palette <- colorRampPalette( c("white","orange", "red"))(100)
   breaks <- seq( 0, 1, length.out = length(color_palette) + 1)
-  acrocyte_heatmap_cor_plot <- pheatmap(
+  heatmap_cor_plot <- pheatmap(
     cor_matrix,
     color = color_palette,
     breaks = breaks,
     na_col = "grey", main = "TissueTyper"
   )
   print("輸出heatmap")
-  print(paste0(sample_id, "_", date_, "_acrocyte_GTEx_cor_analysis.png"))
-  ggsave(   paste0(sample_id, "_", date_ ,"_acrocyte_GTEx_cor_analysis.png"), 
-            plot = acrocyte_heatmap_cor_plot, 
+  print(paste0(sample_id, "_", date_, "_GTEx_cor_analysis.png"))
+  ggsave(   paste0(sample_id, "_", date_ ,"_GTEx_cor_analysis.png"), 
+            plot = heatmap_cor_plot, 
             path = save_path, 
             width = 30, 
             height = 28, 
             units="cm", 
             dpi = 300
   )
-  list_ <- list("plot"= acrocyte_heatmap_cor_plot, "rank1"= group1_cor_rank, "rank2"= group2_cor_rank)
+  list_ <- list("plot"= heatmap_cor_plot, "rank1"= group1_cor_rank, "rank2"= group2_cor_rank)
   return(list_ )
   
   
@@ -137,7 +137,7 @@ mTissueTyper <- function(selectMode = FALSE, geneList_ = NULL , sample_list_, sa
     right_join(df1, df2, by = "Gene")
   }, .init = gtex_gene_expression)
   
-  write.csv(merged_df, paste0(save_path, paste0(paste(patient_code, collapse="_"), "_", date_, "_acrocyte_GTEx_merged_df.csv")))
+  write.csv(merged_df, paste0(save_path, paste0(paste(patient_code, collapse="_"), "_", date_, "_GTEx_merged_df.csv")))
   
   print("合併GTEx和兩樣本表現量")
   merged_df <- as.data.frame(na.omit(merged_df))
@@ -171,23 +171,23 @@ mTissueTyper <- function(selectMode = FALSE, geneList_ = NULL , sample_list_, sa
   print("準備繪製成heatmap")
   color_palette <- colorRampPalette( c("white","orange", "red"))(100)
   breaks <- seq( 0, 1, length.out = length(color_palette) + 1)
-  acrocyte_heatmap_cor_plot <- pheatmap(
+  heatmap_cor_plot <- pheatmap(
     cor_matrix,
     color = color_palette,
     breaks = breaks,
     na_col = "grey", main = "TissueTyper"
   )
   print("輸出heatmap")
-  print(paste0(paste(patient_code, collapse="_"), "_", date_, "_acrocyte_GTEx_cor_analysis.png"))
-  ggsave( paste0(paste(patient_code, collapse="_"), "_", date_, "_acrocyte_GTEx_cor_analysis.png"), 
-          plot = acrocyte_heatmap_cor_plot, 
+  print(paste0(paste(patient_code, collapse="_"), "_", date_, "_GTEx_cor_analysis.png"))
+  ggsave( paste0(paste(patient_code, collapse="_"), "_", date_, "_GTEx_cor_analysis.png"), 
+          plot = heatmap_cor_plot, 
           path = save_path, 
           width = 30, 
           height = 28, 
           units="cm", 
           dpi = 300
   )
-  list_ <- list("plot"= acrocyte_heatmap_cor_plot, "merged_df" = merged_df, "cor_matrix" = cor_matrix)
+  list_ <- list("plot"= heatmap_cor_plot, "merged_df" = merged_df, "cor_matrix" = cor_matrix)
   return(list_ )
   
   
