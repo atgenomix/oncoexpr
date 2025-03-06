@@ -78,7 +78,7 @@ The server function orchestrates the backend processes:
 ## How to Run the Application
 
 1. **Set Up the Environment:**
-   - Ensure Spark is running and accessible at the specified master address (`sc://172.18.0.1:15002`).
+   - Ensure Spark is running and accessible at the specified master address
    - Install all required R packages.
 
 2. **Execute the Function:**
