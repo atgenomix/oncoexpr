@@ -2243,28 +2243,27 @@ RNAseqShinyAppSpark <- function() {
       tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName      
       print(tbls)
+      prefix <- c("^normcounts|^exacttest|^coldata")
       
-      prefix <- c("normcountsgene", "exacttestgene", "coldata")
-      tbls_with_prefix <- tbls[sapply(tbls, function(x) {
-        any(sapply(prefix, function(p) grepl(paste0("^", p), x, ignore.case = TRUE)))
-      })]
+      tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
       print(tbls_with_prefix)
       results$table_list <- tbls_with_prefix
       
-      normcount_tbls <- tbls_with_prefix[grepl("^normcount", tbls_with_prefix, ignore.case = TRUE)]
+      normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
+      exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
+
       if (length(normcount_tbls) > 0) {
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
       }
-      colnames(results$normcount_data)[1] <- "GeneSymbol"
       
-      exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls_with_prefix, ignore.case = TRUE)]
       if (length(exacttest_tbls) > 0) {
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
       }
       
-      colnames(results$exacttest_data)[which(colnames(results$exacttest_data) == "genes")] <- "GeneSymbol"
+      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+      colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
       results$coldata <- colData
       print(colData)
