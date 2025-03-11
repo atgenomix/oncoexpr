@@ -2233,45 +2233,41 @@ RNAseqShinyAppSpark <- function() {
       print("db info 更新")
     })
     
-    observeEvent(input$get_tbl, {
-        req(results$db_info$selected_db())
-        print("成功取得資料庫名稱")
-        selected_db_name <- results$db_info$selected_db()
-        print(paste0("使用的資料庫：", selected_db_name))
-        
-        DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-        tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
-        tbls <- tbl_list_query$tableName      
-        print(tbls)
-        
-        # 篩選出符合條件的 table
-        #prefix <- c("normcount", "exacttest", "coldata")
-        tbls_with_prefix <- tbl_list_query[grepl("^normcount|^exacttest|^coldata" , tbl_list_query$"tableName"),]
-
-
-
-        print(tbls_with_prefix)
-        results$table_list <- tbls_with_prefix
-        
-        # 取得 normcount 資料表 (假設取第一個符合條件的)
-        normcount_tbls <- tbls_with_prefix[grepl("^normcount", tbls_with_prefix$"tableName", ignore.case = TRUE),"tableName"]
-        exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls_with_prefix$"tableName", ignore.case = TRUE),"tableName"]
-
-
-        if(length(normcount_tbls) > 0){
-            query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-            results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
-        }
-        colnames(results$normcount_data)[colnames(results$normcount_data)=="genes"] <- "GeneSymbol"
-
-        if(length(exacttest_tbls) > 0){
-            query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-            results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
-        }
-        colnames(results$exacttest_data)[colnames(results$exacttest_data)=="genes"] <- "GeneSymbol"
-        
-        colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
-        results$coldata <- colData
+    observeEvent(results$db_info$selected_db(), {
+      req(results$db_info$selected_db())
+      print("success get analysis runs")
+      selected_db_name <- results$db_info$selected_db()
+      print(paste0("analysis runs:", selected_db_name))
+      
+      DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+      tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+      tbls <- tbl_list_query$tableName      
+      print(tbls)
+      
+      prefix <- c("normcountsgene", "exacttestgene", "coldata")
+      tbls_with_prefix <- tbls[sapply(tbls, function(x) {
+        any(sapply(prefix, function(p) grepl(paste0("^", p), x, ignore.case = TRUE)))
+      })]
+      print(tbls_with_prefix)
+      results$table_list <- tbls_with_prefix
+      
+      normcount_tbls <- tbls_with_prefix[grepl("^normcount", tbls_with_prefix, ignore.case = TRUE)]
+      if (length(normcount_tbls) > 0) {
+        query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+        results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+      }
+      colnames(results$normcount_data)[1] <- "GeneSymbol"
+      
+      exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls_with_prefix, ignore.case = TRUE)]
+      if (length(exacttest_tbls) > 0) {
+        query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+        results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+      }
+      
+      colnames(results$exacttest_data)[which(colnames(results$exacttest_data) == "genes")] <- "GeneSymbol"
+      colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
+      results$coldata <- colData
+      print(colData)
     })
     
     output$normcount_table <- DT::renderDataTable({
