@@ -199,8 +199,7 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
     m_sub <- m
     rd_sub <- rowData(rna_se)
   }
-  View(rd_sub)
-  print(class(rd_sub))
+
   # 從 rowData 中提取 pvalue 與 log2FoldChange 資料
   if (!("PValue" %in% colnames(rd_sub)) || !("logFC" %in% colnames(rd_sub))) {
     warning("The RNAseq assay rowData does not contain 'pvalue' and 'log2FoldChange'. Only z-score heatmap is displayed.")
