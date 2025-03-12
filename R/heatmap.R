@@ -67,7 +67,7 @@ create_mae_airway <- function() {
   sample_info <- as.data.frame(colData(dds))
   rownames(sample_info) <- colnames(assay_data)
   # 若原本沒有 group 欄位，這邊以 dex 作為分組資訊
-  sample_info$group <- sample_info$dex
+  sample_info$subCode <- sample_info$dex
   
   # 建立 SummarizedExperiment，並將 DESeq2 結果附加到 rowData 中
   se_expression_matrix <- SummarizedExperiment(
@@ -134,7 +134,7 @@ create_mae_airway_edgeR <- function() {
   # 取得 sample 資訊，並確保 rownames 與 norm_counts 的 colnames 一致
   sample_info <- as.data.frame(colData(se))
   rownames(sample_info) <- colnames(norm_counts)
-  sample_info$group <- sample_info$dex
+  sample_info$subCode <- sample_info$dex
   
   # 取出在 norm_counts 與 edgeR_res 中皆存在的基因
   common_genes <- intersect(rownames(norm_counts), rownames(edgeR_res))
@@ -156,21 +156,23 @@ create_mae_airway_edgeR <- function() {
   
   mae
 }
-
-#' Generate a ComplexHeatmap heatmap based on a MAE object and a gene list.
+#' Generate a ComplexHeatmap heatmap based on a MAE object with separate RNAseq and DEG assays.
 #'
-#' This function extracts normalized counts from the RNAseq assay of a MAE object,
-#' subsets the data based on a provided gene list (if given), and generates a heatmap with three tracks:
+#' This function extracts normalized counts from the RNAseq assay and differential expression
+#' results (p-value and log2FoldChange) from the DEG assay of a MAE object. It subsets the data
+#' based on a provided gene list (if given) and generates a heatmap with three tracks:
 #' the z-score of expression, -log10(p-value), and log2FoldChange.
 #'
-#' The necessary information (p-value and log2FoldChange) must be available in the rowData 
-#' of the RNAseq assay.
+#' It assumes that the RNAseq SummarizedExperiment has an assay named "normCount" and that
+#' the DEG SummarizedExperiment contains the differential expression results in its rowData.
 #'
-#' @param mae A MultiAssayExperiment object containing an RNAseq experiment.
-#' @param geneList A character vector of gene identifiers to include. If NULL, all genes will be used.
+#' @param mae A MultiAssayExperiment object containing at least two experiments:
+#' one for RNAseq expression (with an assay "normCount") and one for DEG results.
+#' @param geneList A character vector of gene identifiers to include. If NULL, all genes are used.
 #'
 #' @return A \code{ComplexHeatmap} object.
 #' @export
+#' 
 make_heatmap_mae <- function(mae, geneList = NULL) {
   # 載入必要套件
   library(InteractiveComplexHeatmap)
@@ -178,11 +180,13 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
   library(circlize)
   library(GetoptLong)
   
-  # 取得 MAE 中的 RNAseq SummarizedExperiment
-  se <- experiments(mae)[["RNAseq"]]
-  # 取得 normalized counts (assay 名稱為 "normCount")
-  m <- assay(se, "normCount")
+  # 從 MAE 中取得 RNAseq 的 SummarizedExperiment，
+  # DEG 補充資訊已整合在 rowData 中
+  rna_se <- experiments(mae)[["RNAseq"]]
   
+  # 取得 normalized counts (assay 名稱為 "normCount")
+  m <- assay(rna_se, "normCount")
+  print("assay normCount ok")
   # 根據 geneList 進行子集化，若 geneList 為 NULL 則使用所有基因
   if (!is.null(geneList)) {
     valid_genes <- intersect(geneList, rownames(m))
@@ -190,46 +194,61 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
       stop("None of the genes in geneList were found in the MAE RNAseq assay.")
     }
     m_sub <- m[valid_genes, , drop = FALSE]
-    rd_sub <- rowData(se)[valid_genes, , drop = FALSE]
+    rd_sub <- rowData(rna_se)[valid_genes, , drop = FALSE]
   } else {
     m_sub <- m
-    rd_sub <- rowData(se)
+    rd_sub <- rowData(rna_se)
+  }
+  View(rd_sub)
+  print(class(rd_sub))
+  # 從 rowData 中提取 pvalue 與 log2FoldChange 資料
+  if (!("PValue" %in% colnames(rd_sub)) || !("logFC" %in% colnames(rd_sub))) {
+    warning("The RNAseq assay rowData does not contain 'pvalue' and 'log2FoldChange'. Only z-score heatmap is displayed.")
+    # 僅顯示 z-score heatmap
+    ht <- Heatmap(t(scale(t(m_sub))), name = "z-score",
+                  top_annotation = HeatmapAnnotation(
+                    group = as.data.frame(colData(rna_se))$group
+                  ),
+                  show_row_names = FALSE, show_column_names = FALSE,
+                  column_title = paste0(nrow(m_sub), " selected genes"),
+                  show_row_dend = FALSE)
+  } else {
+    pval <- as.numeric(unlist(rd_sub$PValue))
+    pval[is.na(pval)] <- 1  # NA 值轉換為 1 (-log10(1)=0)
+    log2fc <- as.numeric(unlist(rd_sub$logFC))
+    
+    # 取得 sample 資訊（假設 RNAseq 與 DEG 使用相同的 colData）
+    sample_info <- as.data.frame(colData(rna_se))
+    
+    # 主要 heatmap：以 z-score 呈現 normalized counts
+    ht1 <- Heatmap(t(scale(t(m_sub))), name = "z-score",
+                   top_annotation = HeatmapAnnotation(
+                     group = sample_info$"subCode"
+                   ),
+                   show_row_names = FALSE, show_column_names = FALSE,
+                   column_title = paste0(nrow(m_sub), " selected genes"),
+                   show_row_dend = FALSE)
+    
+    # 第二 heatmap：呈現 -log10(p-value)
+    ht2 <- Heatmap(-log10(pval), name = "-log10(p-value)",
+                   show_row_names = FALSE, show_column_names = FALSE,
+                   width = unit(5, "mm"))
+    
+    # 第三 heatmap：呈現 log2FoldChange
+    ht3 <- Heatmap(log2fc, name = "log2FoldChange",
+                   show_row_names = FALSE, show_column_names = FALSE,
+                   width = unit(5, "mm"),
+                   col = colorRamp2(c(-2, 0, 2), c("green", "white", "red")))
+    
+    ht <- ht1 + ht2 + ht3
   }
   
-  # 檢查 rowData 中是否有必要的欄位
-  if (!("pvalue" %in% colnames(rd_sub)) || !("log2FoldChange" %in% colnames(rd_sub))) {
-    stop("The rowData of the MAE RNAseq assay must contain 'pvalue' and 'log2FoldChange' columns.")
-  }
-  
-  # 取得 sample 資訊（使用 group 欄位）
-  sample_info <- as.data.frame(colData(se))
-  
-  # 主要 heatmap：呈現 z-score
-  ht1 <- Heatmap(t(scale(t(m_sub))), name = "z-score",
-                 top_annotation = HeatmapAnnotation(
-                   group = sample_info$group
-                 ),
-                 show_row_names = FALSE, show_column_names = FALSE,
-                 column_title = paste0(nrow(m_sub), " selected genes"),
-                 show_row_dend = FALSE)
-  
-  # 第二 heatmap：呈現 -log10(p-value)
-  pval <- rd_sub$pvalue
-  pval[is.na(pval)] <- 1  # 將 NA 視為 1 (-log10(1)=0)
-  ht2 <- Heatmap(-log10(pval), name = "-log10(p-value)",
-                 show_row_names = FALSE, show_column_names = FALSE,
-                 width = unit(5, "mm"))
-  
-  # 第三 heatmap：呈現 log2FoldChange
-  ht3 <- Heatmap(rd_sub$log2FoldChange, name = "log2FoldChange",
-                 show_row_names = FALSE, show_column_names = FALSE,
-                 width = unit(5, "mm"),
-                 col = colorRamp2(c(-2, 0, 2), c("green", "white", "red")))
-  
-  ht <- ht1 + ht2 + ht3
   ht <- draw(ht, merge_legend = TRUE)
   ht
 }
+
+
+
 
 #' Run a Shiny App to display the interactive heatmap.
 #'

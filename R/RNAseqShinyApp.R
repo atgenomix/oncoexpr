@@ -2208,7 +2208,7 @@ RNAseqShinyAppSpark <- function() {
       tabPanel(
         title = "Heatmap",
         sidebarPanel(
-          textInput("geneList", "Heatmap Gene List (sep by comma without space)",
+          textInput("geneListheatmap", "Heatmap Gene List (sep by comma without space)",
                     value = "EGFR,ESR1,KRAS,ERBB2,AKT1"),
           #actionButton("update_heatmap", "Update Heatmap"),
           width = 2
@@ -2264,6 +2264,8 @@ RNAseqShinyAppSpark <- function() {
       
       normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
       exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
+      coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
+
 
       if (length(normcount_tbls) > 0) {
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
@@ -2277,8 +2279,15 @@ RNAseqShinyAppSpark <- function() {
       
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-      colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
-      results$coldata <- colData
+      
+      if (length(coldata) > 0) {
+        query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+        results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+      }else{
+        colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
+        results$coldata <- colData
+
+      }
       print(colData)
     })
     
@@ -2317,16 +2326,33 @@ RNAseqShinyAppSpark <- function() {
       if ("GeneSymbol" %in% colnames(wide_data())) {
         rownames(assay_data) <- wide_data()[, "GeneSymbol"]
       }
+    
+      deg_data <- results$exacttest_data
+      if ("GeneSymbol" %in% colnames(deg_data)) {
+        rownames(deg_data) <- deg_data$GeneSymbol
+      }
+
+      # 只取兩者共同的基因（確保 rowData 與 assay 的 rownames 一致）
+      common_genes <- intersect(rownames(assay_data), rownames(deg_data))
+      assay_data <- assay_data[common_genes, , drop = FALSE]
+      deg_data_sub <- deg_data[common_genes, , drop = FALSE]
       sample_info_table <- maeColData()
       rownames(sample_info_table) <- colnames(assay_data) # The rownames of colData must match the colnames of assay_data
+
       se_expression_matrix <- SummarizedExperiment(
         assays = list(normCount = assay_data), #read count, TPM, COV, FPKM
-        colData = sample_info_table
+        colData = sample_info_table,
+        rowData = S4Vectors::DataFrame(deg_data_sub)
       )
+
       mae <- MultiAssayExperiment(
-        experiments = list(RNAseq = se_expression_matrix),  #expr_matrix, DEGresult, GSEAresult
+        experiments = list(
+          RNAseq = se_expression_matrix   #  normCoun
+        ),
         colData = sample_info_table
       )
+
+
       settingMAE(mae)
       print(settingMAE())
       print("OK")
@@ -2384,6 +2410,9 @@ RNAseqShinyAppSpark <- function() {
       print(head(downGeneList()))
       gene_list_string <- paste(c(topGeneList(), downGeneList()), collapse = ",")
       updateTextInput(session, "geneList", value = gene_list_string)
+      updateTextInput(session, "geneListheatmap", value = gene_list_string)
+
+      
     })
     
     observeEvent(input$generate_go, {
