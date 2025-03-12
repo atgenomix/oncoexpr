@@ -2093,6 +2093,7 @@ demo_oncoExprAppSpark <- function(){
 #' @export
 
 RNAseqShinyAppSpark <- function() {
+  print("ui")
   ui <- fluidPage(
     navbarPage(
       title = "RNAseq App (Beta)",
@@ -2203,15 +2204,27 @@ RNAseqShinyAppSpark <- function() {
             )
           )
         )
+       ),
+      tabPanel(
+        title = "Heatmap",
+        sidebarPanel(
+          textInput("geneList", "Heatmap Gene List (sep by comma without space)",
+                    value = "EGFR,ESR1,KRAS,ERBB2,AKT1"),
+          #actionButton("update_heatmap", "Update Heatmap"),
+          width = 2
+        ),
+        mainPanel(
+          originalHeatmapOutput("ht", height = 800, containment = TRUE)
+        )
       )
     )
   )
-
+  print("server")
   server <- function(input, output, session) {
     sc <- reactiveVal(NULL)
     observe({
-      master <- "sc://172.18.0.1:15002"
-      #master <- "sc://localhost:15002"
+      #master <- "sc://172.18.0.1:15002"
+      master <- "sc://localhost:15002"
       method <- "spark_connect"
       version <- "3.5"
       connection <- sparklyr::spark_connect(master = master, method = method, version = version)
@@ -2354,7 +2367,7 @@ RNAseqShinyAppSpark <- function() {
     topGeneList <- reactiveVal(NULL)
     downGeneList <- reactiveVal(NULL)
     
-    observeEvent(input$generate_go, {
+    observeEvent(input$run_DEG, {
       req(DEG_table())
       DEG_table <- DEG_table()
       
@@ -2443,8 +2456,36 @@ RNAseqShinyAppSpark <- function() {
       print(targetGeneExpr)
       output$target_gene_table <- DT::renderDataTable({DT::datatable(targetGeneExpr)})
     })
+    
+    observeEvent(input$targetGeneID, {
+      print("heatmap")
+      req(settingMAE())
+      mae <- settingMAE()
+      geneList <- unlist(strsplit(input$geneList, ","))
+      print(geneList)
+      geneList <- trimws(geneList)
+      print(geneList)
+      ht <- make_heatmap_mae(mae, geneList)
+      if (!is.null(ht)) {
+        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+      } else {
+        output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+        })
+      }
+    })
+
+
+
   }
   
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
 }
+
+
+
+
+
+RNAseqShinyAppSpark()
