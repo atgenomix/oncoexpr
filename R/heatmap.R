@@ -214,6 +214,7 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
                   show_row_dend = FALSE)
   } else {
     pval <- as.numeric(unlist(rd_sub$PValue))
+    pval[pval == 0] <- .Machine$double.eps
     pval[is.na(pval)] <- 1  # NA 值轉換為 1 (-log10(1)=0)
     log2fc <- as.numeric(unlist(rd_sub$logFC))
     

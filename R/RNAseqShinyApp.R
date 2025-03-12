@@ -2281,7 +2281,7 @@ RNAseqShinyAppSpark <- function() {
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       
-      if (length(coldata) > 0) {
+      if (length(coldata_tbls) > 0) {
         query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
         results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
         #colData <- generate_colData( normcount = normCount, grouplist = as.character(results$grouplist$"groupList") , genecol = "GeneSymbol")
