@@ -2096,7 +2096,7 @@ RNAseqShinyAppSpark <- function() {
   print("ui")
   ui <- fluidPage(
     navbarPage(
-      title = "RNAseq App (Beta)",
+      title = "RNAseq App",
       header = tagList(
         tags$style(".shinybusy-overlay {opacity: 0.7; background-color: #7c7c7c;}"),
         add_busy_spinner(
@@ -2223,8 +2223,8 @@ RNAseqShinyAppSpark <- function() {
   server <- function(input, output, session) {
     sc <- reactiveVal(NULL)
     observe({
-      #master <- "sc://172.18.0.1:15002"
-      master <- "sc://localhost:15002"
+      master <- "sc://172.18.0.1:15002"
+      #master <- "sc://localhost:15002"
       method <- "spark_connect"
       version <- "3.5"
       connection <- sparklyr::spark_connect(master = master, method = method, version = version)
