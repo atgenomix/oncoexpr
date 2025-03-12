@@ -2237,7 +2237,8 @@ RNAseqShinyAppSpark <- function() {
       normcount_data = NULL,
       exacttest_data = NULL,
       table_list = NULL,
-      coldata = NULL
+      coldata = NULL,
+      grouplist =NULL
     )
     
     observe({
@@ -2283,6 +2284,8 @@ RNAseqShinyAppSpark <- function() {
       if (length(coldata) > 0) {
         query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
         results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+        #colData <- generate_colData( normcount = normCount, grouplist = as.character(results$grouplist$"groupList") , genecol = "GeneSymbol")
+        #results$coldata <- colData
       }else{
         colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
         results$coldata <- colData
