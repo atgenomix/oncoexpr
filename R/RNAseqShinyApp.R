@@ -2314,6 +2314,9 @@ RNAseqShinyAppSpark <- function() {
       wide_data(results$normcount_data)
       maeColData(results$coldata)
       assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
+      if ("GeneSymbol" %in% colnames(wide_data())) {
+        rownames(assay_data) <- wide_data()[, "GeneSymbol"]
+      }
       sample_info_table <- maeColData()
       rownames(sample_info_table) <- colnames(assay_data) # The rownames of colData must match the colnames of assay_data
       se_expression_matrix <- SummarizedExperiment(
