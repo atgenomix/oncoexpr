@@ -202,13 +202,13 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
 
   # 從 rowData 中提取 pvalue 與 log2FoldChange 資料
   if (!("PValue" %in% colnames(rd_sub)) || !("logFC" %in% colnames(rd_sub))) {
-    warning("The RNAseq assay rowData does not contain 'pvalue' and 'log2FoldChange'. Only z-score heatmap is displayed.")
+    warning("The RNAseq assay rowData does not contain 'PValue' and 'logFC'. Only z-score heatmap is displayed.")
     # 僅顯示 z-score heatmap
     ht <- Heatmap(t(scale(t(m_sub))), name = "z-score",
                   top_annotation = HeatmapAnnotation(
                     group = as.data.frame(colData(rna_se))$group
                   ),
-                  show_row_names = FALSE, show_column_names = FALSE,
+                  show_row_names = TRUE, show_column_names = FALSE,
                   column_title = paste0(nrow(m_sub), " selected genes"),
                   show_row_dend = FALSE)
   } else {
@@ -283,3 +283,65 @@ run_heatmap_app <- function(mae, geneList = NULL) {
   shinyApp(ui, server)
 }
 
+#' Generate pheatmap from a MAE Object
+#'
+#' This function extracts RNA-seq normalized counts (assay "normCount") from the RNAseq experiment 
+#' in a MAE object, optionally subsets the data based on a provided gene list, and retrieves sample 
+#' annotation from the colData (defaulting to the "group" column). It then uses the pheatmap package 
+#' to generate a heatmap that displays both gene names and sample names.
+#'
+#' @param mae A MultiAssayExperiment object that must contain an experiment named "RNAseq" with a "normCount" assay.
+#' @param geneList Optional character vector specifying the genes to subset. If NULL, all genes are used.
+#'
+#' @return A pheatmap object.
+#' @export
+
+make_heatmap_mae_pheatmap <- function(mae, geneList = NULL) {
+  # 若尚未安裝 pheatmap，請先安裝
+  if (!requireNamespace("pheatmap", quietly = TRUE)) {
+    install.packages("pheatmap")
+  }
+  library(pheatmap)
+  
+  # 從 MAE 中取得 RNAseq 的 SummarizedExperiment
+  if (!"RNAseq" %in% names(experiments(mae))) {
+    stop("RNAseq experiment not found in the provided MAE object.")
+  }
+  rna_se <- experiments(mae)[["RNAseq"]]
+  
+  # 取得 normalized counts (assay 名稱為 "normCount")
+  if (!"normCount" %in% assayNames(rna_se)) {
+    stop("normCount assay not found in RNAseq experiment.")
+  }
+  m <- assay(rna_se, "normCount")
+  
+  # 若有提供 geneList，則以 geneList 為依據子集化基因
+  if (!is.null(geneList)) {
+    valid_genes <- intersect(geneList, rownames(m))
+    if (length(valid_genes) == 0) {
+      stop("None of the genes in geneList were found in the MAE RNAseq assay.")
+    }
+    m <- m[valid_genes, , drop = FALSE]
+  }
+  
+  # 從 colData 取得樣本的 annotation，預設使用 "group" 欄位，若無則嘗試 "subCode"
+  sample_info <- as.data.frame(colData(rna_se))
+  if ("group" %in% colnames(sample_info)) {
+    annotation_col <- data.frame(Group = sample_info$group)
+  } else if ("subCode" %in% colnames(sample_info)) {
+    annotation_col <- data.frame(Group = sample_info$subCode)
+  } else {
+    annotation_col <- data.frame(Group = rep("Unknown", nrow(sample_info)))
+  }
+  rownames(annotation_col) <- colnames(m)
+  
+  # 繪製 heatmap，scale = "row" 可將每個基因做 z-score 正規化，並顯示基因與樣本名稱
+  p <- pheatmap(m,
+                scale = "row",
+                annotation_col = annotation_col,
+                show_rownames = TRUE,
+                show_colnames = TRUE,
+                main = paste0(nrow(m), " genes (pheatmap)"))
+  
+  return(p)
+}
