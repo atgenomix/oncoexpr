@@ -12,12 +12,6 @@ A Shiny application object.
 \description{
 start the RNAseq shiny app with spark connection for shiny proxy at the seqslab console
 }
-\details{
-RNAseqShinyAppSpark
-
-This function creates a Shiny application for RNA sequencing data analysis using Spark.
-It provides an interactive interface for users to explore and analyze RNAseq data.
-}
 \examples{
 \dontrun{
   library(sparklyr)
