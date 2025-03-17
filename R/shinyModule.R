@@ -425,7 +425,6 @@ sampleSelectionServer <- function(
 }
 
 
-
 #' @title dbBrowerUI
 #' @description search spark database
 #' @param id module id for UI and Server
@@ -450,18 +449,19 @@ dbBrowserUI <- function(id) {
 #' @description search spark database
 #' @param id module id for UI and Server
 #' @param sc spark connection
-#' @return database browser Server module 
+#' @return database browser Server module
 #' @export
 dbBrowserServer <- function(id, sc) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     # 動態更新資料庫清單
     observe({
-      db_list_query <- dbGetQuery(sc, "SHOW DATABASES")
+      org <- tolower(Sys.getenv("SPARK_USER"))
+      db_list_query <- dbGetQuery(sc, sprintf("SHOW DATABASES LIKE '%%s'", org))
       # 假設第一欄就是資料庫名稱
       db_list <- db_list_query
-      
+
       # 用 updateSelectInput 來更新 UI
       updateSelectInput(
         session,
@@ -487,9 +487,8 @@ dbBrowserServer <- function(id, sc) {
     #   }
     # })
 
-
     # 為了讓主應用拿到目前選擇的 DB & Table，回傳 reactive
-     selected_db    <- reactive({ input$selected_db })
+    selected_db    <- reactive({ input$selected_db })
     # selected_table <- reactive({ input$selected_table })
     
     return(list(
@@ -498,4 +497,3 @@ dbBrowserServer <- function(id, sc) {
     ))
   })
 }
-
