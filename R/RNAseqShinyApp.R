@@ -233,7 +233,8 @@ RNAseqShinyAppSpark <- function() {
         colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
         results$coldata <- colData
       }
-      print(colData)
+      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+      colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       spark_disconnect(sc())
       sc(NULL)
     })
