@@ -234,7 +234,7 @@ RNAseqShinyAppSpark <- function() {
         results$coldata <- colData
       }
       print(colData)
-      sparklyr::spark_disconnect(sc())
+      spark_disconnect(sc())
       sc(NULL)
     })
 
