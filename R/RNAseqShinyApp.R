@@ -177,13 +177,6 @@ RNAseqShinyAppSpark <- function() {
 
   server <- function(input, output, session) {
     sc <- reactiveVal(NULL)
-    observeEvent(is.null(sc()),{
-      master <- "sc://172.18.0.1:15002"
-      method <- "spark_connect"
-      version <- "3.5"
-      connection <- sparklyr::spark_connect(master = master, method = method, version = version)
-      sc(connection)
-    })
 
     results <- reactiveValues(
       db_info = NULL,
@@ -195,8 +188,19 @@ RNAseqShinyAppSpark <- function() {
     )
 
     observe({
+      if (is.null(sc())) {
+        master <- "sc://172.18.0.1:15002"
+        method <- "spark_connect"
+        version <- "3.5"
+        sc(sparklyr::spark_connect(master = master, method = method, version = version))
+      }
+    })
+
+    observe({
       req(sc())
-      results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      if (is.null(results$db_info)) {
+        results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      }
     })
 
     observeEvent(results$db_info$selected_db(), {
@@ -236,6 +240,8 @@ RNAseqShinyAppSpark <- function() {
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       spark_disconnect(sc())
+      sc()$session$stop()
+      spark_disconnect_all()
       sc(NULL)
     })
 
@@ -450,3 +456,13 @@ RNAseqShinyAppSpark <- function() {
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
 }
+
+#library(shiny)
+#library(DBI)
+#library(shinybusy)
+#library(bslib)
+#library(pheatmap)
+#library(oncoexpr)
+#library(sparklyr)
+#library(InteractiveComplexHeatmap)
+#RNAseqShinyAppSpark()
