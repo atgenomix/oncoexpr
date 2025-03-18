@@ -201,3 +201,21 @@ generate_colData_random <- function(normcount = normCount, genecol = "gene_id" )
     rownames(colData) <- colnames(normcount)
     return(colData)
 }
+
+
+#' @title generate colData for RNAseqShinyApp
+#' @description generate classification for colData
+#' @param normcount normCount table to get colnames (sample id)
+#' @param grouplist group list
+#' @param genecol to remove gene column
+#' @return colData
+#' @export
+
+generate_colData <- function(normcount = normCount, grouplist  , genecol = "GeneSymbol" ){
+    rownames(normcount) <- normcount[, genecol]  # 假設第一列是基因名稱
+    normcount <- normcount[, -which(colnames(normcount) == genecol)]  # 去除基因名稱列，確保只有數值矩陣
+    classification <-  grouplist
+    colData <- data.frame("mainCode" = colnames(normcount) , "subCode" = classification)
+    rownames(colData) <- colnames(normcount)
+    return(colData)
+}
