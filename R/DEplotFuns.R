@@ -182,10 +182,8 @@ ggvolcano_limma <- function(fit,
 ggvolcano_custom <- function (df, geneName, pValCol = "PValue", logFCCol = "logFC", 
     coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
     title = "Volcano Plot", topN = 20, geneCol = NULL, pointSize = 2, 
-    ptAlpha = 0.6, labelSize = 3) 
-{
-    plotData <- data.frame(gene = geneName, logFC = df[[logFCCol]], 
-        pval = df[[pValCol]])
+    ptAlpha = 0.6, labelSize = 3) {
+    plotData <- data.frame(gene = geneName, logFC = df[[logFCCol]], pval = df[[pValCol]])
     plotData$color <- "grey"
     plotData$color[plotData$logFC >= lfc_cut & plotData$pval <= 
         pval_cut] <- "red"
@@ -209,9 +207,9 @@ ggvolcano_custom <- function (df, geneName, pValCol = "PValue", logFCCol = "logF
 }
 
 
+View(volcanoData)
 
-
-ggvolcano_custom <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC", 
+ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC", 
                                coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
                                title = "Volcano Plot", topN = 20, geneCol = NULL, 
                                pointSize = 2, ptAlpha = 0.6, labelSize = 3) {
@@ -238,7 +236,7 @@ ggvolcano_custom <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC
          y = bquote(-log[10] ~ .(pValCol)))
   
   # 標註 topN 基因
-  if (topN > 0) {
+  if (topN > 0&& nrow(plotData) > 0) {
     topGenesDF <- head(plotData[order(plotData$pval), ], n = topN)
     p <- p + ggrepel::geom_text_repel(data = topGenesDF, 
                                       aes(label = gene), 

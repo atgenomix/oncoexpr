@@ -104,8 +104,8 @@ RNAseqShinyAppSpark <- function() {
           mainPanel(
             tabsetPanel(
               tabPanel("Volcano Plot interaction",
-                       interactivePlotsUI("plotModule")
                        #plotOutput("volcano_plot", height = "600px")
+                      interactivePlotsUI("plotVolcano")
               ),
               tabPanel("DEG Table", 
                        DT::dataTableOutput('DEG_table', width = "100%")
@@ -177,10 +177,14 @@ RNAseqShinyAppSpark <- function() {
   )
 
   server <- function(input, output, session) {
+    
     sc <- reactiveVal(NULL)
+    
     observe({
-      master <- "sc://172.18.0.1:15002"
-      method <- "spark_connect"
+      #master <- "sc://172.18.0.1:15002"
+      #method <- "spark_connect"
+      master <- "local"
+      method <- "shell"
       version <- "3.5"
       connection <- sparklyr::spark_connect(master = master, method = method, version = version)
       sc(connection)
@@ -189,14 +193,15 @@ RNAseqShinyAppSpark <- function() {
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
-      grouplist = NULL
+      grouplist = NULL,
       normcount_data = NULL,
       exacttest_data = NULL,
-      coldata = NULL,
+      coldata = NULL
     )
     
     observe({
       req(sc())
+      print("test null sc")
       results$db_info <- dbBrowserServer("dbBrowser1", sc())
     })
     
@@ -217,7 +222,6 @@ RNAseqShinyAppSpark <- function() {
       exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
       coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
 
-
       if (length(normcount_tbls) > 0) {
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
@@ -231,15 +235,18 @@ RNAseqShinyAppSpark <- function() {
       if (length(coldata_tbls) > 0) {
         query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
         results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+
       }else{
         colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
         results$coldata <- colData
       }
-      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+      print(str(results$normcount_data))
+      print(str(results$exacttest_data))
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+      results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+      print(str(results$exacttest_data))
 
-      spark_disconnect(sc)
-      print(sc)
     })
     
       
@@ -302,8 +309,6 @@ RNAseqShinyAppSpark <- function() {
         ),
         colData = sample_info_table
       )
-
-
       settingMAE(mae)
     })
     
@@ -317,9 +322,44 @@ RNAseqShinyAppSpark <- function() {
         )
       }, server = FALSE)
     })
-    interactivePlotsServer("plotModule", volcanoData = volcanoData, exprData = exprData)
+
+    observeEvent(input$run_DEG, {
+          req(DEG_table(), maeColData(), wide_data())
+          params <- reactive({
+            list(
+              lfc_cut    = input$lfc_cut,
+              pval_cut   = input$pval_cut,
+              pointSize  = input$pointSize,
+              ptAlpha    = input$ptAlpha,
+              labelSize  = input$labelSize,
+              topN       = input$topN,
+              use_adjP   = input$use_adjP
+            )
+          })
+          normCount <- wide_data()
+          volcanoData <- DEG_table()
+          colData <- maeColData()
+          print(str(normCount))
+          print(str(volcanoData))
+          print(str(colData))
+          exprData <- computeExprData( normCount, colData)
+          interactivePlotsServer("plotVolcano", 
+                                volcanoData = volcanoData, 
+                                exprData = exprData, params)
+          print(str(exprData))
+    })
+    observeEvent(input$run_DEG, {
+        req(results$exacttest_data, results$normcount_data, results$coldata)
+        DEG_table(results$exacttest_data)
+        wide_data(results$normcount_data)
+        maeColData(results$coldata)
+
+        message("run_DEG pressed: reactive values updated.")
+
+    })
     # reactive_volcano_plot <- eventReactive(input$run_DEG, {
-    #   req(DEG_table())
+    #   req(DEG_table(), maeColData(), wide_data())
+
     #   ggvolcano_custom(
     #     df = DEG_table(),
     #     geneName = DEG_table()$GeneSymbol,
@@ -353,8 +393,8 @@ RNAseqShinyAppSpark <- function() {
       sorted_DEG <- DEG_table_filtered[order(DEG_table_filtered$logFC, decreasing = TRUE),]
       gene_list_symbol <- sorted_DEG$GeneSymbol
 
-      topGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table_filtered$logFC) == 1, "GeneSymbol"])
-      downGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table_filtered$logFC) == -1, "GeneSymbol"]) 
+      topGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == 1, "GeneSymbol"])
+      downGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == -1, "GeneSymbol"]) 
 
       gene_list_string <- paste(c(topGeneList(), downGeneList()), collapse = ",")
       updateTextInput(session, "geneList", value = gene_list_string)
