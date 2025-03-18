@@ -458,7 +458,7 @@ dbBrowserServer <- function(id, sc) {
     # 動態更新資料庫清單
     observe({
       org <- tolower(Sys.getenv("SPARK_USER"))
-      db_list_query <- dbGetQuery(sc, sprintf("SHOW DATABASES LIKE '%%s'", org))
+      db_list_query <- dbGetQuery(sc, sprintf("SHOW DATABASES LIKE '%%_%s'", org))
       # 假設第一欄就是資料庫名稱
       db_list <- db_list_query
 

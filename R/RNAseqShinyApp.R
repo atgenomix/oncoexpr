@@ -239,9 +239,7 @@ RNAseqShinyAppSpark <- function() {
       }
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-      spark_disconnect(sc())
       sc()$session$stop()
-      spark_disconnect_all()
       sc(NULL)
     })
 
@@ -392,7 +390,7 @@ RNAseqShinyAppSpark <- function() {
       output$G2_BP <- renderPlot({G2_BPGO})
       output$G2_CC <- renderPlot({G2_CCGO})
     })
-    
+
     observeEvent(input$generate_go, {
       req(topGeneList(), downGeneList(), settingMAE())
       mae <- settingMAE()
@@ -415,7 +413,7 @@ RNAseqShinyAppSpark <- function() {
       output$G1_KEGG <- renderPlot({G1_KEGG})
       output$G2_KEGG <- renderPlot({G2_KEGG})
     })
-    
+
     observeEvent(input$targetGeneID, {
       req(settingMAE(), wide_data())
       mae <- settingMAE()
