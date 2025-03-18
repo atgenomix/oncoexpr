@@ -19,11 +19,9 @@ computeExprData <- function(exprMatrix, groupList) {
 }
 
 
-
 interactivePlotsUI <- function(id) {
   ns <- NS(id)
   tagList(
-    # Set page background to light gray
     tags$div(
       style = "background-color: #f2f2f2; padding: 10px;",
       titlePanel("Interactive Volcano, Scatter, and Violin Plots"),
@@ -51,11 +49,13 @@ interactivePlotsUI <- function(id) {
   )
 }
 
-
-interactivePlotsServer <- function(id, exactTestData, exprData) {
+interactivePlotsServer <- function(id, volcanoData, exprData) {
   moduleServer(id, function(input, output, session) {
     
-    # Create a reactiveVal to store the last hovered gene
+    # For this example, we assume the volcanoData contains at least columns "logFC" and "pvalue"
+    # and a vector of gene names. You can pass in alternative data (e.g., exacttest_data) here.
+    
+    # Create a reactiveVal to store the last hovered gene (for linking with scatter and violin plots)
     persistent_gene <- reactiveVal(NULL)
     
     # Update persistent_gene when hovering over the Volcano Plot
@@ -64,28 +64,27 @@ interactivePlotsServer <- function(id, exactTestData, exprData) {
         persistent_gene(input$volcanoPlot_hovered)
     })
     
-    # Update persistent_gene when hovering over the Scatter Plot
+    # (Optional) Update persistent_gene when hovering over the Scatter Plot
     observeEvent(input$scatterPlot_hovered, {
       if (!is.null(input$scatterPlot_hovered) && input$scatterPlot_hovered != "")
         persistent_gene(input$scatterPlot_hovered)
     })
     
-    # Render Volcano Plot with dynamic color based on persistent_gene
+    # Render the Volcano Plot using your custom function
     output$volcanoPlot <- renderGirafe({
-      current_gene <- persistent_gene()
-      if (is.null(current_gene) || current_gene == "") {
-        volcanoData2 <- exactTestData %>% mutate(highlight = "normal")
-      } else {
-        volcanoData2 <- exactTestData %>% 
-          mutate(highlight = ifelse(gene == current_gene, "highlight", "normal"))
-      }
-      
-      p <- ggplot(volcanoData2, aes(x = logFC, y = -log10(pvalue))) +
-        geom_point_interactive(aes(tooltip = gene, data_id = gene, color = highlight), size = 4) +
-        scale_color_manual(values = c("highlight" = "red", "normal" = "black")) +
-        labs(x = "Log Fold Change", y = "-log10(p-value)") +
-        theme_minimal()
-      
+      # Call the custom volcano plot function.
+      # Here we assume the volcanoData has a column "pvalue" and "logFC" and gene names in volcanoData$gene.
+      p <- ggvolcano_custom(df = volcanoData, 
+                            geneName = volcanoData$gene,
+                            pValCol = "pvalue", 
+                            logFCCol = "logFC", 
+                            lfc_cut = 1, 
+                            pval_cut = 0.05, 
+                            title = "Volcano Plot",
+                            topN = 20, 
+                            pointSize = 2, 
+                            ptAlpha = 0.6, 
+                            labelSize = 3)
       girafe(ggobj = p,
              options = list(
                opts_zoom(max = 5),
@@ -93,7 +92,7 @@ interactivePlotsServer <- function(id, exactTestData, exprData) {
              ))
     })
     
-    # Render Scatter Plot with dynamic color based on persistent_gene
+    # Render Scatter Plot (using exprData)
     output$scatterPlot <- renderGirafe({
       current_gene <- persistent_gene()
       scatterData_local <- exprData %>%
@@ -141,10 +140,22 @@ interactivePlotsServer <- function(id, exactTestData, exprData) {
                 plot.title = element_text(hjust = 0.5))
       }
     })
+    
   })
 }
 
+# ---- Main App ----
+ui <- fluidPage(
+  interactivePlotsUI("plotModule")
+)
 
+server <- function(input, output, session) {
+  # Here you can pass in your volcano data.
+  # For example, if you have an "exacttest_data" you can pass that instead.
+  interactivePlotsServer("plotModule", volcanoData = volcanoData, exprData = exprData)
+}
+
+shinyApp(ui = ui, server = server)
 
 
 

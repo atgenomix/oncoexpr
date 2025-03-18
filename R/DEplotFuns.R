@@ -207,3 +207,44 @@ ggvolcano_custom <- function (df, geneName, pValCol = "PValue", logFCCol = "logF
     }
     return(p)
 }
+
+
+
+
+ggvolcano_custom <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC", 
+                               coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
+                               title = "Volcano Plot", topN = 20, geneCol = NULL, 
+                               pointSize = 2, ptAlpha = 0.6, labelSize = 3) {
+  
+  # 整理資料
+  plotData <- data.frame(gene = geneName, 
+                         logFC = df[[logFCCol]], 
+                         pval = df[[pValCol]])
+  plotData$color <- "grey"
+  plotData$color[plotData$logFC >= lfc_cut & plotData$pval <= pval_cut] <- "red"
+  plotData$color[plotData$logFC <= -lfc_cut & plotData$pval <= pval_cut] <- "blue"
+  plotData$negLogP <- -log10(plotData$pval)
+  
+  # 使用互動式的 geom_point_interactive 取代原本的 geom_point
+  p <- ggplot(plotData, aes(x = logFC, y = negLogP, color = color)) +
+    ggiraph::geom_point_interactive(aes(tooltip = gene, data_id = gene), 
+                                     size = pointSize, alpha = ptAlpha) +
+    scale_color_identity() +
+    geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed", color = "black") +
+    geom_hline(yintercept = -log10(pval_cut), linetype = "dashed", color = "black") +
+    theme_classic() +
+    labs(title = title, 
+         x = expression(log[2] ~ "Fold Change"), 
+         y = bquote(-log[10] ~ .(pValCol)))
+  
+  # 標註 topN 基因
+  if (topN > 0) {
+    topGenesDF <- head(plotData[order(plotData$pval), ], n = topN)
+    p <- p + ggrepel::geom_text_repel(data = topGenesDF, 
+                                      aes(label = gene), 
+                                      size = labelSize, 
+                                      max.overlaps = Inf)
+  }
+  
+  return(p)
+}

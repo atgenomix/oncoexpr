@@ -104,7 +104,8 @@ RNAseqShinyAppSpark <- function() {
           mainPanel(
             tabsetPanel(
               tabPanel("Volcano Plot interaction",
-                       plotOutput("volcano_plot", height = "600px")
+                       interactivePlotsUI("plotModule")
+                       #plotOutput("volcano_plot", height = "600px")
               ),
               tabPanel("DEG Table", 
                        DT::dataTableOutput('DEG_table', width = "100%")
@@ -237,7 +238,8 @@ RNAseqShinyAppSpark <- function() {
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
 
-
+      spark_disconnect(sc)
+      print(sc)
     })
     
       
@@ -315,30 +317,30 @@ RNAseqShinyAppSpark <- function() {
         )
       }, server = FALSE)
     })
+    interactivePlotsServer("plotModule", volcanoData = volcanoData, exprData = exprData)
+    # reactive_volcano_plot <- eventReactive(input$run_DEG, {
+    #   req(DEG_table())
+    #   ggvolcano_custom(
+    #     df = DEG_table(),
+    #     geneName = DEG_table()$GeneSymbol,
+    #     pValCol = "PValue",
+    #     logFCCol = "logFC",
+    #     coef = 2,
+    #     lfc_cut = input$lfc_cut,
+    #     pval_cut = input$pval_cut,
+    #     useAdjP = FALSE,
+    #     title = "Volcano Plot",
+    #     topN = input$topN,
+    #     geneCol = NULL,
+    #     pointSize = input$pointSize, 
+    #     ptAlpha = input$ptAlpha,
+    #     labelSize = input$labelSize 
+    #   )
+    # })
     
-    reactive_volcano_plot <- eventReactive(input$run_DEG, {
-      req(DEG_table())
-      ggvolcano_custom(
-        df = DEG_table(),
-        geneName = DEG_table()$GeneSymbol,
-        pValCol = "PValue",
-        logFCCol = "logFC",
-        coef = 2,
-        lfc_cut = input$lfc_cut,
-        pval_cut = input$pval_cut,
-        useAdjP = FALSE,
-        title = "Volcano Plot",
-        topN = input$topN,
-        geneCol = NULL,
-        pointSize = input$pointSize, 
-        ptAlpha = input$ptAlpha,
-        labelSize = input$labelSize 
-      )
-    })
-    
-    output$volcano_plot <- renderPlot({
-      reactive_volcano_plot()
-    })
+    # output$volcano_plot <- renderPlot({
+    #   reactive_volcano_plot()
+    # })
     
     topGeneList <- reactiveVal(NULL)
     downGeneList <- reactiveVal(NULL)
