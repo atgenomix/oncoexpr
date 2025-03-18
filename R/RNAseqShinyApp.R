@@ -188,7 +188,7 @@ RNAseqShinyAppSpark <- function() {
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
-      grouplist = NULL
+      grouplist = NULL,
       normcount_data = NULL,
       exacttest_data = NULL,
       coldata = NULL
