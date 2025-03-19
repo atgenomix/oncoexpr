@@ -85,12 +85,11 @@ ggvolcano_limma <- function(fit,
                             title     = "Volcano Plot",
                             topN      = 0,
                             geneCol   = NULL,
-                            pointSize = 2,       # 加入點大小參數
-                            ptAlpha   = 0.6,     # 加入點透明度參數
-                            labelSize = 3,       # 加入基因標籤字型大小參數
+                            pointSize = 2,      
+                            ptAlpha   = 0.6,     
+                            labelSize = 3,       
                             ...) {
   
-  # 1) 從 limma 的 fit 物件取出指定係數的結果
   tt <- topTable(
     fit      = fit,
     coef     = coef,
@@ -98,7 +97,7 @@ ggvolcano_limma <- function(fit,
     ...
   )
   
-  # 如果沒有 geneCol，則使用 rownames 作為 gene 名稱
+
   if (is.null(geneCol)) {
     tt$gene <- rownames(tt)
   } else {
@@ -108,28 +107,23 @@ ggvolcano_limma <- function(fit,
     tt$gene <- tt[[geneCol]]
   }
   
-  # 2) 選擇 p-value 或 adj.P.Val
   pvalCol <- if (useAdjP) "adj.P.Val" else "P.Value"
   if (!pvalCol %in% colnames(tt)) {
     stop(paste0("無法在 topTable 結果中找到欄位: ", pvalCol))
   }
-  
-  # 3) 建立繪圖用的資料框
+
   plotData <- data.frame(
     gene  = tt$gene,
     logFC = tt$logFC,
     pval  = tt[[pvalCol]]
   )
   
-  # 4) 根據閾值新增顏色欄位（上調：red，下調：blue，其餘 grey）
   plotData$color <- "grey"
   plotData$color[plotData$logFC >=  lfc_cut & plotData$pval <= pval_cut] <- "red"
   plotData$color[plotData$logFC <= -lfc_cut & plotData$pval <= pval_cut] <- "blue"
-  
-  # 5) 計算 -log10(p-value)
+
   plotData$negLogP <- -log10(plotData$pval)
-  
-  # 6) 繪製基本圖形，將點大小、透明度參數納入
+
   p <- ggplot(plotData, aes(x = logFC, y = negLogP, color = color)) +
     geom_point(size = pointSize, alpha = ptAlpha) +
     scale_color_identity() +
@@ -142,7 +136,6 @@ ggvolcano_limma <- function(fit,
       y     = bquote(-log[10]~.(pvalCol))
     )
   
-  # 7) 標註前 topN 個最顯著基因（若有指定 topN > 0）
   if (topN > 0) {
     topGenesDF <- head(plotData[order(plotData$pval), ], n = topN)
     p <- p + 
@@ -212,7 +205,6 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
                                title = "Volcano Plot", topN = 20, geneCol = NULL, 
                                pointSize = 2, ptAlpha = 0.6, labelSize = 3) {
   
-  # 整理資料
   plotData <- data.frame(gene = geneName, 
                          logFC = df[[logFCCol]], 
                          pval = df[[pValCol]])
@@ -221,7 +213,6 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
   plotData$color[plotData$logFC <= -lfc_cut & plotData$pval <= pval_cut] <- "blue"
   plotData$negLogP <- -log10(plotData$pval)
   
-  # 使用互動式的 geom_point_interactive 取代原本的 geom_point
   p <- ggplot(plotData, aes(x = logFC, y = negLogP, color = color)) +
     ggiraph::geom_point_interactive(aes(tooltip = gene, data_id = gene), 
                                      size = pointSize, alpha = ptAlpha) +
@@ -233,7 +224,6 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
          x = expression(log[2] ~ "Fold Change"), 
          y = bquote(-log[10] ~ .(pValCol)))
   
-  # 標註 topN 基因
   if (topN > 0&& nrow(plotData) > 0) {
     topGenesDF <- head(plotData[order(plotData$pval), ], n = topN)
     p <- p + ggrepel::geom_text_repel(data = topGenesDF, 
