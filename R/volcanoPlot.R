@@ -98,12 +98,16 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
             scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
         } else {
             scatterData_local <- scatterData_local %>% 
-            mutate(highlight = ifelse(GeneSymbol == current_gene, "highlight", "normal"))
+            mutate(highlight = ifelse(GeneSymbol == current_gene, "highlight", "other"))
+
         }
-        
+
+        scatterData_local <- scatterData_local %>% 
+            mutate(highlight = factor(highlight, levels = c("highlight", "other", "normal")))
         p <- ggplot(scatterData_local, aes(x = mean1, y = mean2)) +
-            geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol, color = highlight), size = 4) +
-            scale_color_manual(values = c("highlight" = "red", "normal" = "black"),drop = FALSE) +
+            geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol, color = highlight, alpha = factor(highlight)), size = 2) +
+            scale_color_manual(values = c("highlight" = "red", "other" = "grey", "normal" = "black"), drop = FALSE) +
+            scale_alpha_manual(values = c("highlight" = 1, "other" = 0.2, "normal" = 1)) +
             labs(x = "Group1 Mean Expression", y = "Group2 Mean Expression") +
             theme_minimal()
         
