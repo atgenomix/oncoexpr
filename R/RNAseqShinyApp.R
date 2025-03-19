@@ -129,10 +129,11 @@ RNAseqShinyAppSpark <- function() {
               12,
               h4("UPregulated DEGs"),
               tabsetPanel(
+                tabPanel("KEGG", plotOutput("G1_KEGG")),
                 tabPanel("MF", plotOutput("G1_MF")),
                 tabPanel("BP", plotOutput("G1_BP")),
-                tabPanel("CC", plotOutput("G1_CC")),
-                tabPanel("KEGG", plotOutput("G1_KEGG"))
+                tabPanel("CC", plotOutput("G1_CC"))
+
               )
             )
           ),
@@ -141,10 +142,10 @@ RNAseqShinyAppSpark <- function() {
               12,
               h4("DOWNregulated DEGs"),
               tabsetPanel(
+                tabPanel("KEGG", plotOutput("G2_KEGG")),
                 tabPanel("MF", plotOutput("G2_MF")),
                 tabPanel("BP", plotOutput("G2_BP")),
-                tabPanel("CC", plotOutput("G2_CC")),
-                tabPanel("KEGG", plotOutput("G2_KEGG"))
+                tabPanel("CC", plotOutput("G2_CC"))
               )
             )
           )
