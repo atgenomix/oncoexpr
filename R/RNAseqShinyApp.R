@@ -30,7 +30,9 @@
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
 
-
+#' 
+NULL
+#' @keywords internal
 #' RNAseqShinyAppSpark
 #'
 #' This function creates a Shiny application for RNA sequencing data analysis using Spark.
