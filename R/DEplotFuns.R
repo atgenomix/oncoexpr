@@ -20,43 +20,32 @@ LimmaMAE <- function(mae,
                      lfc_cut  = 1,
                      useAdjP  = FALSE) {
   
-  # 從 mae 中擷取資料：這裡示範從名為 "RNAseq" 的 experiment 拿資料
-  # 且假設其中的 assays 包含一個名為 "max_TPM" 的矩陣
   rna_counts  <- assays(mae[[assayName]])$max_TPM
   sample_info <- colData(mae[[assayName]])
   print(sample_info)
-  # 構建分組因子 (這裡以 subCode 作為分組資訊)
   group <- factor(sample_info[[subCodeCol]])
   print(group)
-  # 建立 DGEList，並進行標準化
+
   dge <- DGEList(counts = rna_counts, group = group)
-  dge <- calcNormFactors(dge)  # TMM 等方法
+  dge <- calcNormFactors(dge) 
   
-  # 建置設計矩陣 (含截距項)
   design <- model.matrix(~ group)
   
-  # voom 轉換
   v <- voom(dge, design)
   
-  # 線性模型擬合 + Bayes校正
   fit <- lmFit(v, design)
   fit <- eBayes(fit)
   
-  # 使用 decideTests() 判定哪些基因顯著差異
-  # 在此設定 p.value 與 lfc 閾值，作為上/下調判定標準
   dt <- decideTests(fit, p.value = pval_cut, lfc = lfc_cut)
-  sumDT <- summary(dt)  # 統計上調/下調/不顯著的數目
+  sumDT <- summary(dt)
   
-  # 用 topTable() 匯出完整結果 (logFC, P.Value, adj.P.Val 等)
-  # coef = 2 代表第二個參數 (group 的對比)，請根據實際情況調整
   topTab <- topTable(fit, coef = coef, number = Inf)
   
-  # 最後以 list 形式回傳，以便後續使用
   return(list(
-    fit            = fit,      # 可給 ggvolcano_limma() 繪圖
-    topTable       = topTab,   # 所有基因的差異分析統計
-    decideTests    = dt,       # limma 對基因上調/下調/不顯著的判定
-    upDownSummary  = sumDT     # 上下調總結
+    fit            = fit,
+    topTable       = topTab,
+    decideTests    = dt,
+    upDownSummary  = sumDT  
   ))
 }
 

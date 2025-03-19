@@ -151,30 +151,52 @@ RNAseqShinyAppSpark <- function() {
         )
       ),
       tabPanel(
-        title = "Target Gene Expression",
-        sidebarPanel(
-          textInput("geneList", "Target Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2"),
-          actionButton(inputId = "targetGeneID", label = "Confirm"),
-          width = 2
-        ),
-        mainPanel(
-          tabsetPanel(
-            tabPanel("Target Gene Expr. Table", 
-                     DT::dataTableOutput('target_gene_table', width = "100%", height = "600px")
-            ),
-            tabPanel(
-              title = "Heatmap",
-              sidebarPanel(
-                textInput("geneListheatmap", "Heatmap Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2,AKT1"),
-                width = 2
+          title = "Heatmap",
+          sidebarLayout(
+          sidebarPanel(
+            textInput("geneListheatmap", "Heatmap Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2,AKT1"),
+            actionButton(inputId = "targetGeneID", label = "Confirm"),
+            width = 2
+          ),
+          mainPanel(
+            fluidRow(
+              column(width = 5,
+                  box(title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                      originalHeatmapOutput("ht", height = 800, containment = TRUE)
+                  )
               ),
-              mainPanel(
-                originalHeatmapOutput("ht", height = 800, containment = TRUE)
+              column(width = 5,
+                  id = "column2",
+                  box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                      subHeatmapOutput("ht", title = NULL, containment = TRUE)
+                  ),
+                  box(title = "Output", width = NULL, solidHeader = TRUE, status = "primary",
+                      HeatmapInfoOutput("ht", title = NULL)
+                  )
               )
             )
+            # originalHeatmapOutput("ht", height = 800, containment = TRUE),
+            # subHeatmapOutput("ht", title = NULL, containment = TRUE)
+            
           )
         )
-       )
+      )
+      # tabPanel(
+      #   title = "Target Gene Expression",
+      #   sidebarPanel(
+      #     textInput("geneList", "Target Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2"),
+      #     actionButton(inputId = "targetGeneID", label = "Confirm"),
+      #     width = 2
+      #   ),
+      #   mainPanel(
+      #     tabsetPanel(
+      #       tabPanel("Target Gene Expr. Table", 
+      #                DT::dataTableOutput('target_gene_table', width = "100%", height = "600px")
+      #       ),
+ 
+      #     )
+      #   )
+      #  )
 
     )
   )
@@ -184,8 +206,10 @@ RNAseqShinyAppSpark <- function() {
     sc <- reactiveVal(NULL)
     
     observe({
-      master <- "sc://172.18.0.1:15002"
-      method <- "spark_connect"
+      master <- "local"
+      method <- "shell"
+      #master <- "sc://172.18.0.1:15002"
+      #method <- "spark_connect"
       version <- "3.5"
       connection <- sparklyr::spark_connect(master = master, method = method, version = version)
       sc(connection)
@@ -398,7 +422,7 @@ RNAseqShinyAppSpark <- function() {
       downGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == -1, "GeneSymbol"]) 
 
       gene_list_string <- paste(c(topGeneList(), downGeneList()), collapse = ",")
-      updateTextInput(session, "geneList", value = gene_list_string)
+      #updateTextInput(session, "geneList", value = gene_list_string)
       updateTextInput(session, "geneListheatmap", value = gene_list_string)
 
       
@@ -457,30 +481,30 @@ RNAseqShinyAppSpark <- function() {
       output$G2_KEGG <- renderPlot({G2_KEGG})
     })
     
-    observeEvent(input$targetGeneID, {
-      req(settingMAE(), wide_data())
-      mae <- settingMAE()
-      geneList <- unlist(strsplit(input$geneList, ","))
-      sample_info <- colData(mae[["RNAseq"]])
-      groups_list <- rownames(sample_info) 
-      expr_profile <- as.data.frame(wide_data())
-      if ("GeneSymbol" %in% colnames(expr_profile)) {
-        rownames(expr_profile) <- expr_profile[,"GeneSymbol"]
-        expr_profile <- expr_profile[,-1]
-        print("wide table has GeneSymbol column as rownames")
-      }
-      targetGeneExpr <- target_exprofile( 
-        geneList_ = geneList, 
-        groups_list_ = groups_list,
-        expr_profile_ = expr_profile
-      )
-      output$target_gene_table <- DT::renderDataTable({DT::datatable(targetGeneExpr)})
-    })
+    # observeEvent(input$targetGeneID, {
+    #   req(settingMAE(), wide_data())
+    #   mae <- settingMAE()
+    #   geneList <- unlist(strsplit(input$geneList, ","))
+    #   sample_info <- colData(mae[["RNAseq"]])
+    #   groups_list <- rownames(sample_info) 
+    #   expr_profile <- as.data.frame(wide_data())
+    #   if ("GeneSymbol" %in% colnames(expr_profile)) {
+    #     rownames(expr_profile) <- expr_profile[,"GeneSymbol"]
+    #     expr_profile <- expr_profile[,-1]
+    #     print("wide table has GeneSymbol column as rownames")
+    #   }
+    #   targetGeneExpr <- target_exprofile( 
+    #     geneList_ = geneList, 
+    #     groups_list_ = groups_list,
+    #     expr_profile_ = expr_profile
+    #   )
+    #   output$target_gene_table <- DT::renderDataTable({DT::datatable(targetGeneExpr)})
+    # })
     
     observeEvent(input$targetGeneID, {
       req(settingMAE())
       mae <- settingMAE()
-      geneList <- unlist(strsplit(input$geneList, ","))
+      geneList <- unlist(strsplit(input$geneListheatmap, ","))
       geneList <- trimws(geneList)
       ht <- make_heatmap_mae(mae, geneList)
       if (!is.null(ht)) {
