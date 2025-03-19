@@ -1,46 +1,7 @@
-#' HeatmapMAE Package: Interactive Heatmap from MAE Object
-#'
-#' This package provides functions to generate interactive heatmaps based on a 
-#' MultiAssayExperiment (MAE) object. Two different differential expression analysis 
-#' workflows are supported: DESeq2 and edgeR. The resulting MAE object is assumed to contain 
-#' the necessary differential expression results (p-value and log2FoldChange) in the rowData 
-#' of the RNAseq assay.
-#'
-#' @section Example Usage:
-#' The following examples demonstrate how to use the functions.
-#'
-#' ## Using DESeq2 workflow:
-#' \dontrun{
-#'   library(HeatmapMAE)
-#'   # Create MAE object using DESeq2 analysis
-#'   mae <- create_mae_airway()
-#'   # Generate heatmap for selected genes (e.g., first 50 genes)
-#'   ht <- make_heatmap_mae(mae, geneList = rownames(mae)[1:50])
-#'   # Run interactive Shiny App
-#'   run_heatmap_app(mae, geneList = rownames(mae)[1:50])
-#' }
-#'
-#' ## Using edgeR workflow:
-#' \dontrun{
-#'   library(HeatmapMAE)
-#'   # Create MAE object using edgeR analysis
-#'   mae_edgeR <- create_mae_airway_edgeR()
-#'   # Generate heatmap for selected genes (e.g., first 50 genes)
-#'   ht_edgeR <- make_heatmap_mae(mae_edgeR, geneList = rownames(mae_edgeR)[1:50])
-#'   # Run interactive Shiny App
-#'   run_heatmap_app(mae_edgeR, geneList = rownames(mae_edgeR)[1:50])
-#' }
-#'
-#' @docType package
-#' @name HeatmapMAE
-NULL
-
-#' Create a MultiAssayExperiment object from airway data using DESeq2 analysis.
-#'
-#' This function loads the airway dataset, performs DESeq2 analysis,
+#' @title Create a MultiAssayExperiment object from airway data using DESeq2 analysis.
+#' @description This function loads the airway dataset, performs DESeq2 analysis,
 #' and creates a MultiAssayExperiment (MAE) object. The DESeq2 results 
 #' (p-value and log2FoldChange) are attached to the rowData of the RNAseq assay.
-#'
 #' @return A MultiAssayExperiment object.
 #' @export
 create_mae_airway <- function() {
