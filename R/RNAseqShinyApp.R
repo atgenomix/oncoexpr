@@ -25,6 +25,7 @@
 #' @import bslib
 #' @import DT
 #' @import InteractiveComplexHeatmap
+#' @import ggiraph
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable

@@ -207,8 +207,6 @@ ggvolcano_custom <- function (df, geneName, pValCol = "PValue", logFCCol = "logF
 }
 
 
-View(volcanoData)
-
 ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC", 
                                coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
                                title = "Volcano Plot", topN = 20, geneCol = NULL, 

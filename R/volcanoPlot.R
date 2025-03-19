@@ -139,8 +139,8 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
     # Render Volcano Plot using provided parameters and volcanoData
     output$volcanoPlot <- renderGirafe({
       p <- ggvolcano_custom_interactive(
-        df        = volcanoData(),
-        geneName  = volcanoData()$GeneSymbol,
+        df        = volcanoData,
+        geneName  = volcanoData$GeneSymbol,
         pValCol   = "PValue",
         logFCCol  = "logFC",
         lfc_cut   = params()$lfc_cut,
@@ -161,7 +161,7 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
     # Render Scatter Plot with interactive point hover
     output$scatterPlot <- renderGirafe({
       current_gene <- persistent_gene()
-      scatterData_local <- exprData() %>%
+      scatterData_local <- exprData %>%
         group_by(GeneSymbol) %>%
         summarise(
           mean1 = mean(expression[group == "control"]),
@@ -201,7 +201,7 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
         plot.new()
         title("Please hover over a gene from the Volcano or Scatter Plot")
       } else {
-        data_selected <- exprData() %>% filter(GeneSymbol == selected_gene)
+        data_selected <- exprData %>% filter(GeneSymbol == selected_gene)
         ggplot(data_selected, aes(x = group, y = expression, fill = group)) +
           geom_violin(trim = FALSE, color = NA) +
           geom_jitter(width = 0.2, size = 3, alpha = 0.7) +
