@@ -342,7 +342,7 @@ RNAseqShinyAppSpark <- function() {
           print(str(normCount))
           print(str(volcanoData))
           print(str(colData))
-          exprData <- computeExprData( normCount, colData)
+          exprData <- transfExprFormat( normCount, colData)
           interactivePlotsServer("plotVolcano", 
                                 volcanoData = volcanoData, 
                                 exprData = exprData, params)
