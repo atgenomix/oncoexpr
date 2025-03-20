@@ -209,11 +209,19 @@ RNAseqShinyAppSpark <- function() {
     sc <- reactiveVal(NULL)
 
     observe({
-      master <- "sc://172.18.0.1:15002"
-      method <- "spark_connect"
-      version <- "3.5"
-      connection <- sparklyr::spark_connect(master = master, method = method, version = version)
-      sc(connection)
+      if (is.null(sc())) {
+        master <- "sc://172.18.0.1:15002"
+        method <- "spark_connect"
+        version <- "3.5"
+        sc(sparklyr::spark_connect(master = master, method = method, version = version))
+      }
+    })
+
+    observe({
+      req(sc())
+      if (is.null(results$db_info)) {
+        results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      }
     })
     
     results <- reactiveValues(
