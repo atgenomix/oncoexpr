@@ -193,7 +193,7 @@ expr_pattern <- function(data_v2, special_gene_list, save_path_ = NULL, save_fil
 #' @return pseudo colData
 #' @export
 
-generate_colData_random <- function(normcount = normCount, genecol = "gene_id" ){
+generate_colData_random <- function(normcount = normCount, genecol = "gene_id"){
     rownames(normcount) <- normcount[, genecol]  # 假設第一列是基因名稱
     normcount <- normcount[, -which(colnames(normcount) == genecol)]  # 去除基因名稱列，確保只有數值矩陣
     classification <- sample(c("T","NT"), ncol(normcount), replace = TRUE)
