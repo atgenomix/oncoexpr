@@ -53,7 +53,6 @@ NULL
 #' }
 #'
 #' @export
-#' @import shinydashboard
 
 
 RNAseqShinyAppSpark <- function() {
