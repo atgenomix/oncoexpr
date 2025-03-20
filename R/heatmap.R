@@ -149,7 +149,9 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
                   ),
                   show_row_names = TRUE, show_column_names = FALSE,
                   column_title = paste0(nrow(m_sub), " selected genes"),
-                  show_row_dend = FALSE)
+                  #show_row_dend = TRUE,
+                  cluster_rows = TRUE
+          )
   } else {
     pval <- as.numeric(unlist(rd_sub$PValue))
     pval[pval == 0] <- .Machine$double.eps
@@ -162,9 +164,10 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
                    top_annotation = HeatmapAnnotation(
                      group = sample_info$"subCode"
                    ),
-                   show_row_names = FALSE, show_column_names = FALSE,
+                   show_row_names = TRUE, show_column_names = FALSE,
                    column_title = paste0(nrow(m_sub), " selected genes"),
-                   show_row_dend = FALSE)
+                   #show_row_dend = FALSE,
+                   cluster_rows = TRUE)
     
     ht2 <- Heatmap(-log10(pval), name = "-log10(p-value)",
                    show_row_names = FALSE, show_column_names = FALSE,
