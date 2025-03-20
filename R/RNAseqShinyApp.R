@@ -87,8 +87,10 @@ RNAseqShinyAppSpark <- function() {
       ),
       tabPanel(
         title = "Differential Expression Analysis",
-        sidebarLayout(
-          sidebarPanel(
+        layout_sidebar(
+          sidebar = sidebar(
+            style = "min-height: 600px; overflow-y: auto;",
+
             sliderInput("lfc_cut", "Fold Change Threshold (log2):", 
                         min = 0, max = 10, value = 1, step = 0.1),
             sliderInput("pval_cut", "p-value Threshold:", 
@@ -166,7 +168,7 @@ RNAseqShinyAppSpark <- function() {
                       originalHeatmapOutput("ht", height = 800, containment = TRUE)
                   )
               ),
-              column(width = 5,
+              column(width = 4,
                   id = "column2",
                   box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
                       subHeatmapOutput("ht", title = NULL, containment = TRUE)
