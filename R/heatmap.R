@@ -1,50 +1,11 @@
-#' HeatmapMAE Package: Interactive Heatmap from MAE Object
-#'
-#' This package provides functions to generate interactive heatmaps based on a 
-#' MultiAssayExperiment (MAE) object. Two different differential expression analysis 
-#' workflows are supported: DESeq2 and edgeR. The resulting MAE object is assumed to contain 
-#' the necessary differential expression results (p-value and log2FoldChange) in the rowData 
-#' of the RNAseq assay.
-#'
-#' @section Example Usage:
-#' The following examples demonstrate how to use the functions.
-#'
-#' ## Using DESeq2 workflow:
-#' \dontrun{
-#'   library(HeatmapMAE)
-#'   # Create MAE object using DESeq2 analysis
-#'   mae <- create_mae_airway()
-#'   # Generate heatmap for selected genes (e.g., first 50 genes)
-#'   ht <- make_heatmap_mae(mae, geneList = rownames(mae)[1:50])
-#'   # Run interactive Shiny App
-#'   run_heatmap_app(mae, geneList = rownames(mae)[1:50])
-#' }
-#'
-#' ## Using edgeR workflow:
-#' \dontrun{
-#'   library(HeatmapMAE)
-#'   # Create MAE object using edgeR analysis
-#'   mae_edgeR <- create_mae_airway_edgeR()
-#'   # Generate heatmap for selected genes (e.g., first 50 genes)
-#'   ht_edgeR <- make_heatmap_mae(mae_edgeR, geneList = rownames(mae_edgeR)[1:50])
-#'   # Run interactive Shiny App
-#'   run_heatmap_app(mae_edgeR, geneList = rownames(mae_edgeR)[1:50])
-#' }
-#'
-#' @docType package
-#' @name HeatmapMAE
-NULL
-
-#' Create a MultiAssayExperiment object from airway data using DESeq2 analysis.
-#'
-#' This function loads the airway dataset, performs DESeq2 analysis,
+#' @title Create a MultiAssayExperiment object from airway data using DESeq2 analysis.
+#' @description This function loads the airway dataset, performs DESeq2 analysis,
 #' and creates a MultiAssayExperiment (MAE) object. The DESeq2 results 
 #' (p-value and log2FoldChange) are attached to the rowData of the RNAseq assay.
-#'
 #' @return A MultiAssayExperiment object.
 #' @export
 create_mae_airway <- function() {
-  # 載入必要套件
+
   library(airway)
   library(DESeq2)
   library(SummarizedExperiment)
@@ -60,23 +21,20 @@ create_mae_airway <- function() {
   dds <- DESeq(dds)
   res <- results(dds)
   res <- as.data.frame(res)
-  
-  # 取得 normalized counts 作為表現矩陣
+
   assay_data <- as.matrix(counts(dds, normalized = TRUE))
-  # 取得 sample 資訊，並確保 rownames 與 assay_data 的 colnames 一致
+
   sample_info <- as.data.frame(colData(dds))
   rownames(sample_info) <- colnames(assay_data)
-  # 若原本沒有 group 欄位，這邊以 dex 作為分組資訊
+
   sample_info$subCode <- sample_info$dex
   
-  # 建立 SummarizedExperiment，並將 DESeq2 結果附加到 rowData 中
   se_expression_matrix <- SummarizedExperiment(
     assays = list(normCount = assay_data),
     colData = sample_info,
     rowData = S4Vectors::DataFrame(res[rownames(assay_data), ])
   )
   
-  # 建立 MultiAssayExperiment 物件
   mae <- MultiAssayExperiment(
     experiments = list(RNAseq = se_expression_matrix),
     colData = sample_info
@@ -94,61 +52,49 @@ create_mae_airway <- function() {
 #' @return A MultiAssayExperiment object.
 #' @export
 create_mae_airway_edgeR <- function() {
-  # 載入必要套件
+
   library(airway)
   library(edgeR)
   library(SummarizedExperiment)
   library(MultiAssayExperiment)
   
-  # 載入 airway 資料
+
   data(airway)
   se <- airway
   
-  # 建立 DGEList 物件
   dge <- DGEList(counts = assay(se))
-  
-  # 過濾低表現基因 (使用 filterByExpr)
+
   keep <- filterByExpr(dge)
   dge <- dge[keep, , keep.lib.sizes = FALSE]
   
-  # 計算 normalization factors
   dge <- calcNormFactors(dge)
-  
-  # 建立設計矩陣，使用 colData(se)$dex 作為分組依據
+
   design <- model.matrix(~ dex, data = as.data.frame(colData(se)))
   
-  # 估計 dispersion
   dge <- estimateDisp(dge, design)
   
-  # 使用 glmQLFit 與 glmQLFTest 進行差異分析
   fit <- glmQLFit(dge, design)
   qlf <- glmQLFTest(fit, coef = 2)
-  
-  # 擷取所有基因的 edgeR 結果
+
   edgeR_res <- topTags(qlf, n = Inf)$table
   edgeR_res <- as.data.frame(edgeR_res)
   
-  # 取得 normalized counts (以 CPM 表示，不取 log 轉換)
   norm_counts <- as.matrix(cpm(dge, normalized.lib.sizes = TRUE))
-  
-  # 取得 sample 資訊，並確保 rownames 與 norm_counts 的 colnames 一致
+
   sample_info <- as.data.frame(colData(se))
   rownames(sample_info) <- colnames(norm_counts)
   sample_info$subCode <- sample_info$dex
   
-  # 取出在 norm_counts 與 edgeR_res 中皆存在的基因
   common_genes <- intersect(rownames(norm_counts), rownames(edgeR_res))
   norm_counts <- norm_counts[common_genes, , drop = FALSE]
   edgeR_res_sub <- edgeR_res[common_genes, , drop = FALSE]
   
-  # 建立 SummarizedExperiment 物件，並將 edgeR 結果附加到 rowData 中
   se_expression_matrix <- SummarizedExperiment(
     assays = list(normCount = norm_counts),
     colData = sample_info,
     rowData = S4Vectors::DataFrame(edgeR_res_sub)
   )
   
-  # 建立 MultiAssayExperiment 物件
   mae <- MultiAssayExperiment(
     experiments = list(RNAseq = se_expression_matrix),
     colData = sample_info
@@ -174,20 +120,15 @@ create_mae_airway_edgeR <- function() {
 #' @export
 #' 
 make_heatmap_mae <- function(mae, geneList = NULL) {
-  # 載入必要套件
   library(InteractiveComplexHeatmap)
   library(ComplexHeatmap)
   library(circlize)
   library(GetoptLong)
   
-  # 從 MAE 中取得 RNAseq 的 SummarizedExperiment，
-  # DEG 補充資訊已整合在 rowData 中
   rna_se <- experiments(mae)[["RNAseq"]]
   
-  # 取得 normalized counts (assay 名稱為 "normCount")
   m <- assay(rna_se, "normCount")
   print("assay normCount ok")
-  # 根據 geneList 進行子集化，若 geneList 為 NULL 則使用所有基因
   if (!is.null(geneList)) {
     valid_genes <- intersect(geneList, rownames(m))
     if (length(valid_genes) == 0) {
@@ -200,41 +141,40 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
     rd_sub <- rowData(rna_se)
   }
 
-  # 從 rowData 中提取 pvalue 與 log2FoldChange 資料
   if (!("PValue" %in% colnames(rd_sub)) || !("logFC" %in% colnames(rd_sub))) {
     warning("The RNAseq assay rowData does not contain 'PValue' and 'logFC'. Only z-score heatmap is displayed.")
-    # 僅顯示 z-score heatmap
     ht <- Heatmap(t(scale(t(m_sub))), name = "z-score",
                   top_annotation = HeatmapAnnotation(
                     group = as.data.frame(colData(rna_se))$group
                   ),
                   show_row_names = TRUE, show_column_names = FALSE,
                   column_title = paste0(nrow(m_sub), " selected genes"),
-                  show_row_dend = FALSE)
+                  #show_row_dend = TRUE,
+                  cluster_rows = TRUE,
+                  #column_names_gp = gpar(fontsize = 0) # Make sure sample names are not shown
+          )
   } else {
     pval <- as.numeric(unlist(rd_sub$PValue))
     pval[pval == 0] <- .Machine$double.eps
-    pval[is.na(pval)] <- 1  # NA 值轉換為 1 (-log10(1)=0)
+    pval[is.na(pval)] <- 1  
     log2fc <- as.numeric(unlist(rd_sub$logFC))
-    
-    # 取得 sample 資訊（假設 RNAseq 與 DEG 使用相同的 colData）
+
     sample_info <- as.data.frame(colData(rna_se))
-    
-    # 主要 heatmap：以 z-score 呈現 normalized counts
+ 
     ht1 <- Heatmap(t(scale(t(m_sub))), name = "z-score",
-                   top_annotation = HeatmapAnnotation(
-                     group = sample_info$"subCode"
-                   ),
-                   show_row_names = FALSE, show_column_names = FALSE,
-                   column_title = paste0(nrow(m_sub), " selected genes"),
-                   show_row_dend = FALSE)
+                      top_annotation = HeatmapAnnotation(
+                        group = sample_info$"subCode"
+                      ),
+                      show_row_names = TRUE, show_column_names = FALSE,
+                      column_title = paste0(nrow(m_sub), " selected genes"),
+                      cluster_rows = TRUE,
+                      #column_names_gp = gpar(fontsize = 0) # Make sure sample names are not shown
+                   ) 
     
-    # 第二 heatmap：呈現 -log10(p-value)
     ht2 <- Heatmap(-log10(pval), name = "-log10(p-value)",
                    show_row_names = FALSE, show_column_names = FALSE,
                    width = unit(5, "mm"))
     
-    # 第三 heatmap：呈現 log2FoldChange
     ht3 <- Heatmap(log2fc, name = "log2FoldChange",
                    show_row_names = FALSE, show_column_names = FALSE,
                    width = unit(5, "mm"),
@@ -260,7 +200,6 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
 #'
 #' @export
 run_heatmap_app <- function(mae, geneList = NULL) {
-  # 載入必要套件
   library(shiny)
   library(InteractiveComplexHeatmap)
   
@@ -297,25 +236,21 @@ run_heatmap_app <- function(mae, geneList = NULL) {
 #' @export
 
 make_heatmap_mae_pheatmap <- function(mae, geneList = NULL) {
-  # 若尚未安裝 pheatmap，請先安裝
   if (!requireNamespace("pheatmap", quietly = TRUE)) {
     install.packages("pheatmap")
   }
   library(pheatmap)
   
-  # 從 MAE 中取得 RNAseq 的 SummarizedExperiment
   if (!"RNAseq" %in% names(experiments(mae))) {
     stop("RNAseq experiment not found in the provided MAE object.")
   }
   rna_se <- experiments(mae)[["RNAseq"]]
   
-  # 取得 normalized counts (assay 名稱為 "normCount")
   if (!"normCount" %in% assayNames(rna_se)) {
     stop("normCount assay not found in RNAseq experiment.")
   }
   m <- assay(rna_se, "normCount")
   
-  # 若有提供 geneList，則以 geneList 為依據子集化基因
   if (!is.null(geneList)) {
     valid_genes <- intersect(geneList, rownames(m))
     if (length(valid_genes) == 0) {
@@ -324,7 +259,6 @@ make_heatmap_mae_pheatmap <- function(mae, geneList = NULL) {
     m <- m[valid_genes, , drop = FALSE]
   }
   
-  # 從 colData 取得樣本的 annotation，預設使用 "group" 欄位，若無則嘗試 "subCode"
   sample_info <- as.data.frame(colData(rna_se))
   if ("group" %in% colnames(sample_info)) {
     annotation_col <- data.frame(Group = sample_info$group)
@@ -334,8 +268,7 @@ make_heatmap_mae_pheatmap <- function(mae, geneList = NULL) {
     annotation_col <- data.frame(Group = rep("Unknown", nrow(sample_info)))
   }
   rownames(annotation_col) <- colnames(m)
-  
-  # 繪製 heatmap，scale = "row" 可將每個基因做 z-score 正規化，並顯示基因與樣本名稱
+
   p <- pheatmap(m,
                 scale = "row",
                 annotation_col = annotation_col,
