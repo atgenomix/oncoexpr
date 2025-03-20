@@ -118,7 +118,7 @@ create_mae_airway_edgeR <- function() {
 #'
 #' @return A \code{ComplexHeatmap} object.
 #' @export
-#' 
+#' @import shinydashboard
 make_heatmap_mae <- function(mae, geneList = NULL) {
   library(InteractiveComplexHeatmap)
   library(ComplexHeatmap)
