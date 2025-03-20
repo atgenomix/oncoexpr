@@ -48,7 +48,7 @@ create_mae_airway <- function() {
 #' This function loads the airway dataset, performs edgeR differential expression analysis,
 #' and creates a MultiAssayExperiment (MAE) object. The edgeR results (including p-value,
 #' log2FoldChange, and FDR) are attached to the rowData of the RNAseq assay.
-#'
+#' 
 #' @return A MultiAssayExperiment object.
 #' @export
 create_mae_airway_edgeR <- function() {

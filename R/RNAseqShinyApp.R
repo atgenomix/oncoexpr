@@ -26,6 +26,7 @@
 #' @import DT
 #' @import InteractiveComplexHeatmap
 #' @import ggiraph
+#' @import shinydashboard
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
@@ -52,6 +53,7 @@ NULL
 #' }
 #'
 #' @export
+
 
 RNAseqShinyAppSpark <- function() {
 
@@ -266,8 +268,6 @@ RNAseqShinyAppSpark <- function() {
         colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
         results$coldata <- colData
       }
-      print(str(results$normcount_data))
-      print(str(results$exacttest_data))
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]

@@ -38,6 +38,8 @@ Imports:
     shinybusy,
     DBI,
     DT,
-    bslib
+    bslib,
+    shinydashboard,
+    ggiraph
 
 
