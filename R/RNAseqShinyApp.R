@@ -26,7 +26,6 @@
 #' @import DT
 #' @import InteractiveComplexHeatmap
 #' @import ggiraph
-#' @import shinydashboard
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
@@ -53,7 +52,6 @@ NULL
 #' }
 #'
 #' @export
-
 
 RNAseqShinyAppSpark <- function() {
 
@@ -208,7 +206,16 @@ RNAseqShinyAppSpark <- function() {
 
   server <- function(input, output, session) {
     
-    sc <- reactiveVal(NULL)    
+    sc <- reactiveVal(NULL)
+    
+    observe({
+      master <- "sc://172.18.0.1:15002"
+      method <- "spark_connect"
+      version <- "3.5"
+      connection <- sparklyr::spark_connect(master = master, method = method, version = version)
+      sc(connection)
+    })
+    
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
@@ -217,34 +224,26 @@ RNAseqShinyAppSpark <- function() {
       exacttest_data = NULL,
       coldata = NULL
     )
-
-    observe({
-
-        master <- "sc://localhost:15002"
-        method <- "spark_connect"
-        version <- "3.5"
-        sc(sparklyr::spark_connect(master = master, method = method, version = version))
-    })
-
+    
     observe({
       req(sc())
-        print("dbbrowser")
-        results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      print("test null sc")
+      results$db_info <- dbBrowserServer("dbBrowser1", sc())
     })
-
+    
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
       
       DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
       tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
-      tbls <- tbl_list_query$tableName
+      tbls <- tbl_list_query$tableName      
 
       prefix <- c("^normcounts|^exacttest|^coldata")
-
+      
       tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
       results$table_list <- tbls_with_prefix
-
+      
       normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
       exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
       coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
@@ -262,34 +261,41 @@ RNAseqShinyAppSpark <- function() {
       if (length(coldata_tbls) > 0) {
         query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
         results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
-      } else {
+
+      }else{
         colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
         results$coldata <- colData
       }
+      print(str(results$normcount_data))
+      print(str(results$exacttest_data))
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-      #results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-      #sc()$session$stop()
-      #sc(NULL)
-    })
+      results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+      #colnames(results$normcount_data)[colnames(results$normcount_data) != "GeneSymbol"] <- unlist(lapply(unique(results$coldata[,"subCode"]), function(x) paste(x, paste0("S", 1:nrow(results$coldata)), sep="_")))
+      
+      
 
+    })
+    
+
+      
     output$normcount_table <- DT::renderDataTable({
       req(results$normcount_data)
       DT::datatable(results$normcount_data)
     })
-
+    
     output$exacttest_table <- DT::renderDataTable({
       req(results$exacttest_data)
       DT::datatable(results$exacttest_data)
     })
-
+    
     volcano_res <- reactiveVal(NULL)
     settingMAE <- reactiveVal(NULL)
     DEG_table <- reactiveVal(NULL)
     DEG_summary <- reactiveVal(NULL)
     wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
-
+    
     output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
       print("send wide data to UI")
@@ -298,7 +304,7 @@ RNAseqShinyAppSpark <- function() {
         options = list(pageLength = 20, autoWidth = TRUE)
       )
     })
-
+    
     observeEvent(results$db_info$selected_db(), { 
       req(results$coldata, results$normcount_data, results$exacttest_data)
       DEG_table(results$exacttest_data)
@@ -321,14 +327,14 @@ RNAseqShinyAppSpark <- function() {
       rownames(sample_info_table) <- colnames(assay_data) # The rownames of colData must match the colnames of assay_data
 
       se_expression_matrix <- SummarizedExperiment(
-        assays = list(normCount = assay_data), # read count, TPM, COV, FPKM
+        assays = list(normCount = assay_data), #read count, TPM, COV, FPKM
         colData = sample_info_table,
         rowData = S4Vectors::DataFrame(deg_data_sub)
       )
 
       mae <- MultiAssayExperiment(
         experiments = list(
-          RNAseq = se_expression_matrix   # normCoun
+          RNAseq = se_expression_matrix   #  normCoun
         ),
         colData = sample_info_table
       )
@@ -398,6 +404,7 @@ RNAseqShinyAppSpark <- function() {
       gene_list_string <- paste(c(topGeneList(), downGeneList()), collapse = ",")
       updateTextInput(session, "geneListheatmap", value = gene_list_string)
 
+      
     })
     
     observeEvent(input$generate_go, {
@@ -412,11 +419,11 @@ RNAseqShinyAppSpark <- function() {
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
         for (mode in c("CC", "BP", "MF")) {
           VAR <- paste0(col, "_", mode, "GO")
-          result <- go_enrich_dotplot(
-            gene_list_ = unique(gene_list),
+          result <- go_enrich_dotplot( 
+            gene_list_ = unique(gene_list), 
             save_path_ = NULL,
-            save_filename_ = NULL,
-            mode_ = mode,
+            save_filename_ = NULL, 
+            mode_ = mode, 
             showCategory_ = 10
           )
           assign(VAR, result, envir = .GlobalEnv)
@@ -429,7 +436,7 @@ RNAseqShinyAppSpark <- function() {
       output$G2_BP <- renderPlot({G2_BPGO})
       output$G2_CC <- renderPlot({G2_CCGO})
     })
-
+    
     observeEvent(input$generate_go, {
       req(topGeneList(), downGeneList(), settingMAE())
       mae <- settingMAE()
@@ -441,10 +448,10 @@ RNAseqShinyAppSpark <- function() {
         col <- groups_list[n]
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
         VAR <- paste0(col, "_", "KEGG")
-        result <- kegg_enrich_dotplot(
-          gene_list_ = unique(gene_list),
+        result <- kegg_enrich_dotplot( 
+          gene_list_ = unique(gene_list), 
           save_path_ = NULL,
-          save_filename_ = NULL,
+          save_filename_ = NULL, 
           showCategory_ = 10
         )
         assign(VAR, result, envir = .GlobalEnv)
@@ -452,8 +459,7 @@ RNAseqShinyAppSpark <- function() {
       output$G1_KEGG <- renderPlot({G1_KEGG})
       output$G2_KEGG <- renderPlot({G2_KEGG})
     })
-
-        
+    
     observeEvent(input$targetGeneID, {
       req(settingMAE())
       mae <- settingMAE()
@@ -470,18 +476,9 @@ RNAseqShinyAppSpark <- function() {
         })
       }
     })
+
   }
   
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
 }
-
-#library(shiny)
-#library(DBI)
-#library(shinybusy)
-#library(bslib)
-#library(pheatmap)
-#library(oncoexpr)
-#library(sparklyr)
-#library(InteractiveComplexHeatmap)
-#RNAseqShinyAppSpark()
