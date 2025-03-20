@@ -207,7 +207,7 @@ RNAseqShinyAppSpark <- function() {
   server <- function(input, output, session) {
     
     sc <- reactiveVal(NULL)
-    
+
     observe({
       master <- "sc://172.18.0.1:15002"
       method <- "spark_connect"
