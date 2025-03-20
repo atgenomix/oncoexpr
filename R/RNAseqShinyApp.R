@@ -273,10 +273,13 @@ RNAseqShinyAppSpark <- function() {
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-      print(str(results$exacttest_data))
+      #colnames(results$normcount_data)[colnames(results$normcount_data) != "GeneSymbol"] <- unlist(lapply(unique(results$coldata[,"subCode"]), function(x) paste(x, paste0("S", 1:nrow(results$coldata)), sep="_")))
+      
+      
 
     })
     
+
       
     output$normcount_table <- DT::renderDataTable({
       req(results$normcount_data)

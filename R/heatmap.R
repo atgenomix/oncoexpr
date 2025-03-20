@@ -150,7 +150,8 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
                   show_row_names = TRUE, show_column_names = FALSE,
                   column_title = paste0(nrow(m_sub), " selected genes"),
                   #show_row_dend = TRUE,
-                  cluster_rows = TRUE
+                  cluster_rows = TRUE,
+                  #column_names_gp = gpar(fontsize = 0) # Make sure sample names are not shown
           )
   } else {
     pval <- as.numeric(unlist(rd_sub$PValue))
@@ -161,13 +162,14 @@ make_heatmap_mae <- function(mae, geneList = NULL) {
     sample_info <- as.data.frame(colData(rna_se))
  
     ht1 <- Heatmap(t(scale(t(m_sub))), name = "z-score",
-                   top_annotation = HeatmapAnnotation(
-                     group = sample_info$"subCode"
-                   ),
-                   show_row_names = TRUE, show_column_names = FALSE,
-                   column_title = paste0(nrow(m_sub), " selected genes"),
-                   #show_row_dend = FALSE,
-                   cluster_rows = TRUE)
+                      top_annotation = HeatmapAnnotation(
+                        group = sample_info$"subCode"
+                      ),
+                      show_row_names = TRUE, show_column_names = FALSE,
+                      column_title = paste0(nrow(m_sub), " selected genes"),
+                      cluster_rows = TRUE,
+                      #column_names_gp = gpar(fontsize = 0) # Make sure sample names are not shown
+                   ) 
     
     ht2 <- Heatmap(-log10(pval), name = "-log10(p-value)",
                    show_row_names = FALSE, show_column_names = FALSE,
