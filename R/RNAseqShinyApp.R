@@ -268,7 +268,9 @@ RNAseqShinyAppSpark <- function() {
       }
       colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-      #results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+      results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+      results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+
       #sc()$session$stop()
       #sc(NULL)
     })
