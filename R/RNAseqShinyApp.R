@@ -237,43 +237,64 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
       
-      DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-      tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
-      tbls <- tbl_list_query$tableName
+      promise({
+        DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+        tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+        tbls <- tbl_list_query$tableName
 
-      prefix <- c("^normcounts|^exacttest|^coldata")
+        prefix <- c("^normcounts|^exacttest|^coldata")
+        tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
+        results$table_list <- tbls_with_prefix
 
-      tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
-      results$table_list <- tbls_with_prefix
+        normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
+        exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
+        coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
 
-      normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
-      exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
-      coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
+        # Create a list to store all promises
+        data_promises <- list()
 
-      if (length(normcount_tbls) > 0) {
-        query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-        results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+        if (length(normcount_tbls) > 0) {
+          data_promises$normcount <- promise({
+            query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+            DBI::dbGetQuery(sc(), query_normcount)
+          })
+        }
+
+        if (length(exacttest_tbls) > 0) {
+          data_promises$exacttest <- promise({
+            query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+            DBI::dbGetQuery(sc(), query_exacttest)
+          })
+        }
+
+        if (length(coldata_tbls) > 0) {
+          data_promises$coldata <- promise({
+            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+            DBI::dbGetQuery(sc(), query_coldata)
+          })
+        } else {
+          data_promises$coldata <- promise({
+            generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
+          })
+        }
+
+        # Wait for all promises to resolve
+        Promise.all(data_promises)
+      }) %...>% {
+        # Handle the resolved promises
+        results$normcount_data <- .$normcount
+        results$exacttest_data <- .$exacttest
+        results$coldata <- .$coldata
+
+        # Process the data after all promises are resolved
+        colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+        colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+        results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+        results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+      } %...!% {
+        # Error handling
+        print(paste("Error in database operations:", .))
       }
-      
-      if (length(exacttest_tbls) > 0) {
-        query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-        results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
-      }
-      
-      if (length(coldata_tbls) > 0) {
-        query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-        results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
-      } else {
-        colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
-        results$coldata <- colData
-      }
-      colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-      results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-      results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-
-      #sc()$session$stop()
-      #sc(NULL)
     })
 
     output$normcount_table <- DT::renderDataTable({
