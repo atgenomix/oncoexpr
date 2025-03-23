@@ -55,7 +55,8 @@ NULL
 #' @export
 
 
-RNAseqShinyAppSpark <- function() {
+
+RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
 
   ui <- fluidPage(
     navbarPage(
@@ -220,9 +221,9 @@ RNAseqShinyAppSpark <- function() {
 
     observe({
 
-        master <- "sc://172.18.0.1:15002"
-        method <- "spark_connect"
-        version <- "3.5"
+        #master <- "sc://172.18.0.1:15002"
+        #method <- "spark_connect"
+        #version <- "3.5"
         sc(sparklyr::spark_connect(master = master, method = method, version = version))
     })
 

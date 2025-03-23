@@ -1,3 +1,5 @@
+^renv$
+^renv\.lock$
 ^oncoexpr\.Rproj$
 ^\.Rproj\.user$
  
