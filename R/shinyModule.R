@@ -455,7 +455,6 @@ dbBrowserServer <- function(id, sc) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # 動態更新資料庫清單
     observe({
       db_list_query <- dbGetQuery(sc, "SHOW DATABASES")
       # 假設第一欄就是資料庫名稱

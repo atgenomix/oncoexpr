@@ -4,7 +4,11 @@
 \alias{RNAseqShinyAppSpark}
 \title{shiny app for RNAseq for public use}
 \usage{
-RNAseqShinyAppSpark()
+RNAseqShinyAppSpark(
+  master = "sc://172.18.0.1:15002",
+  method = "spark_connect",
+  version = "3.5"
+)
 }
 \value{
 A Shiny application object.

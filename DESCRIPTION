@@ -13,7 +13,6 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
     remotes,
-    BiocManager (>= 3.3),
     limma (>= 3.60.6),
     pcaPP (>= 2.0-5),
     reshape2 (>= 1.4.4),
@@ -40,10 +39,10 @@ Imports:
     ggiraph,
     pysparklyr
 Remotes:
-    bioc::3.3/edgeR,
-    bioc::3.3/MultiAssayExperiment,
-    bioc::3.3/SummarizedExperiment,
-    bioc::3.3/enrichplot,
-    bioc::3.3/clusterProfiler,
-    bioc::3.3/Biobase,
-    bioc::3.3/InteractiveComplexHeatmap
+    bioc::3.20/edgeR,
+    bioc::3.20/MultiAssayExperiment,
+    bioc::3.20/SummarizedExperiment,
+    bioc::3.20/enrichplot,
+    bioc::3.20/clusterProfiler,
+    bioc::3.20/Biobase,
+    bioc::3.20/InteractiveComplexHeatmap

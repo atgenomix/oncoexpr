@@ -1,6 +1,4 @@
 ^renv$
 ^renv\.lock$
-^oncoexpr\.Rproj$
+^.*\.Rproj$
 ^\.Rproj\.user$
- 
-
