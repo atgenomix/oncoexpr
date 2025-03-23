@@ -412,6 +412,8 @@ dbBrowserServer <- function(id, sc) {
     
     observe({
       db_list_query <- dbGetQuery(sc, "SHOW DATABASES")
+      #org <- tolower(Sys.getenv("SPARK_USER"))
+      #db_list_query <- dbGetQuery(sc, sprintf("SHOW DATABASES LIKE '%%_%s'", org))
       db_list <- db_list_query
       
       updateSelectInput(
