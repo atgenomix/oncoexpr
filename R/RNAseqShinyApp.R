@@ -277,7 +277,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         }
 
         # Wait for all promises to resolve
-        Promise.all(data_promises)
+        promise_all(.list = data_promises)
       }) %...>% {
         # Handle the resolved promises
         results$normcount_data <- .$normcount
