@@ -40,6 +40,5 @@ Remotes:
     bioc::3.20/SummarizedExperiment,
     bioc::3.20/enrichplot,
     bioc::3.20/clusterProfiler,
-    bioc::3.20/InteractiveComplexHeatmap,
     bioc::3.20/edgeR,
     bioc::3.20/Biobase
