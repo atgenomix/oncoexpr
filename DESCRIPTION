@@ -13,8 +13,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 biocViews:
 Remotes:
-    bioc::3.20/MultiAssayExperiment,
-    bioc::3.20/SummarizedExperiment,
+    Bioconductor/MultiAssayExperiment,
+    Bioconductor/SummarizedExperiment,
     bioc::3.20/enrichplot,
     bioc::3.20/clusterProfiler,
     bioc::3.20/InteractiveComplexHeatmap,
