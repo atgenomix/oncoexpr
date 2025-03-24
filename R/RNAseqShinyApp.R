@@ -31,7 +31,7 @@
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
 
-#' 
+#'
 NULL
 #' @keywords internal
 #' RNAseqShinyAppSpark
@@ -96,22 +96,22 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sidebar = sidebar(
             style = "min-height: 600px; overflow-y: auto;",
 
-            sliderInput("lfc_cut", "Fold Change Threshold (log2):", 
+            sliderInput("lfc_cut", "Fold Change Threshold (log2):",
                         min = 0, max = 10, value = 1, step = 0.1),
 
-            sliderInput("pval_cut", "p-value Threshold:", 
+            sliderInput("pval_cut", "p-value Threshold:",
                         min = 0.001, max = 1, value = 0.05, step = 0.001),
 
-            sliderInput("pointSize", "Point Size:", 
+            sliderInput("pointSize", "Point Size:",
                         min = 1, max = 5, value = 2, step = 0.5),
 
-            sliderInput("ptAlpha", "Transparent:", 
+            sliderInput("ptAlpha", "Transparent:",
                         min = 0.1, max = 1, value = 0.6, step = 0.1),
 
-            sliderInput("labelSize", "Gene Label Size:", 
+            sliderInput("labelSize", "Gene Label Size:",
                         min = 1, max = 6, value = 3, step = 0.5),
 
-            numericInput("topN", "Label N number of Genes (0 is no labeling):", 
+            numericInput("topN", "Label N number of Genes (0 is no labeling):",
                          value = 100, min = 0, max = 1000),
 
             checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
@@ -121,28 +121,28 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           mainPanel(
             width = 12,
             tabsetPanel(
-                
+
                 tabPanel("Volcano Plot interaction",
 
-                
+
                       interactivePlotsUI("plotVolcano")
-                    
-                  
+
+
                 ),
 
-                tabPanel("DEG Table", 
+                tabPanel("DEG Table",
 
                         DT::dataTableOutput('DEG_table', width = "100%")
 
                 )
             )
-              
-            
+
+
           )
         )
       ),
       tabPanel(
-        title = "Gene-enriched Analysis", 
+        title = "Gene-enriched Analysis",
         sidebarPanel(
           actionButton(inputId = "generate_go", label = "Analysis"),
           width = 2
@@ -198,7 +198,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               )
             )
 
-            
+
           )
         )
       )
@@ -208,8 +208,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   )
 
   server <- function(input, output, session) {
-    
-    sc <- reactiveVal(NULL)    
+
+    sc <- reactiveVal(NULL)
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
@@ -220,23 +220,26 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     )
 
     observe({
-
-        #master <- "sc://172.18.0.1:15002"
-        #method <- "spark_connect"
-        #version <- "3.5"
-        sc(sparklyr::spark_connect(master = master, method = method, version = version))
+      #if (is.null(sc())) {
+      master <- "sc://localhost:15002"
+      method <- "spark_connect"
+      version <- "3.5"
+      sc(sparklyr::spark_connect(master = master, method = method, version = version))
+      #}
     })
 
     observe({
       req(sc())
-        print("dbbrowser")
-        results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      #if (is.null(results$db_info)) {
+      print("dbbrowser")
+      results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      #}
     })
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
-      
+
       DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
       tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
@@ -254,12 +257,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
       }
-      
+
       if (length(exacttest_tbls) > 0) {
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
       }
-      
+
       if (length(coldata_tbls) > 0) {
         query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
         results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
@@ -271,7 +274,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
       results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-
+      #spark_disconnect(sc())
       #sc()$session$stop()
       #sc(NULL)
     })
@@ -302,7 +305,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       )
     })
 
-    observeEvent(results$db_info$selected_db(), { 
+    observeEvent(results$db_info$selected_db(), {
       req(results$coldata, results$normcount_data, results$exacttest_data)
       DEG_table(results$exacttest_data)
       wide_data(results$normcount_data)
@@ -311,7 +314,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       if ("GeneSymbol" %in% colnames(wide_data())) {
         rownames(assay_data) <- wide_data()[, "GeneSymbol"]
       }
-    
+
       deg_data <- results$exacttest_data
       if ("GeneSymbol" %in% colnames(deg_data)) {
         rownames(deg_data) <- deg_data$GeneSymbol
@@ -337,10 +340,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       )
       settingMAE(mae)
     })
-    
+
     observeEvent(input$run_DEG, {
       mae <- settingMAE()
-      
+
       output$DEG_table <- renderDT({
         datatable(
           DEG_table(),
@@ -369,8 +372,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           print(str(volcanoData))
           print(str(colData))
           exprData <- transfExprFormat( normCount, colData)
-          interactivePlotsServer("plotVolcano", 
-                                volcanoData = volcanoData, 
+          interactivePlotsServer("plotVolcano",
+                                volcanoData = volcanoData,
                                 exprData = exprData, params)
           print(str(exprData))
     })
@@ -383,28 +386,28 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         message("run_DEG pressed: reactive values updated.")
 
     })
-    
+
     topGeneList <- reactiveVal(NULL)
     downGeneList <- reactiveVal(NULL)
-    
+
     observeEvent(input$run_DEG, {
       req(DEG_table())
       DEG_table <- DEG_table()
-      
+
       DEG_table_filtered <- DEG_table[DEG_table$PValue < input$pval_cut & abs(DEG_table$logFC) > input$lfc_cut, ]
       sorted_DEG <- DEG_table_filtered[order(DEG_table_filtered$logFC, decreasing = TRUE),]
       gene_list_symbol <- sorted_DEG$GeneSymbol
 
       topGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == 1, "GeneSymbol"])
-      downGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == -1, "GeneSymbol"]) 
+      downGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == -1, "GeneSymbol"])
 
       gene_list_string <- paste(c(topGeneList(), downGeneList()), collapse = ",")
       updateTextInput(session, "geneListheatmap", value = gene_list_string)
 
     })
-    
+
     observeEvent(input$generate_go, {
-      req(topGeneList(), downGeneList(), settingMAE())                
+      req(topGeneList(), downGeneList(), settingMAE())
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
@@ -456,14 +459,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       output$G2_KEGG <- renderPlot({G2_KEGG})
     })
 
-        
+
     observeEvent(input$targetGeneID, {
       req(settingMAE())
       mae <- settingMAE()
       geneList <- unlist(strsplit(input$geneListheatmap, ","))
       geneList <- trimws(geneList)
       ht <- make_heatmap_mae(mae, geneList)
-      
+
       if (!is.null(ht)) {
         makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
       } else {
@@ -474,17 +477,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
   }
-  
+
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
 }
-
-#library(shiny)
-#library(DBI)
-#library(shinybusy)
-#library(bslib)
-#library(pheatmap)
-#library(oncoexpr)
-#library(sparklyr)
-#library(InteractiveComplexHeatmap)
-#RNAseqShinyAppSpark()

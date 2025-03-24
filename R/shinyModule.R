@@ -3,7 +3,7 @@
 #' @param id id
 #' @return filtered table
 #' @export
-#' 
+#'
 filterModuleUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -34,17 +34,17 @@ filterModuleServer <- function(id, data) {
         select(!!sym(input$mainCode_col)) %>%
         distinct() %>%
         .[[1]] %>% as.character() %>% trimws()
-      selectInput(session$ns("mainCode_select"), "選擇 mainCode 值：", 
+      selectInput(session$ns("mainCode_select"), "選擇 mainCode 值：",
                   choices = c("all", vals), multiple = TRUE, selected = "all")
     })
-    
+
     output$subCode_values <- renderUI({
       req(input$subCode_col)
       vals <- data() %>%
         select(!!sym(input$subCode_col)) %>%
         distinct() %>%
         .[[1]] %>% as.character() %>% trimws()
-      selectInput(session$ns("subCode_select"), "選擇 subCode 值：", 
+      selectInput(session$ns("subCode_select"), "選擇 subCode 值：",
                   choices = c("all", vals), multiple = TRUE, selected = "all")
     })
 
@@ -61,7 +61,6 @@ filterModuleServer <- function(id, data) {
       }
       df
     })
-    
     return(filtered_data)
   })
 }
@@ -105,14 +104,14 @@ mod_filter_server <- function(id, long_df) {
       req(long_df())
       long_df() %>% select(-value)
     })
-    
+
     observe({
       req(colData_df())
       updateSelectizeInput(session, "filter_columns",
                            choices = names(colData_df()),
                            server = TRUE)
     })
-    
+
     observe({
       req(input$filter_columns)
       stored <- names(rv_filter)
@@ -122,7 +121,7 @@ mod_filter_server <- function(id, long_df) {
         }
       }
     })
-    
+
     output$value_select_ui <- renderUI({
       req(colData_df())
       selected_cols <- input$filter_columns
@@ -130,7 +129,6 @@ mod_filter_server <- function(id, long_df) {
         return(NULL)
       }
       ui_list <- lapply(selected_cols, function(col) {
-
         choices <- colData_df() %>% 
           distinct(.data[[col]]) %>% 
           pull() %>% 
@@ -148,7 +146,7 @@ mod_filter_server <- function(id, long_df) {
       })
       do.call(tagList, ui_list)
     })
-    
+
     observe({
       req(input$filter_columns)
       for (col in input$filter_columns) {
@@ -163,7 +161,7 @@ mod_filter_server <- function(id, long_df) {
         }
       }
     })
-    
+
     filtered_df <- reactive({
       req(long_df())
       df <- long_df()
@@ -178,22 +176,21 @@ mod_filter_server <- function(id, long_df) {
       }
       df
     })
-    
     output$colData_table <- renderDT({
       if (!is.null(input$filter_columns) && length(input$filter_columns) > 0) {
-        df <- colData_df() %>% 
-          select(any_of(input$filter_columns)) %>% 
+        df <- colData_df() %>%
+          select(any_of(input$filter_columns)) %>%
           distinct()
       } else {
         df <- colData_df() %>% distinct()
       }
       df
     }, options = list(pageLength = 5))
-    
+
     output$filtered_data_table <- renderDT({
       filtered_df()
     }, options = list(pageLength = 5))
-    
+
     return(list(filtered_data = filtered_df))
   })
 }
@@ -208,21 +205,19 @@ mod_filter_server <- function(id, long_df) {
 #' @export
 
 generate_coldata_for_local_tcga_data <- function(filtered_table, mainCode_, subCode_){
-  selected_df <- filtered_table %>% select(mainCode_, subCode_) %>% distinct() 
+  selected_df <- filtered_table %>% select(mainCode_, subCode_) %>% distinct()
   print(dim(selected_df))
   print(mainCode_)
   print(subCode_)
-  
   names(selected_df)[names(selected_df) == mainCode_] <- "mainCode"
   names(selected_df)[names(selected_df) == subCode_] <- "subCode"
-  
   return(selected_df)
 }
 
 
 
 
-#' @title UI for connecting to spark 
+#' @title UI for connecting to spark
 #' @description spark connection shiny UI
 #' @param id id
 #' @return pivot long format from se object
@@ -246,9 +241,9 @@ sparkConnectionUI <- function(id) {
 }
 
 
-#' @title Server for connecting to spark 
+#' @title Server for connecting to spark
 #' @description spark connection shiny server
-#' @param id id  
+#' @param id id
 #' @return pivot long format from se object
 #' @export
 
@@ -256,7 +251,7 @@ sparkConnectionServer <- function(id) {
   moduleServer(id, function(input, output, session) {
 
     sc <- reactiveVal(NULL)
-    
+
     observeEvent(input$connect, {
       if (input$conn_option == "default") {
         master <- "local"
@@ -270,11 +265,7 @@ sparkConnectionServer <- function(id) {
         connection <<- sparklyr::spark_connect(master = master, method = method, version = version )
         sc(connection)
       }
-      
-      
-
     })
-
     return(sc)
   })
 }
@@ -284,7 +275,7 @@ sparkConnectionServer <- function(id) {
 #' @title sampleSelect shinmy UI module
 #' @description set shiny UI module for sample selection
 #' @param id module id for UI and Server
-#' @return UI module 
+#' @return UI module
 #' @export
 
 sampleSelectionUI <- function(id) {
@@ -308,10 +299,10 @@ sampleSelectionUI <- function(id) {
 #' @description set shiny Server module for sample selection
 #' @param id module id for UI and Server
 #' @param sc spark connection
-#' @param selected_db select database from spark 
+#' @param selected_db select database from spark
 #' @param selected_table select deltatable from selected database
 #' @param set_colData a reactive Value for storage dynamic dataframe
-#' @return Sample selection Server module 
+#' @return Sample selection Server module
 #' @export
 
 sampleSelectionServer <- function(
@@ -321,8 +312,8 @@ sampleSelectionServer <- function(
     selected_table,
     set_colData
 ) {
-  
-  
+
+
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     preview_data_filtered <- reactiveVal(NULL) 
@@ -341,7 +332,6 @@ sampleSelectionServer <- function(
 
 
       DBI::dbExecute(sc, paste0("USE spark_catalog.", selected_db()))
-
       result <- query_spark_rnaseqdata(
         sc         = sc,
         use_table  = selected_table(),
@@ -350,8 +340,6 @@ sampleSelectionServer <- function(
         normMethod = input$normMethod_input
       )
       print(head(result$data))
-
-      
       df_renamed <- result$data |> dplyr::rename(
         mainCode = main_code,
         subCode  = sub_code
@@ -362,22 +350,20 @@ sampleSelectionServer <- function(
 
       required_cols <- c("mainCode","subCode")
       print(required_cols %in% colnames(df_renamed))
-      
+
       distinct_data <- df_renamed %>%
         select(mainCode, subCode) %>%
         distinct()
       print(dim(distinct_data))
       set_colData(distinct_data) # sample information (MAE colData)
       print(head(set_colData()))
-      
-      
     })
-    
-    
+
+
     return(list(
       subColData = set_colData,
       filteredTable  = preview_data_filtered
-      
+
     ))
   })
 }
@@ -386,7 +372,7 @@ sampleSelectionServer <- function(
 #' @title dbBrowerUI
 #' @description search spark database
 #' @param id module id for UI and Server
-#' @return database browser UI module 
+#' @return database browser UI module
 #' @export
 
 dbBrowserUI <- function(id) {
@@ -409,13 +395,11 @@ dbBrowserUI <- function(id) {
 dbBrowserServer <- function(id, sc) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
     observe({
-      #db_list_query <- dbGetQuery(sc, "SHOW DATABASES")
       org <- tolower(Sys.getenv("SPARK_USER"))
-      db_list_query <- dbGetQuery(sc, sprintf("SHOW DATABASES LIKE '%%_%s'", org))
-      db_list <- db_list_query
-      
+      c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+      print(c)
+      db_list <- dbGetQuery(sc, sprintf("SHOW DATABASES %s", c))
       updateSelectInput(
         session,
         "selected_db",
@@ -423,11 +407,8 @@ dbBrowserServer <- function(id, sc) {
         selected = db_list[1]
       )
     })
-    
- 
-    selected_db    <- reactive({ input$selected_db })
 
-    
+    selected_db    <- reactive({ input$selected_db })
     return(list(
       selected_db    = selected_db
     ))
