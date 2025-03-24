@@ -280,18 +280,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         }
 
         # Wait for all promises to resolve
-        data_all <- promise_all(.list = data_promises)
+        promise_all(.list = data_promises) %...>% {
 
-        # Handle the resolved promises
-        results$normcount_data <- data_all$normcount
-        results$exacttest_data <- data_all$exacttest
-        results$coldata <- data_all$coldata
+          # Handle the resolved promises
+          results$normcount_data <- .$normcount
+          results$exacttest_data <- .$exacttest
+          results$coldata <- .$coldata
 
-        # Process the data after all promises are resolved
-        colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-        colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-        results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-        results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+          # Process the data after all promises are resolved
+          colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+          colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+          results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+          results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+        }
       })
     })
 
@@ -493,17 +494,20 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
   }
-  
+
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
 }
 
-#library(shiny)
-#library(DBI)
-#library(shinybusy)
-#library(bslib)
-#library(pheatmap)
-#library(oncoexpr)
-#library(sparklyr)
-#library(InteractiveComplexHeatmap)
-#RNAseqShinyAppSpark()
+# library(shiny)
+# library(DBI)
+# library(shinybusy)
+# library(bslib)
+# library(pheatmap)
+# library(oncoexpr)
+# library(sparklyr)
+# library(InteractiveComplexHeatmap)
+# library(promises)
+# library(future)
+# plan(multisession)
+# RNAseqShinyAppSpark()
