@@ -235,7 +235,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
       
-      promise({
+      future_promise({
         DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
         tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
         tbls <- tbl_list_query$tableName
@@ -252,26 +252,26 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         data_promises <- list()
 
         if (length(normcount_tbls) > 0) {
-          data_promises$normcount <- promise({
+          data_promises$normcount <- future_promise({
             query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
             DBI::dbGetQuery(sc(), query_normcount)
           })
         }
 
         if (length(exacttest_tbls) > 0) {
-          data_promises$exacttest <- promise({
+          data_promises$exacttest <- future_promise({
             query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
             DBI::dbGetQuery(sc(), query_exacttest)
           })
         }
 
         if (length(coldata_tbls) > 0) {
-          data_promises$coldata <- promise({
+          data_promises$coldata <- future_promise({
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             DBI::dbGetQuery(sc(), query_coldata)
           })
         } else {
-          data_promises$coldata <- promise({
+          data_promises$coldata <- future_promise({
             generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
           })
         }
