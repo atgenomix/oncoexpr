@@ -11,16 +11,18 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
-biocViews:
-Remotes:
-    Bioconductor/MultiAssayExperiment,
-    Bioconductor/SummarizedExperiment,
-    bioc::3.20/enrichplot,
-    bioc::3.20/clusterProfiler,
-    bioc::3.20/InteractiveComplexHeatmap,
-    bioc::3.20/edgeR,
-    bioc::3.20/Biobase
+biocViews: GeneExpression, Transcription, AlternativeSplicing,
+        Coverage, DifferentialExpression, DifferentialSplicing,
+        DifferentialMethylation, GeneSetEnrichment, Pathways, Genetics,
+        DNAMethylation, Bayesian, Clustering, ChIPSeq, Regression,
+        TimeCourse, Sequencing, RNASeq, BatchEffect, SAGE,
+        Normalization, QualityControl, MultipleComparison,
+        BiomedicalInformatics, CellBiology, FunctionalGenomics,
+        Epigenetics, Genetics, ImmunoOncology, SystemsBiology,
+        Transcriptomics, SingleCell
 Imports:
     pysparklyr,
     edgeR,
-    InteractiveComplexHeatmap
+    InteractiveComplexHeatmap,
+    MultiAssayExperiment,
+    clusterProfiler
