@@ -19,7 +19,8 @@ Remotes:
     bioc::3.20/InteractiveComplexHeatmap,
     bioc::3.20/edgeR,
     bioc::3.20/Biobase
-Imports: 
+Imports:
+    remotes, 
     pcaPP (>= 2.0-5),
     reshape2 (>= 1.4.4),
     stringr (>= 1.5.1),
