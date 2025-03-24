@@ -235,9 +235,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
       
-      future_promise({
+      tbl_list_promise <- future_promise({
         DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-        tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+        DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+      })
+
+      tbl_list_promise %...>% (function(tbl_list) {
         tbls <- tbl_list_query$tableName
 
         prefix <- c("^normcounts|^exacttest|^coldata")
@@ -277,21 +280,18 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         }
 
         # Wait for all promises to resolve
-        promise_all(.list = data_promises)
-      }) %>% then(~ {
+        data_all <- promise_all(.list = data_promises)
+
         # Handle the resolved promises
-        results$normcount_data <- .x$normcount
-        results$exacttest_data <- .x$exacttest
-        results$coldata <- .x$coldata
+        results$normcount_data <- data_all$normcount
+        results$exacttest_data <- data_all$exacttest
+        results$coldata <- data_all$coldata
 
         # Process the data after all promises are resolved
         colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
         colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
         results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
         results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-      }) %>% catch(~ {
-        # Error handling
-        print(paste("Error in database operations:", .))
       })
     })
 
