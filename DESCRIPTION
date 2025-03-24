@@ -21,4 +21,6 @@ Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/Biobase
 Imports:
-    pysparklyr
+    pysparklyr,
+    edgeR,
+    InteractiveComplexHeatmap
