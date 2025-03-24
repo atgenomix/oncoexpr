@@ -42,6 +42,4 @@ Remotes:
     bioc::3.20/enrichplot,
     bioc::3.20/clusterProfiler,
     bioc::3.20/Biobase,
-    bioc::3.20/InteractiveComplexHeatmap,
-    bioc::3.20/limma,
-    bioc::3.20/org.Hs.eg.db,
+    bioc::3.20/InteractiveComplexHeatmap
