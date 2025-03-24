@@ -255,25 +255,25 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           data_promises$normcount <- future_promise({
             query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
             DBI::dbGetQuery(sc(), query_normcount)
-          })
+          }) %>% catch(~ print(paste("Error in normcount:", .x$message)))
         }
 
         if (length(exacttest_tbls) > 0) {
           data_promises$exacttest <- future_promise({
             query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
             DBI::dbGetQuery(sc(), query_exacttest)
-          })
+          }) %>% catch(~ print(paste("Error in exacttest:", .x$message)))
         }
 
         if (length(coldata_tbls) > 0) {
           data_promises$coldata <- future_promise({
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             DBI::dbGetQuery(sc(), query_coldata)
-          })
+          }) %>% catch(~ print(paste("Error in coldata:", .x$message)))
         } else {
           data_promises$coldata <- future_promise({
             generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
-          })
+          }) %>% catch(~ print(paste("Error in coldata generation:", .x$message)))
         }
 
         # Wait for all promises to resolve
