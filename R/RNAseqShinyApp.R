@@ -278,21 +278,21 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         # Wait for all promises to resolve
         promise_all(.list = data_promises)
-      }) %...>% {
+      }) %>% then(~ {
         # Handle the resolved promises
-        results$normcount_data <- .$normcount
-        results$exacttest_data <- .$exacttest
-        results$coldata <- .$coldata
+        results$normcount_data <- .x$normcount
+        results$exacttest_data <- .x$exacttest
+        results$coldata <- .x$coldata
 
         # Process the data after all promises are resolved
         colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
         colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
         results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
         results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-      } %...!% {
+      }) %>% catch(~ {
         # Error handling
         print(paste("Error in database operations:", .))
-      }
+      })
     })
 
     output$normcount_table <- DT::renderDataTable({
