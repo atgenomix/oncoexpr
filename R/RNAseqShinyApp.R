@@ -241,10 +241,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       })
 
       tbl_list_promise %...>% (function(tbl_list) {
-        tbls <- tbl_list_query$tableName
+        tbls <- tbl_list$tableName
 
         prefix <- c("^normcounts|^exacttest|^coldata")
-        tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
+        tbls_with_prefix <- tbl_list[grepl(prefix , tbls),]
         results$table_list <- tbls_with_prefix
 
         normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
