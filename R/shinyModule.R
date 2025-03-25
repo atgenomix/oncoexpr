@@ -396,7 +396,6 @@ dbBrowserServer <- function(id, sc) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     observe({
-      print("dbBrowserServer")
       org <- tolower(Sys.getenv("SPARK_USER"))
       c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
       print(c)
