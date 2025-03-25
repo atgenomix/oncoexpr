@@ -276,6 +276,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
       exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
       coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
+      print(normcount_tbls)
+      print(exacttest_tbls)
+      print(coldata_tbls)
 
       if (length(normcount_tbls) > 0) {
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
