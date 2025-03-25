@@ -269,16 +269,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           DBI::dbGetQuery(sc_conn, query_exacttest)
         })
 
-        coldata_promise <- future_promise({
+        coldata_promise <-
           if (length(coldata_tbls) > 0) {
-            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-            DBI::dbGetQuery(sc_conn, query_coldata)
+            future_promise({
+              query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+              DBI::dbGetQuery(sc_conn, query_coldata)
+            })
           } else {
             normcount_promise %...>% (function(normcount) {
-              generate_colData_random(normcount_data, genecol = "GeneSymbol")
+              future_promise({
+                generate_colData_random(normcount, genecol = "GeneSymbol")
+              })
             })
           }
-        })
 
         output$normcount_table <- DT::renderDataTable({
           normcount_promise %...>% {
