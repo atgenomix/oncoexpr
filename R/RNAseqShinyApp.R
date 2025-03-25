@@ -281,38 +281,29 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         # Wait for all promises to resolve
         promise_all(.list = data_promises) %...>% {
-          
+
           # Handle the resolved promises
           results$normcount_data <- .$normcount
           results$exacttest_data <- .$exacttest
           results$coldata <- .$coldata
-          
+
           # Process the data after all promises are resolved
           colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
           colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
           results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
           results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-          
-          output$normcount_table <- DT::renderDataTable({
-            req(results$normcount_data)
-            DT::datatable(results$normcount_data)
-          })
-          
-          output$exacttest_table <- DT::renderDataTable({
-            req(results$exacttest_data)
-            DT::datatable(results$exacttest_data)
-          })
-          
-          output$wide_table_dt <- DT::renderDataTable({
-            req(wide_data())
-            print("send wide data to UI")
-            DT::datatable(
-              wide_data(),
-              options = list(pageLength = 20, autoWidth = TRUE)
-            )
-          })
         }
       })
+    })
+
+    output$normcount_table <- DT::renderDataTable({
+      req(results$normcount_data)
+      DT::datatable(results$normcount_data)
+    })
+
+    output$exacttest_table <- DT::renderDataTable({
+      req(results$exacttest_data)
+      DT::datatable(results$exacttest_data)
     })
 
     volcano_res <- reactiveVal(NULL)
@@ -321,6 +312,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     DEG_summary <- reactiveVal(NULL)
     wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
+
+    output$wide_table_dt <- DT::renderDataTable({
+      req(wide_data())
+      print("send wide data to UI")
+      DT::datatable(
+        wide_data(),
+        options = list(pageLength = 20, autoWidth = TRUE)
+      )
+    })
 
     observeEvent(results$db_info$selected_db(), {
       req(results$coldata, results$normcount_data, results$exacttest_data)
