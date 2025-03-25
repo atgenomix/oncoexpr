@@ -226,22 +226,19 @@ generate_colData <- function(normcount = normCount, grouplist  , genecol = "Gene
 #' @param filename_list list of filenames
 #' @return filename list with time information
 #' @export
+
 get_latest_file_group_df <- function(filename_list) {
 
-  # 將每個檔名依 "_" 分割
   filename_split <- strsplit(filename_list, "_")
   
-  # 從分割結果中提取符合 "YYYYMMDDtHHMMSSz" 格式的時間字串
   extract_time <- function(parts) {
     time_str <- parts[grepl("^\\d{8}t\\d{6}z$", parts)]
     if (length(time_str) == 1) return(time_str) else return(NA)
   }
   
   time_strs <- sapply(filename_split, extract_time)
-  # 轉換成 POSIXct，注意格式需與字串格式一致
   time_posix <- as.POSIXct(time_strs, format = "%Y%m%dt%H%M%Sz", tz = "UTC")
   
-  # 建立 dataframe，保留所有檔案
   df <- data.frame(
     file = filename_list,
     time_str = time_strs,
@@ -249,16 +246,11 @@ get_latest_file_group_df <- function(filename_list) {
     stringsAsFactors = FALSE
   )
   
-  # 找出最新的時間（忽略 NA）
   latest_time <- max(df$time, na.rm = TRUE)
   
-  # 設定 is_latest，當 time 為 NA 時 !is.na(df$time) 為 FALSE，自然結果為 FALSE
   df$is_latest <- !is.na(df$time) & (df$time == latest_time)
   
-  # 依據時間排序，並將 row names 重設以避免不連續的 row.names
-  df <- df[order(df$time, decreasing = TRUE, na.last = TRUE), ]
-  rownames(df) <- NULL
+  #df <- df[order(df$time, decreasing = TRUE, na.last = TRUE), ]
   
   return(df)
 }
-
