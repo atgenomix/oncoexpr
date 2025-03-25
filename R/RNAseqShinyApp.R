@@ -251,76 +251,52 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
         coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
 
-        # Create a list to store all promises
-        data_promises <- list()
-
-        if (length(normcount_tbls) > 0) {
-          data_promises$normcount <- future_promise({
+        output$normcount_table <- DT::renderDataTable({
+          future_promise({
             query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
             DBI::dbGetQuery(sc(), query_normcount)
-          }) %>% catch(~ print(paste("Error in normcount:", .x$message)))
-        }
+          }) %...>% {
+            colnames(.)[colnames(.) == "genes"] <- "GeneSymbol"
+            normcount_data <- .[,colnames(.)!="_c0"]
+            DT::datatable(normcount_data)
+          }
+        })
 
-        if (length(exacttest_tbls) > 0) {
-          data_promises$exacttest <- future_promise({
+        output$exacttest_table <- DT::renderDataTable({
+          future_promise({
             query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
             DBI::dbGetQuery(sc(), query_exacttest)
-          }) %>% catch(~ print(paste("Error in exacttest:", .x$message)))
-        }
+          }) %...>% {
+            colnames(.)[colnames(.) == "genes"] <- "GeneSymbol"
+            exacttest_data <- .[,colnames(.)!="_c0"]
+            DT::datatable(exacttest_data)
+          }
+        })
 
-        if (length(coldata_tbls) > 0) {
-          data_promises$coldata <- future_promise({
-            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-            DBI::dbGetQuery(sc(), query_coldata)
-          }) %>% catch(~ print(paste("Error in coldata:", .x$message)))
-        } else {
-          data_promises$coldata <- future_promise({
-            generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
-          }) %>% catch(~ print(paste("Error in coldata generation:", .x$message)))
-        }
+        wide_data <- reactiveVal(NULL)
 
-        # Wait for all promises to resolve
-        promise_all(.list = data_promises) %...>% {
+        output$wide_table_dt <- DT::renderDataTable({
+          print("send wide data to UI")
 
-          # Handle the resolved promises
-          results$normcount_data <- .$normcount
-          results$exacttest_data <- .$exacttest
-          results$coldata <- .$coldata
-
-          # Process the data after all promises are resolved
-          colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-          colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-          results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-          results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-        }
+          future_promise({
+            if (length(coldata_tbls) > 0) {
+              query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+              DBI::dbGetQuery(sc(), query_coldata)
+            } else {
+              generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
+            }
+          }) %...>% {
+            DT::datatable(., options = list(pageLength = 20, autoWidth = TRUE))
+          }
+        })
       })
-    })
-
-    output$normcount_table <- DT::renderDataTable({
-      req(results$normcount_data)
-      DT::datatable(results$normcount_data)
-    })
-
-    output$exacttest_table <- DT::renderDataTable({
-      req(results$exacttest_data)
-      DT::datatable(results$exacttest_data)
     })
 
     volcano_res <- reactiveVal(NULL)
     settingMAE <- reactiveVal(NULL)
     DEG_table <- reactiveVal(NULL)
     DEG_summary <- reactiveVal(NULL)
-    wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
-
-    output$wide_table_dt <- DT::renderDataTable({
-      req(wide_data())
-      print("send wide data to UI")
-      DT::datatable(
-        wide_data(),
-        options = list(pageLength = 20, autoWidth = TRUE)
-      )
-    })
 
     observeEvent(results$db_info$selected_db(), {
       req(results$coldata, results$normcount_data, results$exacttest_data)
