@@ -244,22 +244,33 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
       print(tbls)
-
+      print(tbl_list_query)
       prefix <- c("^normcounts|^exacttest|^coldata")
 
       tbls_with_time_filter <- get_latest_file_group_df(tbls)
       print(tbls_with_time_filter)
 
       if(sum(tbls_with_time_filter$is_latest)==0){
-        tbls_with_time_filter <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+        print("no latest table")
+        tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==FALSE,]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
       }else{
-        tbls_with_time_filter <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+        print("latest table")
+        tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==TRUE,]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
       }
-
-      tbls <- tbls_with_time_filter$"file"
+      
+      tbls <- summary_table$"file"
       print("time filtered result")
-      print(tbls)
-      tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
+      print(summary_table)
+      print("tbl_list_query")
+      
+      print(tbls_with_prefix)
+      grepl(prefix , tbls)
+      #tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==TRUE,]
+      #tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
+      print("tbls_with_prefix")
+      print(tbls_with_prefix)
       results$table_list <- tbls_with_prefix
 
       normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
