@@ -243,9 +243,22 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
       tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
+      print(tbls)
 
       prefix <- c("^normcounts|^exacttest|^coldata")
 
+      tbls_with_time_filter <- get_latest_file_group_df(tbls)
+      print(tbls_with_time_filter)
+
+      if(sum(tbls_with_time_filter$is_latest)==0){
+        tbls_with_time_filter <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+      }else{
+        tbls_with_time_filter <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+      }
+
+      tbls <- tbls_with_time_filter$"file"
+      print("time filtered result")
+      print(tbls)
       tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
       results$table_list <- tbls_with_prefix
 
