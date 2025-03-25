@@ -247,7 +247,8 @@ get_latest_file_group_df <- function(filename_list) {
   )
   
   latest_time <- max(df$time, na.rm = TRUE)
-  
+  print("latest_time")
+  print(latest_time)
   df$is_latest <- !is.na(df$time) & (df$time == latest_time)
   
   #df <- df[order(df$time, decreasing = TRUE, na.last = TRUE), ]
