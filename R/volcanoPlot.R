@@ -178,7 +178,7 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
             p <- ggplot(scatterData_local, aes(x = log2(mean1), y = log2(mean2))) +
             geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol),
                                     size = 2, color = "black", alpha = 1) +
-            labs(x = "Group1 Mean Expression", y = "Group2 Mean Expression") +
+            labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
             theme_minimal()
         } else {
             # 有選取基因時，分成兩層：非選取與選取
@@ -187,12 +187,12 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
             
             p <- ggplot() +
             geom_point_interactive(data = nonhighlight_data,
-                                    aes(x = mean1, y = mean2, tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
                                     size = 2, color = "grey", alpha = 0.2) +
             geom_point_interactive(data = highlight_data,
-                                    aes(x = mean1, y = mean2, tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
                                     size = 2, color = "red", alpha = 1) +
-            labs(x = "Control Mean Expression", y = "Case Mean Expression") +
+            labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
             theme_minimal()
         }
         
