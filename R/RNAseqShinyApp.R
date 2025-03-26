@@ -261,12 +261,18 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         normcount_promise <- future_promise({
           query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-          DBI::dbGetQuery(sc_conn, query_normcount)
+          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
+          normcount <- normcount[,colnames(normcount)!="_c0"]
+          normcount
         })
 
         exacttest_promise <- future_promise({
           query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-          DBI::dbGetQuery(sc_conn, query_exacttest)
+          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+          colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
+          exacttest <- exacttest[,colnames(exacttest)!="_c0"]
+          exacttest
         })
 
         coldata_promise <-
@@ -285,16 +291,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         output$normcount_table <- DT::renderDataTable({
           normcount_promise %...>% {
-            colnames(.)[colnames(.) == "genes"] <- "GeneSymbol"
-            normcount_data <- .[,colnames(.)!="_c0"]
             DT::datatable(normcount_data)
           }
         })
 
         output$exacttest_table <- DT::renderDataTable({
           exacttest_promise %...>% {
-            colnames(.)[colnames(.) == "genes"] <- "GeneSymbol"
-            exacttest_data <- .[,colnames(.)!="_c0"]
             DT::datatable(exacttest_data)
           }
         })
