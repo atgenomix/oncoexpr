@@ -61,7 +61,7 @@ interactivePlotsUI <- function(id) {
   tagList(
     tags$div(
       style = "background-color: #f2f2f2; padding: 10px;",
-      titlePanel("Interactive Volcano, Scatter, and Violin Plots"),
+      titlePanel(""),
       fluidRow(
         # Left: Volcano Plot block
         column(width = 8,
