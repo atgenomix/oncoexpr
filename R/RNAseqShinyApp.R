@@ -81,7 +81,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             fluidRow(
               column(
                 width = 12,
-                DT::dataTableOutput("wide_table_dt", width = "100%")
+                tabsetPanel(
+                    tabPanel("normCount Table",
+                            DT::dataTableOutput("wide_table_dt", width = "100%")
+                    ),
+                    tabPanel("DEG Table",
+                             DT::dataTableOutput('DEG_table', width = "100%")
+                    )
+
+                )
+
+
               )
             )
           )
@@ -105,7 +115,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                         min = 1, max = 6, value = 3, step = 0.5),
             numericInput("topN", "Label N number of Genes (0 is no labeling):",
                          value = 100, min = 0, max = 1000),
-            checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
+            #checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
             actionButton("run_DEG", "Updata DEG")
           ),
           mainPanel(
@@ -113,9 +123,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             tabsetPanel(
               tabPanel("Volcano Plot", 
                        interactivePlotsUI("plotVolcano")
-              ),
-              tabPanel("DEG Table", 
-                       DT::dataTableOutput('DEG_table', width = "100%")
               ),
 
               tabPanel("Gene Set Enrichment",
@@ -336,13 +343,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       settingMAE(mae)
     })
 
-    observeEvent(input$run_DEG, {
+    observe({
+      req(results$coldata, results$normcount_data, results$exacttest_data)
       mae <- settingMAE()
-
       output$DEG_table <- renderDT({
         datatable(
           DEG_table(),
-          options = list(pageLength = 10, autoWidth = TRUE)
+          options = list(pageLength = 20, autoWidth = TRUE)
         )
       }, server = FALSE)
     })
