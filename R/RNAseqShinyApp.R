@@ -221,9 +221,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observe({
       #if (is.null(sc())) {
-      master <- "sc://172.18.0.1:15002"
-      method <- "spark_connect"
-      version <- "3.5"
+      #master <- "sc://172.18.0.1:15002"
+      #method <- "spark_connect"
+      #version <- "3.5"
       sc(sparklyr::spark_connect(master = master, method = method, version = version))
       #}
     })
