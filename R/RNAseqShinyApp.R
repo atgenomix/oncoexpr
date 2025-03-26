@@ -300,7 +300,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
 
         observeEvent(results$db_info$selected_db(),
-                     promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% {
+                     promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
                        req(coldata, normcount_data, exacttest_data)
                        DEG_table(exacttest_data)
                        wide_data(normcount_data)
@@ -334,17 +334,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                          colData = sample_info_table
                        )
                        settingMAE(mae)
-                     })
+                     }))
 
         observeEvent(input$run_DEG,
-                     promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% {
+                     promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
                        req(exacttest_data, normcount_data, coldata)
                        DEG_table(exacttest_data)
                        wide_data(normcount_data)
                        maeColData(coldata)
 
                        message("run_DEG pressed: reactive values updated.")
-                     })
+                     }))
 
         output$wide_table_dt <- DT::renderDataTable({
           req(wide_data())
