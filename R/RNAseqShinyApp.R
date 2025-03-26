@@ -116,7 +116,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             numericInput("topN", "Label N number of Genes (0 is no labeling):",
                          value = 100, min = 0, max = 1000),
             #checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
-            actionButton("run_DEG", "Updata DEG")
+            actionButton("run_DEG", "Update DEG")
           ),
           mainPanel(
             width = 12,
