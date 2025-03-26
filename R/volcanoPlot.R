@@ -150,7 +150,7 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
         logFCCol  = "logFC", 
         lfc_cut   = params()$lfc_cut, 
         pval_cut  = params()$pval_cut, 
-        title     = "Volcano Plot",
+        title     = "",
         topN      = params()$topN, 
         pointSize = params()$pointSize, 
         ptAlpha   = params()$ptAlpha, 
