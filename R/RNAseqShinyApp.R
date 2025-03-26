@@ -91,7 +91,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
                 )
 
-
               )
             )
           )
@@ -115,7 +114,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                         min = 1, max = 6, value = 3, step = 0.5),
             numericInput("topN", "Label N number of Genes (0 is no labeling):",
                          value = 100, min = 0, max = 1000),
-            #checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
+
             actionButton("run_DEG", "Update DEG")
           ),
           mainPanel(
@@ -129,7 +128,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                         fluidRow(
                           column(2, 
                                 textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                                #actionButton(inputId = "generate_go", label = "Run Gene Set Enrichment")
+                       
                           )
                         ),
                         fluidRow(
@@ -159,7 +158,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                         fluidRow(
                           column(2,
                                 textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                                #actionButton(inputId = "targetGeneID", label = "Confirm")
+           
                           )
                         ),
                         fluidRow(
@@ -405,7 +404,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("geneListReactive section 1")
       print(topGeneList())
       print(downGeneList())
-      # 根據 slider 參數篩選上調與下調的基因
+
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
       topGeneList(topGenes)
@@ -413,14 +412,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("geneListReactive section 2")
       print(topGeneList())
       print(downGeneList())
-      # 合併成一個逗號分隔的字串
+
       gene_list <- paste(c(topGenes, downGenes), collapse = ",")
       gene_list
       print("geneListReactive section 3")
       print(gene_list)
     })
 
-    # 觀察 geneListReactive 的變化，並即時更新 textInput 的內容
+
     observe({
       new_gene_list <- geneListReactive()
       updateTextInput(session, "geneListheatmap", value = new_gene_list)
@@ -437,7 +436,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
       
-      # 對 GO 分析部分加上 tryCatch
+
       for (n in seq_len(length(groups_list))) {
         col <- groups_list[n]
         gene_list <- list(topGeneList(), downGeneList())[[n]]
@@ -452,7 +451,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               showCategory_ = 10
             )
           }, error = function(e) {
-            # 顯示通知或更新 UI
+
             shiny::showNotification(
               paste("GO enrichment error in", col, "mode", mode, ":", e$message),
               type = "error",
