@@ -243,15 +243,50 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
       tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
+      print("====tbls====")
+      print(tbls)
 
       prefix <- c("^normcounts|^exacttest|^coldata")
 
-      tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
-      results$table_list <- tbls_with_prefix
+      tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls),]
+      print("====tbl_list_query_prefix====")
+      print(tbl_list_query_prefix)
+      tbls_with_prefix <- tbl_list_query_prefix$tableName
+      print("====tbls_with_prefix====")
+      print(tbls_with_prefix)
 
-      normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
-      exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
-      coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
+      tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+      print("====tbls_with_time_filter====")
+      print(tbls_with_time_filter)
+
+      if(sum(tbls_with_time_filter$is_latest)==0){
+        print("no latest table")
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==FALSE,]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+      }else{
+        print("latest table")
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==TRUE,]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+      }
+      
+      tbls_with_prefix_time <- summary_table$"file"
+      print("====tbls_with_prefix_time====")
+      print(tbls_with_prefix_time)
+      print("====summary_table====")
+      print(summary_table)
+      print("====tbl_list_query_prefix_time====")  
+      print(tbl_list_query_prefix_time)
+      results$table_list <- tbl_list_query_prefix_time
+
+      normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      print("====normcount_tbls====")
+      print(normcount_tbls)
+      print("====exacttest_tbls====")
+      print(exacttest_tbls)
+      print("====coldata_tbls====")
+      print(coldata_tbls)
 
       if (length(normcount_tbls) > 0) {
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
