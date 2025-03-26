@@ -123,7 +123,26 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               tabPanel("Volcano Plot", 
                        interactivePlotsUI("plotVolcano")
               ),
-
+              tabPanel("Heatmap",
+                        fluidRow(
+                          column(2,
+                                textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+           
+                          )
+                        ),
+                        fluidRow(
+                          column(width = 6,
+                                box(title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                                    originalHeatmapOutput("ht", height = 1000, containment = TRUE)
+                                )
+                          ),
+                          column(width = 6,
+                                box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                                    subHeatmapOutput("ht", title = NULL, containment = TRUE)
+                                )
+                          )
+                        )
+              ),
               tabPanel("Gene Set Enrichment",
                         fluidRow(
                           column(2, 
@@ -153,27 +172,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                                 )
                           )
                         )
-              ),
-              tabPanel("Heatmap",
-                        fluidRow(
-                          column(2,
-                                textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-           
-                          )
-                        ),
-                        fluidRow(
-                          column(width = 6,
-                                box(title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                                    originalHeatmapOutput("ht", height = 1000, containment = TRUE)
-                                )
-                          ),
-                          column(width = 6,
-                                box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                                    subHeatmapOutput("ht", title = NULL, containment = TRUE)
-                                )
-                          )
-                        )
               )
+              
 
             )
           )
