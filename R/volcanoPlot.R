@@ -163,37 +163,46 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
              ))
     })
     
-    output$scatterPlot <- renderGirafe({
-      current_gene <- persistent_gene()
-      scatterData_local <- exprData %>%
-        group_by(GeneSymbol) %>%
-        summarise(
-          mean1 = mean(expression[group == "control"]),
-          mean2 = mean(expression[group == "case"])
-        ) %>% ungroup()
-      
-      if (is.null(current_gene) || current_gene == "") {
-        scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
-      } else {
-        scatterData_local <- scatterData_local %>% 
-          mutate(highlight = ifelse(GeneSymbol == current_gene, "highlight", "other"))
-      }
-      
-      scatterData_local <- scatterData_local %>% 
-        mutate(highlight = factor(highlight, levels = c("highlight", "other", "normal")))
-      p <- ggplot(scatterData_local, aes(x = mean1, y = mean2)) +
-        geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol, color = highlight, alpha = factor(highlight)), size = 2) +
-        scale_color_manual(values = c("highlight" = "red", "other" = "grey", "normal" = "black"), drop = FALSE) +
-        scale_alpha_manual(values = c("highlight" = 1, "other" = 0.2, "normal" = 1)) +
-        labs(x = "Group1 Mean Expression", y = "Group2 Mean Expression") +
-        theme_minimal()
-      
-      girafe(ggobj = p,
-             options = list(
-               opts_zoom(max = 5),
-               opts_selection(type = "single", only_shiny = FALSE)
-             ))
+   output$scatterPlot <- renderGirafe({
+        current_gene <- persistent_gene()
+        scatterData_local <- exprData %>%
+            group_by(GeneSymbol) %>%
+            summarise(
+            mean1 = mean(expression[group == "control"]),
+            mean2 = mean(expression[group == "case"])
+            ) %>% ungroup()
+        
+        # 如果沒有選取基因，直接全部以 normal 繪製
+        if (is.null(current_gene) || current_gene == "") {
+            scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
+            p <- ggplot(scatterData_local, aes(x = log2(mean1), y = log2(mean2))) +
+            geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    size = 2, color = "black", alpha = 1) +
+            labs(x = "Group1 Mean Expression", y = "Group2 Mean Expression") +
+            theme_minimal()
+        } else {
+            # 有選取基因時，分成兩層：非選取與選取
+            nonhighlight_data <- scatterData_local %>% filter(GeneSymbol != current_gene)
+            highlight_data    <- scatterData_local %>% filter(GeneSymbol == current_gene)
+            
+            p <- ggplot() +
+            geom_point_interactive(data = nonhighlight_data,
+                                    aes(x = mean1, y = mean2, tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    size = 2, color = "grey", alpha = 0.2) +
+            geom_point_interactive(data = highlight_data,
+                                    aes(x = mean1, y = mean2, tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    size = 2, color = "red", alpha = 1) +
+            labs(x = "Control Mean Expression", y = "Case Mean Expression") +
+            theme_minimal()
+        }
+        
+        girafe(ggobj = p,
+                options = list(
+                opts_zoom(max = 5),
+                opts_selection(type = "single", only_shiny = FALSE)
+                ))
     })
+
     
     output$geneViolinPlot <- renderPlot({
       selected_gene <- persistent_gene()
