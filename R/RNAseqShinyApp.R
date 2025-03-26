@@ -124,9 +124,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
                 tabPanel("Volcano Plot interaction",
 
-
                       interactivePlotsUI("plotVolcano")
-
 
                 ),
 
@@ -495,7 +493,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
 
-    observeEvent(input$targetGeneID, {
+    observeEvent(input$geneListheatmap, {
       req(settingMAE())
       mae <- settingMAE()
       geneList <- unlist(strsplit(input$geneListheatmap, ","))
