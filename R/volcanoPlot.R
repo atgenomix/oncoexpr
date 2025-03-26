@@ -53,31 +53,29 @@ transfExprFormat <- function(exprMatrix = normCount, colData = colData) {
 #' }
 #'
 #' @export
+#' 
+#' 
 interactivePlotsUI <- function(id) {
   ns <- NS(id)
   tagList(
-    tags$div(
-      style = "background-color: #f2f2f2; padding: 10px;",
-      titlePanel("Interactive Volcano, Scatter, and Violin Plots"),
-      fluidRow(
-        # Left: Volcano Plot block
-        column(width = 8,
-               div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
-                   h4("Volcano Plot"),
-                   ggiraph::girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px")
-               )
-        ),
-        # Right: Scatter Plot (top) and Violin Plot (bottom)
-        column(width = 4,
-               div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
-                   h4("Scatter Plot"),
-                   ggiraph::girafeOutput(ns("scatterPlot"), width = "100%", height = "300px")
-               ),
-               div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px;",
-                   h4("Violin Plot"),
-                   plotOutput(ns("geneViolinPlot"), width = "100%", height = "300px")
-               )
-        )
+    fluidRow(
+      # Volcano Plot 區塊
+      column(width = 8,
+             div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
+                 h4("Volcano Plot"),
+                 girafeOutput(ns("volcano_plot"), width = "100%", height = "600px")
+             )
+      ),
+      # 右側：Scatter Plot（上）與 Violin Plot（下）
+      column(width = 4,
+             div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
+                 h4("Scatter Plot"),
+                 girafeOutput(ns("scatterPlot"), width = "100%", height = "300px")
+             ),
+             div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px;",
+                 h4("Violin Plot"),
+                 plotOutput(ns("geneViolinPlot"), width = "100%", height = "300px")
+             )
       )
     )
   )
@@ -123,42 +121,49 @@ interactivePlotsUI <- function(id) {
 interactivePlotsServer <- function(id, volcanoData, exprData, params) {
   moduleServer(id, function(input, output, session) {
     
-    # Store the currently hovered gene
+    # 使用 reactiveVal 儲存最後點擊的基因名稱
     persistent_gene <- reactiveVal(NULL)
     
-    observeEvent(input$volcanoPlot_hovered, {
-      if (!is.null(input$volcanoPlot_hovered) && input$volcanoPlot_hovered != "")
-        persistent_gene(input$volcanoPlot_hovered)
+    # 當 Volcano Plot 的點被點選時更新
+    observeEvent(input$volcano_plot_selected, {
+      if (!is.null(input$volcano_plot_selected) && input$volcano_plot_selected != "")
+        persistent_gene(input$volcano_plot_selected)
     })
     
-    observeEvent(input$scatterPlot_hovered, {
-      if (!is.null(input$scatterPlot_hovered) && input$scatterPlot_hovered != "")
-        persistent_gene(input$scatterPlot_hovered)
+    # 當 Scatter Plot 的點被點選時更新
+    observeEvent(input$scatterPlot_selected, {
+      if (!is.null(input$scatterPlot_selected) && input$scatterPlot_selected != "")
+        persistent_gene(input$scatterPlot_selected)
     })
     
-    # Render Volcano Plot using provided parameters and volcanoData
-    output$volcanoPlot <- renderGirafe({
-      p <- ggvolcano_custom_interactive(
-        df        = volcanoData,
-        geneName  = volcanoData$GeneSymbol,
-        pValCol   = "PValue",
-        logFCCol  = "logFC",
-        lfc_cut   = params()$lfc_cut,
-        pval_cut  = params()$pval_cut,
-        title     = "Volcano Plot",
-        topN      = params()$topN,
-        pointSize = params()$pointSize,
-        ptAlpha   = params()$ptAlpha,
-        labelSize = params()$labelSize
-      )
+    # Render Volcano Plot：使用自訂函數產生互動圖形
+    output$volcano_plot <- renderGirafe({
+      lfc_cut   <- params()$lfc_cut
+      pval_cut  <- params()$pval_cut
+      pointSize <- params()$pointSize
+      ptAlpha   <- params()$ptAlpha
+      labelSize <- params()$labelSize
+      topN      <- params()$topN
+      
+      p <- ggvolcano_custom_interactive(df = volcanoData, 
+                            geneName = volcanoData$'GeneSymbol', 
+                            pValCol = "PValue", 
+                            logFCCol = "logFC", 
+                            lfc_cut = lfc_cut, 
+                            pval_cut = pval_cut, 
+                            title = "Volcano Plot", 
+                            topN = topN, 
+                            pointSize = pointSize, 
+                            ptAlpha = ptAlpha, 
+                            labelSize = labelSize)
       girafe(ggobj = p,
              options = list(
                opts_zoom(max = 5),
-               opts_hover_inv(css = "opacity:0.3;")
+               opts_selection(type = "single", only_shiny = FALSE)
              ))
     })
     
-    # Render Scatter Plot with interactive point hover
+    # Render Scatter Plot：根據點選的基因改變顏色
     output$scatterPlot <- renderGirafe({
       current_gene <- persistent_gene()
       scatterData_local <- exprData %>%
@@ -172,34 +177,28 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
         scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
       } else {
         scatterData_local <- scatterData_local %>% 
-          mutate(highlight = ifelse(GeneSymbol == current_gene, "highlight", "other"))
+          mutate(highlight = ifelse(GeneSymbol == current_gene, "highlight", "normal"))
       }
       
-      scatterData_local <- scatterData_local %>% 
-        mutate(highlight = factor(highlight, levels = c("highlight", "other", "normal")))
-      
       p <- ggplot(scatterData_local, aes(x = mean1, y = mean2)) +
-        ggiraph::geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol, 
-                                             color = highlight, alpha = factor(highlight)), 
-                                         size = 2) +
-        scale_color_manual(values = c("highlight" = "red", "other" = "grey", "normal" = "black"), drop = FALSE) +
-        scale_alpha_manual(values = c("highlight" = 1, "other" = 0.2, "normal" = 1), drop = FALSE) +
+        geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol, color = highlight), size = 4) +
+        scale_color_manual(values = c("highlight" = "red", "normal" = "black")) +
         labs(x = "Group1 Mean Expression", y = "Group2 Mean Expression") +
         theme_minimal()
       
       girafe(ggobj = p,
              options = list(
                opts_zoom(max = 5),
-               opts_hover_inv(css = "opacity:0.3;")
+               opts_selection(type = "single", only_shiny = FALSE)
              ))
     })
     
-    # Render Violin Plot based on the currently hovered gene
+    # Render Violin Plot：根據點選的基因來繪製
     output$geneViolinPlot <- renderPlot({
       selected_gene <- persistent_gene()
       if (is.null(selected_gene) || selected_gene == "") {
         plot.new()
-        title("Please hover over a gene from the Volcano or Scatter Plot")
+        title("Please click a gene from the Volcano or Scatter Plot")
       } else {
         data_selected <- exprData %>% filter(GeneSymbol == selected_gene)
         ggplot(data_selected, aes(x = group, y = expression, fill = group)) +
@@ -212,6 +211,5 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
                 plot.title = element_text(hjust = 0.5))
       }
     })
-    
   })
 }
