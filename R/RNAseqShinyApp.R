@@ -120,7 +120,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
               tabPanel("Gene Set Enrichment",
                         fluidRow(
-                          column(2, actionButton(inputId = "generate_go", label = "Run Gene Set Enrichment"))
+                          column(2, 
+                                textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+                                #actionButton(inputId = "generate_go", label = "Run Gene Set Enrichment")
+                          )
                         ),
                         fluidRow(
                           column(12,
@@ -148,9 +151,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               tabPanel("Heatmap",
                         fluidRow(
                           column(2,
-                                textInput("geneListheatmap", "Heatmap Gene List (sep by comma without space)", 
-                                          value = "EGFR,ESR1,KRAS,ERBB2,AKT1"),
-                                actionButton(inputId = "targetGeneID", label = "Confirm")
+                                textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+                                #actionButton(inputId = "targetGeneID", label = "Confirm")
                           )
                         ),
                         fluidRow(
@@ -415,7 +417,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observe({
       new_gene_list <- geneListReactive()
       updateTextInput(session, "geneListheatmap", value = new_gene_list)
-      print("update geneListheatmap")
+      updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
+      print("update geneListheatmap and geneLisEnrichment")
       print(new_gene_list)
     })
 
@@ -426,59 +429,73 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
-      print("GO section 4")
-      print(topGeneList())
-      print(downGeneList())
-      group1_fc_gene_profile <- topGeneList()
-      group2_fc_gene_profile <- downGeneList()
+      
+      # 對 GO 分析部分加上 tryCatch
       for (n in seq_len(length(groups_list))) {
         col <- groups_list[n]
-        gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        gene_list <- list(topGeneList(), downGeneList())[[n]]
         for (mode in c("CC", "BP", "MF")) {
           VAR <- paste0(col, "_", mode, "GO")
-          result <- go_enrich_dotplot(
-            gene_list_ = unique(gene_list),
-            save_path_ = NULL,
-            save_filename_ = NULL,
-            mode_ = mode,
-            showCategory_ = 10
-          )
+          result <- tryCatch({
+            go_enrich_dotplot(
+              gene_list_ = unique(gene_list),
+              save_path_ = NULL,
+              save_filename_ = NULL,
+              mode_ = mode,
+              showCategory_ = 10
+            )
+          }, error = function(e) {
+            # 顯示通知或更新 UI
+            shiny::showNotification(
+              paste("GO enrichment error in", col, "mode", mode, ":", e$message),
+              type = "error",
+              duration = 5
+            )
+            return(NULL)
+          })
           assign(VAR, result, envir = .GlobalEnv)
         }
       }
-      output$G1_MF <- renderPlot({G1_MFGO})
-      output$G1_BP <- renderPlot({G1_BPGO})
-      output$G1_CC <- renderPlot({G1_CCGO})
-      output$G2_MF <- renderPlot({G2_MFGO})
-      output$G2_BP <- renderPlot({G2_BPGO})
-      output$G2_CC <- renderPlot({G2_CCGO})
+      output$G1_MF <- renderPlot({ G1_MFGO })
+      output$G1_BP <- renderPlot({ G1_BPGO })
+      output$G1_CC <- renderPlot({ G1_CCGO })
+      output$G2_MF <- renderPlot({ G2_MFGO })
+      output$G2_BP <- renderPlot({ G2_BPGO })
+      output$G2_CC <- renderPlot({ G2_CCGO })
     })
+
 
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
-      print("KEGG section 4")
-      print(topGeneList())
-      print(downGeneList())
-      group1_fc_gene_profile <- topGeneList()
-      group2_fc_gene_profile <- downGeneList()
+      
       for (n in seq_len(length(groups_list))) {
         col <- groups_list[n]
-        gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        gene_list <- list(topGeneList(), downGeneList())[[n]]
         VAR <- paste0(col, "_", "KEGG")
-        result <- kegg_enrich_dotplot(
-          gene_list_ = unique(gene_list),
-          save_path_ = NULL,
-          save_filename_ = NULL,
-          showCategory_ = 10
-        )
+        result <- tryCatch({
+          kegg_enrich_dotplot(
+            gene_list_ = unique(gene_list),
+            save_path_ = NULL,
+            save_filename_ = NULL,
+            showCategory_ = 10
+          )
+        }, error = function(e) {
+          shiny::showNotification(
+            paste("KEGG enrichment error in", col, ":", e$message),
+            type = "error",
+            duration = 5
+          )
+          return(NULL)
+        })
         assign(VAR, result, envir = .GlobalEnv)
       }
-      output$G1_KEGG <- renderPlot({G1_KEGG})
-      output$G2_KEGG <- renderPlot({G2_KEGG})
+      output$G1_KEGG <- renderPlot({ G1_KEGG })
+      output$G2_KEGG <- renderPlot({ G2_KEGG })
     })
+
 
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
