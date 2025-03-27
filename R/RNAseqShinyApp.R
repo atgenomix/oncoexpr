@@ -83,10 +83,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 width = 12,
                 tabsetPanel(
                     tabPanel("normCount Table",
+                            downloadButton("download_normCount", "Download normCount CSV"),
                             DT::dataTableOutput("wide_table_dt", width = "100%")
                     ),
                     tabPanel("DEG Table",
-                             DT::dataTableOutput('DEG_table', width = "100%")
+                            downloadButton("download_DEG", "Download DEG CSV"),
+                            DT::dataTableOutput('DEG_table', width = "100%")
                     )
 
                 )
@@ -259,11 +261,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       if (length(normcount_tbls) > 0) {
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+
+
+
       }
 
       if (length(exacttest_tbls) > 0) {
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+        
       }
 
       if (length(coldata_tbls) > 0) {
@@ -277,6 +283,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
       results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
       results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
+                if (is.numeric(x)) round(x, 4) else x
+            }))
+      results$exacttest_data <- as.data.frame(lapply(results$exacttest_data, function(x) {
+                if (is.numeric(x)) round(x, 4) else x
+            }))
+
     })
 
     output$normcount_table <- DT::renderDataTable({
@@ -320,7 +333,27 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       if ("GeneSymbol" %in% colnames(deg_data)) {
         rownames(deg_data) <- deg_data$GeneSymbol
       }
+          # For normCount table download
+      output$download_normCount <- downloadHandler(
+        filename = function() {
+          paste("normCount_table_", Sys.Date(), ".csv", sep = "")
+        },
+        content = function(file) {
+          # Replace 'normCountData' with your actual data frame used for the normCount table.
+          write.csv(wide_data(), file, row.names = FALSE)
+        }
+      )
 
+      # For DEG table download
+      output$download_DEG <- downloadHandler(
+        filename = function() {
+          paste("DEG_table_", Sys.Date(), ".csv", sep = "")
+        },
+        content = function(file) {
+          # Replace 'DEGData' with your actual data frame used for the DEG table.
+          write.csv(DEG_table(), file, row.names = FALSE)
+        }
+      )
       common_genes <- intersect(rownames(assay_data), rownames(deg_data))
       assay_data <- assay_data[common_genes, , drop = FALSE]
       deg_data_sub <- deg_data[common_genes, , drop = FALSE]
