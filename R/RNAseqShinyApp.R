@@ -411,7 +411,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           interactivePlotsServer("plotVolcano",
                                 volcanoData = volcanoData,
                                 exprData = exprData, params)
-          print(str(exprData))
+
     })
 
 
@@ -433,22 +433,20 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("geneListReactive section before req")
       req(DEG_table(), maeColData(), wide_data())
       DEG_table_data <- DEG_table()
-      print("geneListReactive section 1")
-      print(topGeneList())
-      print(downGeneList())
+
 
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
+
       topGeneList(topGenes)
       downGeneList(downGenes)
-      print("geneListReactive section 2")
+      print("=====Case DEG List=====")
       print(topGeneList())
+      print("=====Control DEG List=====")
       print(downGeneList())
 
       gene_list <- paste(c(topGenes, downGenes), collapse = ",")
       gene_list
-      print("geneListReactive section 3")
-      print(gene_list)
     })
 
 
@@ -538,7 +536,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
       mae <- settingMAE()
-      print("Heatmap section 4")
+
       print(geneListReactive())
       
       geneListVec <- unlist(strsplit(geneListReactive(), ","))
