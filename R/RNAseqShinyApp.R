@@ -83,7 +83,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 width = 12,
                 tabsetPanel(
                     tabPanel("normCount Table",
-                            downloadButton("download_normCount", "Download normCount CSV"),
+                           #downloadButton("download_normCount", "Download normCount CSV"),
                             DT::dataTableOutput("wide_table_dt", width = "100%")
                     ),
                     tabPanel("DEG Table",
@@ -286,9 +286,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
                 if (is.numeric(x)) round(x, 4) else x
             }))
-      results$exacttest_data <- as.data.frame(lapply(results$exacttest_data, function(x) {
-                if (is.numeric(x)) round(x, 4) else x
-            }))
+      results$exacttest_data[,"logFC"] <- if(is.numeric(results$exacttest_data[,"logFC"])) round(results$exacttest_data[,"logFC"], 4) else results$exacttest_data[,"logFC"]
+      results$exacttest_data[,"logCPM"] <- if(is.numeric(results$exacttest_data[,"logCPM"])) round(results$exacttest_data[,"logCPM"], 4) else results$exacttest_data[,"logCPM"]
 
     })
 
@@ -334,15 +333,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         rownames(deg_data) <- deg_data$GeneSymbol
       }
           # For normCount table download
-      output$download_normCount <- downloadHandler(
-        filename = function() {
-          paste("normCount_table_", Sys.Date(), ".csv", sep = "")
-        },
-        content = function(file) {
-          # Replace 'normCountData' with your actual data frame used for the normCount table.
-          write.csv(wide_data(), file, row.names = FALSE)
-        }
-      )
+      # output$download_normCount <- downloadHandler(
+      #   filename = function() {
+      #     paste("normCount_table_", Sys.Date(), ".csv", sep = "")
+      #   },
+      #   content = function(file) {
+      #     # Replace 'normCountData' with your actual data frame used for the normCount table.
+      #     write.csv(wide_data(), file, row.names = FALSE)
+      #   }
+      # )
 
       # For DEG table download
       output$download_DEG <- downloadHandler(
