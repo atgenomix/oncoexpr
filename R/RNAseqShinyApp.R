@@ -413,7 +413,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         })
 
-        observeEvent(input$generate_go, {
+        eventReactive(input$generate_go, {
           req(topGeneList(), downGeneList(), settingMAE())
           mae <- settingMAE()
           sample_info <- colData(mae[["RNAseq"]])
@@ -440,7 +440,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           }
         })
 
-        observeEvent(input$generate_go, {
+        eventReactive(input$generate_go, {
           req(topGeneList(), downGeneList(), settingMAE())
           mae <- settingMAE()
           sample_info <- colData(mae[["RNAseq"]])
