@@ -83,7 +83,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 width = 12,
                 tabsetPanel(
                     tabPanel("normCount Table",
-                           #downloadButton("download_normCount", "Download normCount CSV"),
                             DT::dataTableOutput("wide_table_dt", width = "100%")
                     ),
                     tabPanel("DEG Table",
@@ -224,8 +223,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("====tbl_list_query_prefix====")
       print(tbl_list_query_prefix)
       tbls_with_prefix <- tbl_list_query_prefix$tableName
-      print("====tbls_with_prefix====")
-      print(tbls_with_prefix)
 
       tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
       print("====tbls_with_time_filter====")
@@ -242,12 +239,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
       
       tbls_with_prefix_time <- summary_table$"file"
-      print("====tbls_with_prefix_time====")
-      print(tbls_with_prefix_time)
       print("====summary_table====")
       print(summary_table)
-      print("====tbl_list_query_prefix_time====")  
-      print(tbl_list_query_prefix_time)
       results$table_list <- tbl_list_query_prefix_time
 
       normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
@@ -334,24 +327,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       if ("GeneSymbol" %in% colnames(deg_data)) {
         rownames(deg_data) <- deg_data$GeneSymbol
       }
-          # For normCount table download
-      # output$download_normCount <- downloadHandler(
-      #   filename = function() {
-      #     paste("normCount_table_", Sys.Date(), ".csv", sep = "")
-      #   },
-      #   content = function(file) {
-      #     # Replace 'normCountData' with your actual data frame used for the normCount table.
-      #     write.csv(wide_data(), file, row.names = FALSE)
-      #   }
-      # )
 
-      # For DEG table download
       output$download_DEG <- downloadHandler(
         filename = function() {
           paste("DEG_table_", Sys.Date(), ".csv", sep = "")
         },
         content = function(file) {
-          # Replace 'DEGData' with your actual data frame used for the DEG table.
           write.csv(DEG_table(), file, row.names = FALSE)
         }
       )
