@@ -237,6 +237,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     DEG_summary <- reactiveVal(NULL)
     wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
+    topGeneList <- reactiveVal(NULL)
+    downGeneList <- reactiveVal(NULL)
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
@@ -394,9 +396,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           print(str(exprData))
         })
 
-        topGeneList <- reactiveVal(NULL)
-        downGeneList <- reactiveVal(NULL)
-
         observeEvent(input$run_DEG, {
           req(DEG_table())
           DEG_table <- DEG_table()
@@ -413,7 +412,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         })
 
-        eventReactive(input$generate_go, {
+        observeEvent(input$generate_go, {
           req(topGeneList(), downGeneList(), settingMAE())
           mae <- settingMAE()
           sample_info <- colData(mae[["RNAseq"]])
@@ -440,7 +439,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           }
         })
 
-        eventReactive(input$generate_go, {
+        observeEvent(input$generate_go, {
           req(topGeneList(), downGeneList(), settingMAE())
           mae <- settingMAE()
           sample_info <- colData(mae[["RNAseq"]])
