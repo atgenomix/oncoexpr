@@ -424,23 +424,20 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             col <- groups_list[n]
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             for (mode in c("CC", "BP", "MF")) {
-              VAR <- paste0(col, "_", mode, "GO")
-              result <- go_enrich_dotplot(
-                gene_list_ = unique(gene_list),
-                save_path_ = NULL,
-                save_filename_ = NULL,
-                mode_ = mode,
-                showCategory_ = 10
-              )
-              assign(VAR, result, envir = .GlobalEnv)
+              future_promise({
+                result <- go_enrich_dotplot(
+                  gene_list_ = unique(gene_list),
+                  save_path_ = NULL,
+                  save_filename_ = NULL,
+                  mode_ = mode,
+                  showCategory_ = 10)
+                list(r = result, c = col, m = mode)
+              }) %...>% {
+                var <- paste0(.$c, "_", .$m)
+                output[[var]] <- renderPlot(.$r)
+              }
             }
           }
-          output$G1_MF <- renderPlot({G1_MFGO})
-          output$G1_BP <- renderPlot({G1_BPGO})
-          output$G1_CC <- renderPlot({G1_CCGO})
-          output$G2_MF <- renderPlot({G2_MFGO})
-          output$G2_BP <- renderPlot({G2_BPGO})
-          output$G2_CC <- renderPlot({G2_CCGO})
         })
 
         observeEvent(input$generate_go, {
@@ -453,17 +450,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           for (n in seq_len(length(groups_list))) {
             col <- groups_list[n]
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-            VAR <- paste0(col, "_", "KEGG")
-            result <- kegg_enrich_dotplot(
-              gene_list_ = unique(gene_list),
-              save_path_ = NULL,
-              save_filename_ = NULL,
-              showCategory_ = 10
-            )
-            assign(VAR, result, envir = .GlobalEnv)
+            future_promise({
+              result <- kegg_enrich_dotplot(
+                gene_list_ = unique(gene_list),
+                save_path_ = NULL,
+                save_filename_ = NULL,
+                showCategory_ = 10
+              )
+              list(r = result, c = col)
+            }) %...>% {
+              var <- paste0(.$c, "_", "KEGG")
+              output[[var]] <- renderPlot(.$r)
+            }
           }
-          output$G1_KEGG <- renderPlot({G1_KEGG})
-          output$G2_KEGG <- renderPlot({G2_KEGG})
         })
 
         observeEvent(input$targetGeneID, {
