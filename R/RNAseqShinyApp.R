@@ -239,7 +239,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     maeColData <- reactiveVal(NULL)
     topGeneList <- reactiveVal(NULL)
     downGeneList <- reactiveVal(NULL)
-    currentMAE <- NULL
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
@@ -339,7 +338,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                          colData = sample_info_table
                        )
                        settingMAE(mae)
-                       currentMAE <- mae
                      }))
 
         observeEvent(input$run_DEG,
@@ -415,8 +413,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
 
         observeEvent(input$generate_go, {
-          req(topGeneList(), downGeneList(), currentMAE)
-          mae <- currentMAE
+          req(topGeneList(), downGeneList(), settingMAE())
+          mae <- settingMAE()
           sample_info <- colData(mae[["RNAseq"]])
           groups_list <- c("G1", "G2")
           group1_fc_gene_profile <- topGeneList()
@@ -439,11 +437,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               }
             }
           }
-        })
+        }, ignoreInit=TRUE)
 
         observeEvent(input$generate_go, {
-          req(topGeneList(), downGeneList(), currentMAE)
-          mae <- currentMAE
+          req(topGeneList(), downGeneList(), settingMAE())
+          mae <- settingMAE()
           sample_info <- colData(mae[["RNAseq"]])
           groups_list <- c("G1", "G2")
           group1_fc_gene_profile <- topGeneList()
@@ -464,7 +462,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               output[[var]] <- renderPlot(.$r)
             }
           }
-        })
+        }, ignoreInit=TRUE)
 
         observeEvent(input$targetGeneID, {
           req(settingMAE())
