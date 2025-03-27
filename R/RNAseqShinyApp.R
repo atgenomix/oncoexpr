@@ -416,7 +416,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         observeEvent(input$generate_go, {
           req(topGeneList(), downGeneList(), currentMAE)
-          mae <- currentMAE()
+          mae <- currentMAE
           sample_info <- colData(mae[["RNAseq"]])
           groups_list <- c("G1", "G2")
           group1_fc_gene_profile <- topGeneList()
