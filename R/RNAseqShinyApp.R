@@ -422,7 +422,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         wide_data(results$normcount_data)
         maeColData(results$coldata)
 
-        message("run_DEG pressed: reactive values updated.")
+        message("assign reactiveVal: DEG_table, wide_data, maeColData")
     })
 
     topGeneList <- reactiveVal(NULL)
