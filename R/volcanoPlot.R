@@ -61,7 +61,7 @@ interactivePlotsUI <- function(id) {
   tagList(
     tags$div(
       style = "background-color: #f2f2f2; padding: 10px;",
-      titlePanel("Interactive Volcano, Scatter, and Violin Plots"),
+      titlePanel(""),
       fluidRow(
         # Left: Volcano Plot block
         column(width = 8,
@@ -150,7 +150,7 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
         logFCCol  = "logFC", 
         lfc_cut   = params()$lfc_cut, 
         pval_cut  = params()$pval_cut, 
-        title     = "Volcano Plot",
+        title     = "",
         topN      = params()$topN, 
         pointSize = params()$pointSize, 
         ptAlpha   = params()$ptAlpha, 
