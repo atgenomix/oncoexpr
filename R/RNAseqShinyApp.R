@@ -291,13 +291,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         output$normcount_table <- DT::renderDataTable({
           normcount_promise %...>% {
-            DT::datatable(normcount_data)
+            DT::datatable(.)
           }
         })
 
         output$exacttest_table <- DT::renderDataTable({
           exacttest_promise %...>% {
-            DT::datatable(exacttest_data)
+            DT::datatable(.)
           }
         })
 
