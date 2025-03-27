@@ -381,15 +381,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               use_adjP   = input$use_adjP
             )
           })
-          print("params")
-          print(params)
+          message("params")
+          message(params)
 
           normCount <- wide_data()
           volcanoData <- DEG_table()
           colData <- maeColData()
-          print(str(normCount))
-          print(str(volcanoData))
-          print(str(colData))
+          message(str(normCount))
+          message(str(volcanoData))
+          message(str(colData))
           exprData <- transfExprFormat(normCount, colData)
           interactivePlotsServer("plotVolcano",
                                 volcanoData = volcanoData,
