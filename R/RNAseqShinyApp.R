@@ -445,196 +445,226 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     cat("==================================== \n")
     cat("experiment \n")
     cat("==================================== \n")
-    # === G1 - KEGG ===
-    observeEvent(geneListReactive(), {
-      req(topGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- kegg_enrich_dotplot(unique(topGeneList()), save_path_ = NULL, save_filename_ = NULL, showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G1_KEGG started at:", .$start_time, "\n")
-        cat("G1_KEGG ended at:", .$end_time, "\n")
-        cat("G1_KEGG elapsed:", .$elapsed, " seconds\n")
-        output[["G1_KEGG"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G1 - CC ===
-    observeEvent(geneListReactive(), {
-      req(topGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- go_enrich_dotplot(unique(topGeneList()), save_path_ = NULL, save_filename_ = NULL, mode_ = "CC", showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G1_CC started at:", .$start_time, "\n")
-        cat("G1_CC ended at:", .$end_time, "\n")
-        cat("G1_CC elapsed:", .$elapsed, " seconds\n")
-        output[["G1_CC"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G1 - BP ===
-    observeEvent(geneListReactive(), {
-      req(topGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- go_enrich_dotplot(unique(topGeneList()), save_path_ = NULL, save_filename_ = NULL, mode_ = "BP", showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G1_BP started at:", .$start_time, "\n")
-        cat("G1_BP ended at:", .$end_time, "\n")
-        cat("G1_BP elapsed:", .$elapsed, " seconds\n")
-        output[["G1_BP"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G1 - MF ===
-    observeEvent(geneListReactive(), {
-      req(topGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- go_enrich_dotplot(unique(topGeneList()), save_path_ = NULL, save_filename_ = NULL, mode_ = "MF", showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G1_MF started at:", .$start_time, "\n")
-        cat("G1_MF ended at:", .$end_time, "\n")
-        cat("G1_MF elapsed:", .$elapsed, " seconds\n")
-        output[["G1_MF"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G2 - KEGG ===
-    observeEvent(geneListReactive(), {
-      req(downGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- kegg_enrich_dotplot(unique(downGeneList()), save_path_ = NULL, save_filename_ = NULL, showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G2_KEGG started at:", .$start_time, "\n")
-        cat("G2_KEGG ended at:", .$end_time, "\n")
-        cat("G2_KEGG elapsed:", .$elapsed, " seconds\n")
-        output[["G2_KEGG"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G2 - CC ===
-    observeEvent(geneListReactive(), {
-      req(downGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- go_enrich_dotplot(unique(downGeneList()), save_path_ = NULL, save_filename_ = NULL, mode_ = "CC", showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G2_CC started at:", .$start_time, "\n")
-        cat("G2_CC ended at:", .$end_time, "\n")
-        cat("G2_CC elapsed:", .$elapsed, " seconds\n")
-        output[["G2_CC"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G2 - BP ===
-    observeEvent(geneListReactive(), {
-      req(downGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- go_enrich_dotplot(unique(downGeneList()), save_path_ = NULL, save_filename_ = NULL, mode_ = "BP", showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G2_BP started at:", .$start_time, "\n")
-        cat("G2_BP ended at:", .$end_time, "\n")
-        cat("G2_BP elapsed:", .$elapsed, " seconds\n")
-        output[["G2_BP"]] <- renderPlot(.$result)
-      }
-    })
-
-    # === G2 - MF ===
-    observeEvent(geneListReactive(), {
-      req(downGeneList())
-      future_promise({
-        start_time <- as.character(Sys.time())
-        tic()
-        result <- go_enrich_dotplot(unique(downGeneList()), save_path_ = NULL, save_filename_ = NULL, mode_ = "MF", showCategory_ = 10)
-        elapsed <- toc(quiet = TRUE)
-        list(result = result, start_time = start_time, end_time = as.character(Sys.time()), elapsed = elapsed$toc - elapsed$tic)
-      }) %...>% {
-        cat("G2_MF started at:", .$start_time, "\n")
-        cat("G2_MF ended at:", .$end_time, "\n")
-        cat("G2_MF elapsed:", .$elapsed, " seconds\n")
-        output[["G2_MF"]] <- renderPlot(.$result)
-      }
-    })
-
+    # # === G1 - KEGG ===
     # observeEvent(geneListReactive(), {
-    #   req(topGeneList(), downGeneList(), settingMAE())
-      
-    #   gene_profiles <- list(
-    #     G1 = topGeneList(),
-    #     G2 = downGeneList()
-    #   )
-
-    #   task_list <- expand.grid(
-    #     group = names(gene_profiles),
-    #     mode = c("CC", "BP", "MF", "KEGG"),
-    #     stringsAsFactors = FALSE
-    #   )
-
-    #   # === 開始進度條 ===
-
-
-    #     pwalk(task_list, function(group, mode) {
-    #       gene_list <- gene_profiles[[group]]
-          
-    #       future_promise({
-    #         p(sprintf("Processing %s - %s", group, mode))  # 推進度 + 顯示訊息
-    #         tryCatch({
-    #           result <- if (mode == "KEGG") {
-    #             kegg_enrich_dotplot(
-    #               gene_list_ = unique(gene_list),
-    #               save_path_ = NULL,
-    #               save_filename_ = NULL,
-    #               showCategory_ = 10
-    #             )
-    #           } else {
-    #             go_enrich_dotplot(
-    #               gene_list_ = unique(gene_list),
-    #               save_path_ = NULL,
-    #               save_filename_ = NULL,
-    #               mode_ = mode,
-    #               showCategory_ = 10
-    #             )
-    #           }
-    #           list(r = result, c = group, m = mode)
-    #         }, error = function(e) {
-    #           message("Error in ", group, "-", mode, ": ", e$message)
-    #           NULL
-    #         })
-    #       }) %...>% {
-    #         if (!is.null(.)) {
-    #           var <- paste0(.$c, "_", .$m)
-    #           output[[var]] <- renderPlot(.$r)
-    #         }
-    #       }
-    #     })
-
-
+    #   gene_list <- topGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- kegg_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G1_KEGG started at:", .$start_time, "\n")
+    #     cat("G1_KEGG ended at:", .$end_time, "\n")
+    #     cat("G1_KEGG elapsed:", .$elapsed, " seconds\n")
+    #     output[["G1_KEGG"]] <- renderPlot(.$result)
+    #   }
     # })
+
+    # # === G1 - CC ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- topGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- go_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, mode_ = "CC", showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G1_CC started at:", .$start_time, "\n")
+    #     cat("G1_CC ended at:", .$end_time, "\n")
+    #     cat("G1_CC elapsed:", .$elapsed, " seconds\n")
+    #     output[["G1_CC"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+    # # === G1 - BP ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- topGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- go_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, mode_ = "BP", showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G1_BP started at:", .$start_time, "\n")
+    #     cat("G1_BP ended at:", .$end_time, "\n")
+    #     cat("G1_BP elapsed:", .$elapsed, " seconds\n")
+    #     output[["G1_BP"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+    # # === G1 - MF ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- topGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- go_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, mode_ = "MF", showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G1_MF started at:", .$start_time, "\n")
+    #     cat("G1_MF ended at:", .$end_time, "\n")
+    #     cat("G1_MF elapsed:", .$elapsed, " seconds\n")
+    #     output[["G1_MF"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+    # # === G2 - KEGG ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- downGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- kegg_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G2_KEGG started at:", .$start_time, "\n")
+    #     cat("G2_KEGG ended at:", .$end_time, "\n")
+    #     cat("G2_KEGG elapsed:", .$elapsed, " seconds\n")
+    #     output[["G2_KEGG"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+    # # === G2 - CC ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- downGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- go_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, mode_ = "CC", showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G2_CC started at:", .$start_time, "\n")
+    #     cat("G2_CC ended at:", .$end_time, "\n")
+    #     cat("G2_CC elapsed:", .$elapsed, " seconds\n")
+    #     output[["G2_CC"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+    # # === G2 - BP ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- downGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- go_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, mode_ = "BP", showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G2_BP started at:", .$start_time, "\n")
+    #     cat("G2_BP ended at:", .$end_time, "\n")
+    #     cat("G2_BP elapsed:", .$elapsed, " seconds\n")
+    #     output[["G2_BP"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+    # # === G2 - MF ===
+    # observeEvent(geneListReactive(), {
+    #   gene_list <- downGeneList()
+    #   req(gene_list)
+    #   future_promise({
+    #     start_time <- as.character(Sys.time())
+    #     tic()
+    #     result <- go_enrich_dotplot(unique(gene_list), save_path_ = NULL, save_filename_ = NULL, mode_ = "MF", showCategory_ = 10)
+    #     elapsed <- toc(quiet = TRUE)
+    #     end_time <- as.character(Sys.time())
+    #     list(result = result, start_time = start_time, end_time = end_time, elapsed = elapsed$toc - elapsed$tic)
+    #   }) %...>% {
+    #     cat("G2_MF started at:", .$start_time, "\n")
+    #     cat("G2_MF ended at:", .$end_time, "\n")
+    #     cat("G2_MF elapsed:", .$elapsed, " seconds\n")
+    #     output[["G2_MF"]] <- renderPlot(.$result)
+    #   }
+    # })
+
+
+    observeEvent(geneListReactive(), {
+      req(topGeneList(), downGeneList(), settingMAE())
+      
+      gene_profiles <- list(
+        G1 = topGeneList(),
+        G2 = downGeneList()
+      )
+      
+      task_list <- expand.grid(
+        group = names(gene_profiles),
+        mode = c("CC", "BP", "MF", "KEGG"),
+        stringsAsFactors = FALSE
+      )
+      
+      pwalk(task_list, function(group, mode) {
+        gene_list <- gene_profiles[[group]]
+        
+        future_promise({
+          tryCatch({
+            # 記錄開始時間與 tic 計時
+            start_time <- as.character(Sys.time())
+            tic()
+            
+            result <- if (mode == "KEGG") {
+              kegg_enrich_dotplot(
+                gene_list_ = unique(gene_list),
+                save_path_ = NULL,
+                save_filename_ = NULL,
+                showCategory_ = 10
+              )
+            } else {
+              go_enrich_dotplot(
+                gene_list_ = unique(gene_list),
+                save_path_ = NULL,
+                save_filename_ = NULL,
+                mode_ = mode,
+                showCategory_ = 10
+              )
+            }
+            
+            # 取得計時結果並記錄結束時間
+            elapsed <- toc(quiet = TRUE)
+            end_time <- as.character(Sys.time())
+            
+            list(
+              r = result,
+              c = group,
+              m = mode,
+              start_time = start_time,
+              end_time = end_time,
+              elapsed = elapsed$toc - elapsed$tic
+            )
+          }, error = function(e) {
+            message("Error in ", group, "-", mode, ": ", e$message)
+            NULL
+          })
+        }) %...>% {
+          if (!is.null(.)) {
+            var <- paste0(.$c, "_", .$m)
+            cat(var, " started at:", .$start_time, "\n")
+            cat(var, " ended at:", .$end_time, "\n")
+            cat(var, " elapsed:", .$elapsed, " seconds\n")
+            output[[var]] <- renderPlot(.$r)
+          }
+        }
+      })
+    })
 
 
 
