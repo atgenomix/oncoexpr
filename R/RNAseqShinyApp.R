@@ -820,24 +820,24 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     # })
 
 
-    # observeEvent(geneListReactive(), {
-    #   req(geneListReactive(), settingMAE())
-    #   mae <- settingMAE()
+    observeEvent(geneListReactive(), {
+      req(geneListReactive(), settingMAE())
+      mae <- settingMAE()
 
-    #   print(geneListReactive())
+      print(geneListReactive())
       
-    #   geneListVec <- unlist(strsplit(geneListReactive(), ","))
-    #   geneListVec <- trimws(geneListVec)
-    #   ht <- make_heatmap_mae(mae, geneListVec)
-    #   if (!is.null(ht)) {
-    #     makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-    #   } else {
-    #     output$ht_heatmap <- renderPlot({
-    #       grid::grid.newpage()
-    #       grid::grid.text("No data available.")
-    #     })
-    #   }
-    # })
+      geneListVec <- unlist(strsplit(geneListReactive(), ","))
+      geneListVec <- trimws(geneListVec)
+      ht <- make_heatmap_mae(mae, geneListVec)
+      if (!is.null(ht)) {
+        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+      } else {
+        output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+        })
+      }
+    })
   }
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
