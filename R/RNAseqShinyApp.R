@@ -56,8 +56,8 @@ NULL
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  plan(multisession, workers =2)
-  print(future::plan())
+  #plan(multisession, workers =2)
+  #print(future::plan())
   ui <- fluidPage(
     navbarPage(
       title = "RNAseq App",
@@ -249,7 +249,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       tbl_list_promise <- future_promise({
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
-      })
+      }, globals = list(selected_db_name = selected_db_name))
 
       tbl_list_promise %...>% (function(tbl_list) {
         tbls <- tbl_list$tableName
