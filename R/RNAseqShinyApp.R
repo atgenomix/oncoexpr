@@ -426,13 +426,24 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             for (mode in c("CC", "BP", "MF")) {
               print(mode)
               future_promise({
+                start_time <- as.character(Sys.time())
+                tic()
                 result <- go_enrich_dotplot(
-                  gene_list_ = unique(gene_list),
-                  save_path_ = NULL,
-                  save_filename_ = NULL,
-                  mode_ = mode,
-                  showCategory_ = 10)
-                list(r = result, c = col, m = mode)
+                          gene_list_ = unique(gene_list),
+                          save_path_ = NULL,
+                          save_filename_ = NULL,
+                          mode_ = mode,
+                          showCategory_ = 10
+                )
+                elapsed <- toc(quiet = TRUE)
+                end_time <- as.character(Sys.time())
+                list( r = result,
+                      c = col,
+                      m = mode,
+                      start_time = start_time,
+                      end_time = end_time,
+                      elapsed = elapsed$toc - elapsed$tic
+                )
               }) %...>% {
                 var <- paste0(.$c, "_", .$m)
                 output[[var]] <- renderPlot(.$r)
@@ -454,13 +465,22 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             print("KEGG")
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             future_promise({
+              start_time <- as.character(Sys.time())
+              tic()
               result <- kegg_enrich_dotplot(
-                gene_list_ = unique(gene_list),
-                save_path_ = NULL,
-                save_filename_ = NULL,
-                showCategory_ = 10
+                        gene_list_ = unique(gene_list),
+                        save_path_ = NULL,
+                        save_filename_ = NULL,
+                        showCategory_ = 10
               )
-              list(r = result, c = col)
+              elapsed <- toc(quiet = TRUE)
+              end_time <- as.character(Sys.time())
+              list( r = result,
+                    c = col,
+                    start_time = start_time,
+                    end_time = end_time,
+                    elapsed = elapsed$toc - elapsed$tic
+              )
             }) %...>% {
               var <- paste0(.$c, "_", "KEGG")
               output[[var]] <- renderPlot(.$r)
