@@ -246,11 +246,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       selected_db_name <- results$db_info$selected_db()
       sc_conn <- sc()
 
-
       DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
       tbl_list <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
-
-
 
       tbls <- tbl_list$tableName
       prefix <- c("^normcounts|^exacttest|^coldata")
@@ -262,14 +259,18 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
 
       normcount_promise <- future_promise({
+        message("開始執行")
+        sc_conn <- sc()
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
         colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
         normcount <- normcount[,colnames(normcount)!="_c0"]
         normcount
       }, globals = list(sc_conn = sc_conn, normcount_tbls = normcount_tbls))
-
+      print("normcount_promise")
+      print(normcount_promise)
       exacttest_promise <- future_promise({
+        message("開始執行")
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
         colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
@@ -280,6 +281,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       coldata_promise <-
         if (length(coldata_tbls) > 0) {
           future_promise({
+            sc_conn <- sc()
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             DBI::dbGetQuery(sc_conn, query_coldata)
           }, globals = list(sc_conn = sc_conn, coldata_tbls = coldata_tbls))
