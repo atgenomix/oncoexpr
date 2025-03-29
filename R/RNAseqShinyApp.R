@@ -245,7 +245,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
       sc_conn <- sc()
-
       DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
       tbl_list <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
 
@@ -260,7 +259,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       normcount_promise <- future_promise({
         message("開始執行")
-        sc_conn <- sc()
+
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
         colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
@@ -281,7 +280,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       coldata_promise <-
         if (length(coldata_tbls) > 0) {
           future_promise({
-            sc_conn <- sc()
+
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             DBI::dbGetQuery(sc_conn, query_coldata)
           }, globals = list(sc_conn = sc_conn, coldata_tbls = coldata_tbls))
