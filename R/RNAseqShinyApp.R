@@ -248,7 +248,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
       DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-      DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
+      tbl_list <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
 
 
 
@@ -267,7 +267,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
         normcount <- normcount[,colnames(normcount)!="_c0"]
         normcount
-      })
+      }, globals = list(sc_conn = sc_conn, normcount_tbls = normcount_tbls))
 
       exacttest_promise <- future_promise({
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
@@ -275,14 +275,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
         exacttest <- exacttest[,colnames(exacttest)!="_c0"]
         exacttest
-      })
+      }, globals = list(sc_conn = sc_conn, exacttest_tbls = exacttest_tbls))
 
       coldata_promise <-
         if (length(coldata_tbls) > 0) {
           future_promise({
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             DBI::dbGetQuery(sc_conn, query_coldata)
-          })
+          }, globals = list(sc_conn = sc_conn, coldata_tbls = coldata_tbls))
         } else {
           normcount_promise %...>% (function(normcount) {
             future_promise({
