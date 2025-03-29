@@ -421,8 +421,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           group2_fc_gene_profile <- downGeneList()
           for (n in seq_len(length(groups_list))) {
             col <- groups_list[n]
+            print(col)
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             for (mode in c("CC", "BP", "MF")) {
+              print(mode)
               future_promise({
                 result <- go_enrich_dotplot(
                   gene_list_ = unique(gene_list),
@@ -448,6 +450,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           group2_fc_gene_profile <- downGeneList()
           for (n in seq_len(length(groups_list))) {
             col <- groups_list[n]
+            print(col)
+            print("KEGG")
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             future_promise({
               result <- kegg_enrich_dotplot(
