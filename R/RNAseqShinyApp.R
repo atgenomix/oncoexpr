@@ -607,8 +607,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           group2_fc_gene_profile <- downGeneList()
           for (n in seq_len(length(groups_list))) {
             col <- groups_list[n]
+            print(col)
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             for (mode in c("CC", "BP", "MF")) {
+              print(mode)
               future_promise({
                 start_time <- as.character(Sys.time())
                 tic()
@@ -624,12 +626,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                end_time = end_time,
                elapsed = elapsed$toc - elapsed$tic)
               }) %...>% {
-                var <- paste0(.$c, "_", .$m)
-                output[[var]] <- renderPlot(.$r)
+                if (!is.null(.)) {
+                  var <- paste0(.$c, "_", .$m)
+                  cat(var, " started at:", .$start_time, "\n")
+                  cat(var, " ended at:", .$end_time, "\n")
+                  cat(var, " elapsed:", .$elapsed, " seconds\n")
+                  output[[var]] <- renderPlot(.$r)
+                }
               }
             }
           }
-        }, ignoreInit=TRUE)
+        })
 
         observeEvent(geneListReactive(), {
           req(topGeneList(), downGeneList(), settingMAE())
@@ -640,6 +647,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           group2_fc_gene_profile <- downGeneList()
           for (n in seq_len(length(groups_list))) {
             col <- groups_list[n]
+            print(col)
+            print("KEGG")
             gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             future_promise({
               start_time <- as.character(Sys.time())
@@ -656,11 +665,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                end_time = end_time,
                elapsed = elapsed$toc - elapsed$tic)
             }) %...>% {
-              var <- paste0(.$c, "_", "KEGG")
-              output[[var]] <- renderPlot(.$r)
+              if (!is.null(.)) {
+                var <- paste0(.$c, "_", "KEGG")
+                cat(var, " started at:", .$start_time, "\n")
+                cat(var, " ended at:", .$end_time, "\n")
+                cat(var, " elapsed:", .$elapsed, " seconds\n")
+                output[[var]] <- renderPlot(.$r)
+              }
             }
           }
-        }, ignoreInit=TRUE)
+        })
 
     # observeEvent(geneListReactive(), {
     #   req(topGeneList(), downGeneList(), settingMAE())
