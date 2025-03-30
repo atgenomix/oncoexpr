@@ -82,7 +82,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             fluidRow(
               column(
                 width = 12,
-                DT::dataTableOutput("wide_table_dt", width = "100%")
+                #DT::dataTableOutput("wide_table_dt", width = "100%")
+                DT::dataTableOutput("normcount_table", width = "100%")
               )
             )
           )
@@ -132,7 +133,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
               tabPanel("DEG Table",
 
-                       DT::dataTableOutput('DEG_table', width = "100%")
+                       #DT::dataTableOutput('DEG_table', width = "100%")
+                       DT::dataTableOutput('exacttest_table', width = "100%")
 
               )
             )
@@ -247,6 +249,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       sc_conn <- sc()
       DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
       tbl_list <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
+      
 
       tbls <- tbl_list$tableName
       prefix <- c("^normcounts|^exacttest|^coldata")
@@ -256,34 +259,61 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
       exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
       coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
-
+      #"===="
+      #spark_disconnect(sc_conn)
+      #rm(sc_conn)
+      #"===="
       normcount_promise <- future_promise({
-        message("開始執行")
-
+        start_time <- Sys.time()
+        message(sprintf("[%s] 開始查詢 normcounts 資料表", start_time))
+        sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+        print(sc_conn)
+        DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
         colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
         normcount <- normcount[,colnames(normcount)!="_c0"]
+        #spark_disconnect(sc_conn)
+        end_time <- Sys.time()
+        message(sprintf("[%s] 完成 normcounts 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
         normcount
-      }, globals = list(sc_conn = sc_conn, normcount_tbls = normcount_tbls))
-      print("normcount_promise")
-      print(normcount_promise)
+        #print(head(normcount))
+      }, globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name))
+
       exacttest_promise <- future_promise({
-        message("開始執行")
+        start_time <- Sys.time()
+        message(sprintf("[%s] 開始查詢 exacttest 資料表", start_time))
+        sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+        print(sc_conn)
+        DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
         colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
         exacttest <- exacttest[,colnames(exacttest)!="_c0"]
+        #spark_disconnect(sc_conn)
+        end_time <- Sys.time()
+        message(sprintf("[%s] 完成 exacttest 查詢 (耗時 %.2f 秒)", 
+                        end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
         exacttest
-      }, globals = list(sc_conn = sc_conn, exacttest_tbls = exacttest_tbls))
+        #print(head(exacttest))
+      }, globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls , selected_db_name = selected_db_name))
 
       coldata_promise <-
         if (length(coldata_tbls) > 0) {
           future_promise({
-
+            start_time <- Sys.time()
+            message(sprintf("[%s] 開始查詢 coldata 資料表", start_time))
+            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            print(sc_conn)
+            DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-            DBI::dbGetQuery(sc_conn, query_coldata)
-          }, globals = list(sc_conn = sc_conn, coldata_tbls = coldata_tbls))
+            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+            #spark_disconnect(sc_conn)
+            end_time <- Sys.time()
+            message(sprintf("[%s] 完成 coldata 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+            coldata
+            #print(head(coldata))
+          }, globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls , selected_db_name = selected_db_name))
         } else {
           normcount_promise %...>% (function(normcount) {
             future_promise({
@@ -291,19 +321,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             })
           })
         }
-
-      output$normcount_table <- DT::renderDataTable({
-        normcount_promise %...>% {
-          DT::datatable(.)
-        }
+      print("finish query")
+      normcount_promise %...>% (function(normcount_data) {
+        output$normcount_table <- DT::renderDataTable({
+          DT::datatable(normcount_data)
+        })
+      })
+      exacttest_promise %...>% (function(exacttest_data) {
+        output$exacttest_table <- DT::renderDataTable({
+          DT::datatable(exacttest_data)
+        })
       })
 
-      output$exacttest_table <- DT::renderDataTable({
-        exacttest_promise %...>% {
-          DT::datatable(.)
-        }
-      })
-
+      print("finish render data table")
       observeEvent(results$db_info$selected_db(),
                     promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
                       req(coldata, normcount_data, exacttest_data)
@@ -339,17 +369,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                         colData = sample_info_table
                       )
                       settingMAE(mae)
-                    }))
+                    }), ignoreInit = TRUE)
 
-      observeEvent(input$run_DEG,
-                    promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
-                      req(exacttest_data, normcount_data, coldata)
-                      DEG_table(exacttest_data)
-                      wide_data(normcount_data)
-                      maeColData(coldata)
+      # observeEvent(input$run_DEG,
+      #               promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
+      #                 req(exacttest_data, normcount_data, coldata)
+      #                 DEG_table(exacttest_data)
+      #                 wide_data(normcount_data)
+      #                 maeColData(coldata)
 
-                      message("run_DEG pressed: reactive values updated.")
-                    }))
+      #                 message("run_DEG pressed: reactive values updated.")
+      #               }))
 
       output$wide_table_dt <- DT::renderDataTable({
         req(wide_data())
