@@ -29,7 +29,6 @@
 #' @import shinydashboard
 #' @import promises
 #' @import future
-#' @import future.apply
 #' @import tictoc
 #' @import purrr
 #' @importFrom ggpubr color_palette
