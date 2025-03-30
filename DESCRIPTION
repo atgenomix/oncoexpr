@@ -35,7 +35,11 @@ Imports:
     shinydashboard,
     ggiraph,
     pysparklyr,
-    org.Hs.eg.db
+    org.Hs.eg.db,
+    promises,
+    future,
+    purrr,
+    tictoc
 Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/MultiAssayExperiment,
