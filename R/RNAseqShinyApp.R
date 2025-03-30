@@ -27,6 +27,11 @@
 #' @import InteractiveComplexHeatmap
 #' @import ggiraph
 #' @import shinydashboard
+#' @import promises
+#' @import future
+#' @import future.apply
+#' @import tictoc
+#' @import purrr
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
