@@ -201,6 +201,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       exacttest_data = NULL,
       coldata = NULL
     )
+    volcano_res <- reactiveVal(NULL)
+    settingMAE <- reactiveVal(NULL)
+    DEG_table <- reactiveVal(NULL)
+    DEG_summary <- reactiveVal(NULL)
+    wide_data <- reactiveVal(NULL)
+    maeColData <- reactiveVal(NULL)
 
     observe({
       sc(sparklyr::spark_connect(master = master, method = method, version = version))
@@ -257,12 +263,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(exacttest_tbls)
       print("====coldata_tbls====")
       print(coldata_tbls)
-
+      spark_disconnect(sc())
       normcount_promise <- future_promise({
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 normcounts 資料表", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+
         print(sc_conn)
+        print(normcount_tbls[1])
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
@@ -279,7 +287,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 exacttest 資料表", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-        print(sc_conn)
+
+        #print(sc_conn)
+        print(exacttest_tbls[1])
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
@@ -299,7 +309,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             start_time <- Sys.time()
             message(sprintf("[%s] 開始查詢 coldata 資料表", start_time))
             sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-            print(sc_conn)
+
+            #print(sc_conn)
+            print(coldata_tbls[1])
             DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
@@ -317,29 +329,32 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           })
         }
 
-      promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% (function(normcount_data, exacttest_data, coldata) {
-        results$normcount_data <- normcount_data
-        results$exacttest_data <- exacttest_data
-        results$coldata <- coldata
-        print("===normcount_data===")
-        print(head(results$normcount_data))
-        print("===exacttest_data===")
-        print(head(results$exacttest_data))
-        print("===coldata===")
-        print(head(results$coldata))
-      })
+
+        promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% (function(normcount_data, exacttest_data, coldata) {
+            results$normcount_data <- normcount_data
+            results$exacttest_data <- exacttest_data
+            results$coldata <- coldata
+            print("===normcount_data===")
+            print(head(results$normcount_data))
+            print("===exacttest_data===")
+            print(head(results$exacttest_data))
+            print("===coldata===")
+            print(head(results$coldata))
+        })
+
+
       
-      colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-      results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-      results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+      #colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+      #colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+      #results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+      #results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
       results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
                 if (is.numeric(x)) round(x, 4) else x
             }))
       results$exacttest_data[,"logFC"] <- if(is.numeric(results$exacttest_data[,"logFC"])) round(results$exacttest_data[,"logFC"], 4) else results$exacttest_data[,"logFC"]
       results$exacttest_data[,"logCPM"] <- if(is.numeric(results$exacttest_data[,"logCPM"])) round(results$exacttest_data[,"logCPM"], 4) else results$exacttest_data[,"logCPM"]
 
-    })
+     })
 
     output$normcount_table <- DT::renderDataTable({
       req(results$normcount_data)
@@ -351,12 +366,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       DT::datatable(results$exacttest_data)
     })
 
-    volcano_res <- reactiveVal(NULL)
-    settingMAE <- reactiveVal(NULL)
-    DEG_table <- reactiveVal(NULL)
-    DEG_summary <- reactiveVal(NULL)
-    wide_data <- reactiveVal(NULL)
-    maeColData <- reactiveVal(NULL)
+
 
 
     output$wide_table_dt <- DT::renderDataTable({
@@ -501,83 +511,83 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     cat("experiment \n")
     cat("==================================== \n")
 
-        observeEvent(geneListReactive(), {
-          req(topGeneList(), downGeneList(), settingMAE())
-          mae <- settingMAE()
-          sample_info <- colData(mae[["RNAseq"]])
-          groups_list <- c("G1", "G2")
-          group1_fc_gene_profile <- topGeneList()
-          group2_fc_gene_profile <- downGeneList()
-          for (n in seq_len(length(groups_list))) {
-            col <- groups_list[n]
-            print(col)
-            gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-            for (mode in c("CC", "BP", "MF")) {
-              print(mode)
-              future_promise({
-                start_time <- as.character(Sys.time())
-                tic()
-                result <- go_enrich_dotplot(
-                  gene_list_ = unique(gene_list),
-                  save_path_ = NULL,
-                  save_filename_ = NULL,
-                  mode_ = mode,
-                  showCategory_ = 10)
-                elapsed <- toc(quiet = TRUE)
-                end_time <- as.character(Sys.time())
-                list(r = result, c = col, m = mode,start_time = start_time,
-               end_time = end_time,
-               elapsed = elapsed$toc - elapsed$tic)
-              }) %...>% {
-                if (!is.null(.)) {
-                  var <- paste0(.$c, "_", .$m)
-                  cat(var, " started at:", .$start_time, "\n")
-                  cat(var, " ended at:", .$end_time, "\n")
-                  cat(var, " elapsed:", .$elapsed, " seconds\n")
-                  output[[var]] <- renderPlot(.$r)
-                }
-              }
+    observeEvent(geneListReactive(), {
+      req(topGeneList(), downGeneList(), settingMAE())
+      mae <- settingMAE()
+      sample_info <- colData(mae[["RNAseq"]])
+      groups_list <- c("G1", "G2")
+      group1_fc_gene_profile <- topGeneList()
+      group2_fc_gene_profile <- downGeneList()
+      for (n in seq_len(length(groups_list))) {
+        col <- groups_list[n]
+        print(col)
+        gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        for (mode in c("CC", "BP", "MF")) {
+          print(mode)
+          future_promise({
+            start_time <- as.character(Sys.time())
+            tic()
+            result <- go_enrich_dotplot(
+              gene_list_ = unique(gene_list),
+              save_path_ = NULL,
+              save_filename_ = NULL,
+              mode_ = mode,
+              showCategory_ = 10)
+            elapsed <- toc(quiet = TRUE)
+            end_time <- as.character(Sys.time())
+            list(r = result, c = col, m = mode,start_time = start_time,
+            end_time = end_time,
+            elapsed = elapsed$toc - elapsed$tic)
+          }) %...>% {
+            if (!is.null(.)) {
+              var <- paste0(.$c, "_", .$m)
+              cat(var, " started at:", .$start_time, "\n")
+              cat(var, " ended at:", .$end_time, "\n")
+              cat(var, " elapsed:", .$elapsed, " seconds\n")
+              output[[var]] <- renderPlot(.$r)
             }
           }
-        })
+        }
+      }
+    })
 
-        observeEvent(geneListReactive(), {
-          req(topGeneList(), downGeneList(), settingMAE())
-          mae <- settingMAE()
-          sample_info <- colData(mae[["RNAseq"]])
-          groups_list <- c("G1", "G2")
-          group1_fc_gene_profile <- topGeneList()
-          group2_fc_gene_profile <- downGeneList()
-          for (n in seq_len(length(groups_list))) {
-            col <- groups_list[n]
-            print(col)
-            print("KEGG")
-            gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-            future_promise({
-              start_time <- as.character(Sys.time())
-              tic()
-              result <- kegg_enrich_dotplot(
-                gene_list_ = unique(gene_list),
-                save_path_ = NULL,
-                save_filename_ = NULL,
-                showCategory_ = 10
-              )
-              elapsed <- toc(quiet = TRUE)
-              end_time <- as.character(Sys.time())
-              list(r = result, c = col, start_time = start_time,
-               end_time = end_time,
-               elapsed = elapsed$toc - elapsed$tic)
-            }) %...>% {
-              if (!is.null(.)) {
-                var <- paste0(.$c, "_", "KEGG")
-                cat(var, " started at:", .$start_time, "\n")
-                cat(var, " ended at:", .$end_time, "\n")
-                cat(var, " elapsed:", .$elapsed, " seconds\n")
-                output[[var]] <- renderPlot(.$r)
-              }
-            }
+    observeEvent(geneListReactive(), {
+      req(topGeneList(), downGeneList(), settingMAE())
+      mae <- settingMAE()
+      sample_info <- colData(mae[["RNAseq"]])
+      groups_list <- c("G1", "G2")
+      group1_fc_gene_profile <- topGeneList()
+      group2_fc_gene_profile <- downGeneList()
+      for (n in seq_len(length(groups_list))) {
+        col <- groups_list[n]
+        print(col)
+        print("KEGG")
+        gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        future_promise({
+          start_time <- as.character(Sys.time())
+          tic()
+          result <- kegg_enrich_dotplot(
+            gene_list_ = unique(gene_list),
+            save_path_ = NULL,
+            save_filename_ = NULL,
+            showCategory_ = 10
+          )
+          elapsed <- toc(quiet = TRUE)
+          end_time <- as.character(Sys.time())
+          list(r = result, c = col, start_time = start_time,
+            end_time = end_time,
+            elapsed = elapsed$toc - elapsed$tic)
+        }) %...>% {
+          if (!is.null(.)) {
+            var <- paste0(.$c, "_", "KEGG")
+            cat(var, " started at:", .$start_time, "\n")
+            cat(var, " ended at:", .$end_time, "\n")
+            cat(var, " elapsed:", .$elapsed, " seconds\n")
+            output[[var]] <- renderPlot(.$r)
           }
-        })
+        }
+      }
+    })
 
 
     observeEvent(geneListReactive(), {
@@ -602,6 +612,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
 
+ 
 }
 
 
