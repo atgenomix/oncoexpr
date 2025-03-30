@@ -53,25 +53,29 @@ transfExprFormat <- function(exprMatrix = normCount, colData = colData) {
 #' }
 #'
 #' @export
+#' 
+#' 
+
 interactivePlotsUI <- function(id) {
   ns <- NS(id)
   tagList(
     tags$div(
       style = "background-color: #f2f2f2; padding: 10px;",
-      titlePanel("Interactive Volcano, Scatter, and Violin Plots"),
+      titlePanel(""),
       fluidRow(
         # Left: Volcano Plot block
         column(width = 8,
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
                    h4("Volcano Plot"),
-                   ggiraph::girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px")
+                   
+                   girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px")
                )
         ),
         # Right: Scatter Plot (top) and Violin Plot (bottom)
         column(width = 4,
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
                    h4("Scatter Plot"),
-                   ggiraph::girafeOutput(ns("scatterPlot"), width = "100%", height = "300px")
+                   girafeOutput(ns("scatterPlot"), width = "100%", height = "300px")
                ),
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px;",
                    h4("Violin Plot"),
@@ -120,86 +124,91 @@ interactivePlotsUI <- function(id) {
 #' }
 #'
 #' @export
+
+
 interactivePlotsServer <- function(id, volcanoData, exprData, params) {
   moduleServer(id, function(input, output, session) {
     
-    # Store the currently hovered gene
     persistent_gene <- reactiveVal(NULL)
     
-    observeEvent(input$volcanoPlot_hovered, {
-      if (!is.null(input$volcanoPlot_hovered) && input$volcanoPlot_hovered != "")
-        persistent_gene(input$volcanoPlot_hovered)
+    observeEvent(input$volcanoPlot_selected, {
+      if (!is.null(input$volcanoPlot_selected) && input$volcanoPlot_selected != "")
+        persistent_gene(input$volcanoPlot_selected)
+    })
+
+    observeEvent(input$scatterPlot_selected, {
+      if (!is.null(input$scatterPlot_selected) && input$scatterPlot_selected != "")
+        persistent_gene(input$scatterPlot_selected)
     })
     
-    observeEvent(input$scatterPlot_hovered, {
-      if (!is.null(input$scatterPlot_hovered) && input$scatterPlot_hovered != "")
-        persistent_gene(input$scatterPlot_hovered)
-    })
-    
-    # Render Volcano Plot using provided parameters and volcanoData
+
     output$volcanoPlot <- renderGirafe({
       p <- ggvolcano_custom_interactive(
-        df        = volcanoData,
-        geneName  = volcanoData$GeneSymbol,
-        pValCol   = "PValue",
-        logFCCol  = "logFC",
-        lfc_cut   = params()$lfc_cut,
-        pval_cut  = params()$pval_cut,
-        title     = "Volcano Plot",
-        topN      = params()$topN,
-        pointSize = params()$pointSize,
-        ptAlpha   = params()$ptAlpha,
+        df        = volcanoData, 
+        geneName  = volcanoData$"GeneSymbol",
+        pValCol   = "PValue", 
+        logFCCol  = "logFC", 
+        lfc_cut   = params()$lfc_cut, 
+        pval_cut  = params()$pval_cut, 
+        title     = "",
+        topN      = params()$topN, 
+        pointSize = params()$pointSize, 
+        ptAlpha   = params()$ptAlpha, 
         labelSize = params()$labelSize
       )
       girafe(ggobj = p,
              options = list(
                opts_zoom(max = 5),
-               opts_hover_inv(css = "opacity:0.3;")
+               opts_selection(type = "single", only_shiny = FALSE)
              ))
     })
     
-    # Render Scatter Plot with interactive point hover
-    output$scatterPlot <- renderGirafe({
-      current_gene <- persistent_gene()
-      scatterData_local <- exprData %>%
-        group_by(GeneSymbol) %>%
-        summarise(
-          mean1 = mean(expression[group == "control"]),
-          mean2 = mean(expression[group == "case"])
-        ) %>% ungroup()
-      
-      if (is.null(current_gene) || current_gene == "") {
-        scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
-      } else {
-        scatterData_local <- scatterData_local %>% 
-          mutate(highlight = ifelse(GeneSymbol == current_gene, "highlight", "other"))
-      }
-      
-      scatterData_local <- scatterData_local %>% 
-        mutate(highlight = factor(highlight, levels = c("highlight", "other", "normal")))
-      
-      p <- ggplot(scatterData_local, aes(x = mean1, y = mean2)) +
-        ggiraph::geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol, 
-                                             color = highlight, alpha = factor(highlight)), 
-                                         size = 2) +
-        scale_color_manual(values = c("highlight" = "red", "other" = "grey", "normal" = "black"), drop = FALSE) +
-        scale_alpha_manual(values = c("highlight" = 1, "other" = 0.2, "normal" = 1), drop = FALSE) +
-        labs(x = "Group1 Mean Expression", y = "Group2 Mean Expression") +
-        theme_minimal()
-      
-      girafe(ggobj = p,
-             options = list(
-               opts_zoom(max = 5),
-               opts_hover_inv(css = "opacity:0.3;")
-             ))
+   output$scatterPlot <- renderGirafe({
+        current_gene <- persistent_gene()
+        scatterData_local <- exprData %>%
+            group_by(GeneSymbol) %>%
+            summarise(
+            mean1 = mean(expression[group == "control"]),
+            mean2 = mean(expression[group == "case"])
+            ) %>% ungroup()
+        
+        # 如果沒有選取基因，直接全部以 normal 繪製
+        if (is.null(current_gene) || current_gene == "") {
+            scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
+            p <- ggplot(scatterData_local, aes(x = log2(mean1), y = log2(mean2))) +
+            geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    size = 2, color = "black", alpha = 1) +
+            labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
+            theme_minimal()
+        } else {
+            # 有選取基因時，分成兩層：非選取與選取
+            nonhighlight_data <- scatterData_local %>% filter(GeneSymbol != current_gene)
+            highlight_data    <- scatterData_local %>% filter(GeneSymbol == current_gene)
+            
+            p <- ggplot() +
+            geom_point_interactive(data = nonhighlight_data,
+                                    aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    size = 2, color = "grey", alpha = 0.2) +
+            geom_point_interactive(data = highlight_data,
+                                    aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
+                                    size = 2, color = "red", alpha = 1) +
+            labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
+            theme_minimal()
+        }
+        
+        girafe(ggobj = p,
+                options = list(
+                opts_zoom(max = 5),
+                opts_selection(type = "single", only_shiny = FALSE)
+                ))
     })
+
     
-    # Render Violin Plot based on the currently hovered gene
     output$geneViolinPlot <- renderPlot({
       selected_gene <- persistent_gene()
       if (is.null(selected_gene) || selected_gene == "") {
         plot.new()
-        title("Please hover over a gene from the Volcano or Scatter Plot")
+        title("Please click a gene from the Volcano or Scatter Plot")
       } else {
         data_selected <- exprData %>% filter(GeneSymbol == selected_gene)
         ggplot(data_selected, aes(x = group, y = expression, fill = group)) +

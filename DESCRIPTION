@@ -12,8 +12,6 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
-    remotes,
-    limma (>= 3.60.6),
     pcaPP (>= 2.0-5),
     reshape2 (>= 1.4.4),
     stringr (>= 1.5.1),
@@ -31,13 +29,17 @@ Imports:
     sparklyr (>= 1.8.6),
     shiny (>= 1.7.1),
     shinybusy,
-    org.Hs.eg.db,
     DBI,
     DT,
     bslib,
     shinydashboard,
     ggiraph,
-    pysparklyr
+    pysparklyr,
+    org.Hs.eg.db,
+    promises,
+    future,
+    purrr,
+    tictoc
 Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/MultiAssayExperiment,
@@ -45,4 +47,6 @@ Remotes:
     bioc::3.20/enrichplot,
     bioc::3.20/clusterProfiler,
     bioc::3.20/Biobase,
-    bioc::3.20/InteractiveComplexHeatmap
+    bioc::3.20/InteractiveComplexHeatmap,
+    bioc::3.20/limma
+

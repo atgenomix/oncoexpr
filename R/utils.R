@@ -219,3 +219,39 @@ generate_colData <- function(normcount = normCount, grouplist  , genecol = "Gene
     rownames(colData) <- colnames(normcount)
     return(colData)
 }
+
+
+#' @title time filter for filename selection
+#' @description extract the latest file from filename list with time information
+#' @param filename_list list of filenames
+#' @return filename list with time information
+#' @export
+
+get_latest_file_group_df <- function(filename_list) {
+
+  filename_split <- strsplit(filename_list, "_")
+  
+  extract_time <- function(parts) {
+    time_str <- parts[grepl("^\\d{8}t\\d{6}z$", parts)]
+    if (length(time_str) == 1) return(time_str) else return(NA)
+  }
+  
+  time_strs <- sapply(filename_split, extract_time)
+  time_posix <- as.POSIXct(time_strs, format = "%Y%m%dt%H%M%Sz", tz = "UTC")
+  
+  df <- data.frame(
+    file = filename_list,
+    time_str = time_strs,
+    time = time_posix,
+    stringsAsFactors = FALSE
+  )
+  
+  latest_time <- max(df$time, na.rm = TRUE)
+  print("latest_time")
+  print(latest_time)
+  df$is_latest <- !is.na(df$time) & (df$time == latest_time)
+  
+  #df <- df[order(df$time, decreasing = TRUE, na.last = TRUE), ]
+  
+  return(df)
+}

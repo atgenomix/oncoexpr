@@ -27,6 +27,10 @@
 #' @import InteractiveComplexHeatmap
 #' @import ggiraph
 #' @import shinydashboard
+#' @import promises
+#' @import future
+#' @import tictoc
+#' @import purrr
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
@@ -56,8 +60,8 @@ NULL
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  #plan(multisession, workers =2)
-  #print(future::plan())
+  plan(multisession, workers = 2 )
+  print(future::plan())
   ui <- fluidPage(
     navbarPage(
       title = "RNAseq App",
@@ -82,130 +86,107 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             fluidRow(
               column(
                 width = 12,
-                #DT::dataTableOutput("wide_table_dt", width = "100%")
-                DT::dataTableOutput("normcount_table", width = "100%")
+                tabsetPanel(
+                    tabPanel("normCount Table",
+                            DT::dataTableOutput("wide_table_dt", width = "100%")
+                    ),
+                    tabPanel("DEG Table",
+                            downloadButton("download_DEG", "Download DEG CSV"),
+                            DT::dataTableOutput('DEG_table', width = "100%")
+                    )
+
+                )
+
               )
             )
           )
         )
       ),
-
       tabPanel(
         title = "Differential Expression Analysis",
         layout_sidebar(
           full_screen = TRUE,
           sidebar = sidebar(
             style = "min-height: 600px; overflow-y: auto;",
-
             sliderInput("lfc_cut", "Fold Change Threshold (log2):",
                         min = 0, max = 10, value = 1, step = 0.1),
-
             sliderInput("pval_cut", "p-value Threshold:",
                         min = 0.001, max = 1, value = 0.05, step = 0.001),
-
             sliderInput("pointSize", "Point Size:",
                         min = 1, max = 5, value = 2, step = 0.5),
-
             sliderInput("ptAlpha", "Transparent:",
                         min = 0.1, max = 1, value = 0.6, step = 0.1),
-
             sliderInput("labelSize", "Gene Label Size:",
                         min = 1, max = 6, value = 3, step = 0.5),
-
             numericInput("topN", "Label N number of Genes (0 is no labeling):",
                          value = 100, min = 0, max = 1000),
 
-            checkboxInput("use_adjP", "Use Adjusted P-value?", value = FALSE),
-
-            actionButton("run_DEG", "Run DEG analysis")
+            actionButton("run_DEG", "Update DEG")
           ),
           mainPanel(
             width = 12,
             tabsetPanel(
-
-              tabPanel("Volcano Plot interaction",
-
-
+              tabPanel("Volcano Plot", 
                        interactivePlotsUI("plotVolcano")
-
-
               ),
-
-              tabPanel("DEG Table",
-
-                       #DT::dataTableOutput('DEG_table', width = "100%")
-                       DT::dataTableOutput('exacttest_table', width = "100%")
-
-              )
-            )
-
-
-          )
-        )
-      ),
-      tabPanel(
-        title = "Gene-enriched Analysis",
-        sidebarPanel(
-          actionButton(inputId = "generate_go", label = "Analysis"),
-          width = 2
-        ),
-        mainPanel(
-          fluidRow(
-            column(
-              12,
-              h4("UPregulated DEGs"),
-              tabsetPanel(
-                tabPanel("KEGG", plotOutput("G1_KEGG")),
-                tabPanel("MF", plotOutput("G1_MF")),
-                tabPanel("BP", plotOutput("G1_BP")),
-                tabPanel("CC", plotOutput("G1_CC"))
-
-              )
-            )
-          ),
-          fluidRow(
-            column(
-              12,
-              h4("DOWNregulated DEGs"),
-              tabsetPanel(
-                tabPanel("KEGG", plotOutput("G2_KEGG")),
-                tabPanel("MF", plotOutput("G2_MF")),
-                tabPanel("BP", plotOutput("G2_BP")),
-                tabPanel("CC", plotOutput("G2_CC"))
-              )
-            )
-          )
-        )
-      ),
-      tabPanel(
-        title = "Heatmap",
-        sidebarLayout(
-          sidebarPanel(
-            textInput("geneListheatmap", "Heatmap Gene List (sep by comma without space)", value = "EGFR,ESR1,KRAS,ERBB2,AKT1"),
-            actionButton(inputId = "targetGeneID", label = "Confirm"),
-            width = 2
-          ),
-          mainPanel(
-            fluidRow(
-              column(width = 6,
-                     box(title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                         originalHeatmapOutput("ht", height = 1000, containment = TRUE)
-                     )
+              tabPanel("Heatmap",
+                        fluidRow(
+                          column(2,
+                                
+                                #textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+           
+                          )
+                        ),
+                        fluidRow(
+                          column(width = 6,
+                                box(title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                                    originalHeatmapOutput("ht", height = 1000, containment = TRUE)
+                                )
+                          ),
+                          column(width = 6,
+                                box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                                    subHeatmapOutput("ht", title = NULL, containment = TRUE)
+                                )
+                          )
+                        )
               ),
-              column(width = 6,
-                     id = "column2",
-                     box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                         subHeatmapOutput("ht", title = NULL, containment = TRUE)
-                     )
+              tabPanel("Gene Set Enrichment",
+                        fluidRow(
+                          column(2, 
+                                
+                                #textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+                       
+                          )
+                        ),
+                        fluidRow(
+                          column(12,
+                                h4("UPregulated DEGs"),
+                                tabsetPanel(
+                                  tabPanel("KEGG", plotOutput("G1_KEGG")),
+                                  tabPanel("MF", plotOutput("G1_MF")),
+                                  tabPanel("BP", plotOutput("G1_BP")),
+                                  tabPanel("CC", plotOutput("G1_CC"))
+                                )
+                          )
+                        ),
+                        fluidRow(
+                          column(12,
+                                h4("DOWNregulated DEGs"),
+                                tabsetPanel(
+                                  tabPanel("KEGG", plotOutput("G2_KEGG")),
+                                  tabPanel("MF", plotOutput("G2_MF")),
+                                  tabPanel("BP", plotOutput("G2_BP")),
+                                  tabPanel("CC", plotOutput("G2_CC"))
+                                )
+                          )
+                        )
               )
+              
+
             )
-
-
           )
         )
       )
-
-
     )
   )
 
@@ -222,9 +203,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     )
 
     observe({
-      #master <- "sc://172.18.0.1:15002"
-      #method <- "spark_connect"
-      #version <- "3.5"
       sc(sparklyr::spark_connect(master = master, method = method, version = version))
     })
 
@@ -234,35 +212,52 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$db_info <- dbBrowserServer("dbBrowser1", sc())
     })
 
-    volcano_res <- reactiveVal(NULL)
-    settingMAE <- reactiveVal(NULL)
-    DEG_table <- reactiveVal(NULL)
-    DEG_summary <- reactiveVal(NULL)
-    wide_data <- reactiveVal(NULL)
-    maeColData <- reactiveVal(NULL)
-    topGeneList <- reactiveVal(NULL)
-    downGeneList <- reactiveVal(NULL)
-
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
-      sc_conn <- sc()
-      DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-      tbl_list <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", selected_db_name))
-      
 
-      tbls <- tbl_list$tableName
+      DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+      tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+      tbls <- tbl_list_query$tableName
+      print("====tbls====")
+      print(tbls)
+
       prefix <- c("^normcounts|^exacttest|^coldata")
-      tbls_with_prefix <- tbl_list[grepl(prefix , tbls),]
-      results$table_list <- tbls_with_prefix
 
-      normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
-      exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
-      coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
-      #"===="
-      #spark_disconnect(sc_conn)
-      #rm(sc_conn)
-      #"===="
+      tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls),]
+      print("====tbl_list_query_prefix====")
+      print(tbl_list_query_prefix)
+      tbls_with_prefix <- tbl_list_query_prefix$tableName
+
+      tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+      print("====tbls_with_time_filter====")
+      print(tbls_with_time_filter)
+
+      if(sum(tbls_with_time_filter$is_latest)==0){
+        print("no latest table")
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==FALSE,]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+      } else {
+        print("latest table")
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==TRUE,]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+      }
+      
+      tbls_with_prefix_time <- summary_table$"file"
+      print("====summary_table====")
+      print(summary_table)
+      results$table_list <- tbl_list_query_prefix_time
+
+      normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      print("====normcount_tbls====")
+      print(normcount_tbls)
+      print("====exacttest_tbls====")
+      print(exacttest_tbls)
+      print("====coldata_tbls====")
+      print(coldata_tbls)
+
       normcount_promise <- future_promise({
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 normcounts 資料表", start_time))
@@ -321,237 +316,293 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             })
           })
         }
-      print("finish query")
-      normcount_promise %...>% (function(normcount_data) {
-        output$normcount_table <- DT::renderDataTable({
-          DT::datatable(normcount_data)
-        })
+
+      promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% (function(normcount_data, exacttest_data, coldata) {
+        results$normcount_data <- normcount_data
+        results$exacttest_data <- exacttest_data
+        results$coldata <- coldata
+        print("===normcount_data===")
+        print(head(results$normcount_data))
+        print("===exacttest_data===")
+        print(head(results$exacttest_data))
+        print("===coldata===")
+        print(head(results$coldata))
       })
-      exacttest_promise %...>% (function(exacttest_data) {
-        output$exacttest_table <- DT::renderDataTable({
-          DT::datatable(exacttest_data)
-        })
-      })
+      
+      colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+      colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+      results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+      results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
+                if (is.numeric(x)) round(x, 4) else x
+            }))
+      results$exacttest_data[,"logFC"] <- if(is.numeric(results$exacttest_data[,"logFC"])) round(results$exacttest_data[,"logFC"], 4) else results$exacttest_data[,"logFC"]
+      results$exacttest_data[,"logCPM"] <- if(is.numeric(results$exacttest_data[,"logCPM"])) round(results$exacttest_data[,"logCPM"], 4) else results$exacttest_data[,"logCPM"]
 
-      print("finish render data table")
-      observeEvent(results$db_info$selected_db(),
-                    promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
-                      req(coldata, normcount_data, exacttest_data)
-                      DEG_table(exacttest_data)
-                      wide_data(normcount_data)
-                      maeColData(coldata)
-                      assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
-                      if ("GeneSymbol" %in% colnames(wide_data())) {
-                        rownames(assay_data) <- wide_data()[, "GeneSymbol"]
-                      }
+    })
 
-                      deg_data <- exacttest_data
-                      if ("GeneSymbol" %in% colnames(deg_data)) {
-                        rownames(deg_data) <- deg_data$GeneSymbol
-                      }
+    output$normcount_table <- DT::renderDataTable({
+      req(results$normcount_data)
+      DT::datatable(results$normcount_data)
+    })
 
-                      common_genes <- intersect(rownames(assay_data), rownames(deg_data))
-                      assay_data <- assay_data[common_genes, , drop = FALSE]
-                      deg_data_sub <- deg_data[common_genes, , drop = FALSE]
-                      sample_info_table <- maeColData()
-                      rownames(sample_info_table) <- colnames(assay_data) # The rownames of colData must match the colnames of assay_data
+    output$exacttest_table <- DT::renderDataTable({
+      req(results$exacttest_data)
+      DT::datatable(results$exacttest_data)
+    })
 
-                      se_expression_matrix <- SummarizedExperiment(
-                        assays = list(normCount = assay_data), # read count, TPM, COV, FPKM
-                        colData = sample_info_table,
-                        rowData = S4Vectors::DataFrame(deg_data_sub)
-                      )
+    volcano_res <- reactiveVal(NULL)
+    settingMAE <- reactiveVal(NULL)
+    DEG_table <- reactiveVal(NULL)
+    DEG_summary <- reactiveVal(NULL)
+    wide_data <- reactiveVal(NULL)
+    maeColData <- reactiveVal(NULL)
 
-                      mae <- MultiAssayExperiment(
-                        experiments = list(
-                          RNAseq = se_expression_matrix   # normCoun
-                        ),
-                        colData = sample_info_table
-                      )
-                      settingMAE(mae)
-                    }), ignoreInit = TRUE)
 
-      # observeEvent(input$run_DEG,
-      #               promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with ({
-      #                 req(exacttest_data, normcount_data, coldata)
-      #                 DEG_table(exacttest_data)
-      #                 wide_data(normcount_data)
-      #                 maeColData(coldata)
+    output$wide_table_dt <- DT::renderDataTable({
+      req(wide_data())
+      print("send wide data to UI")
+      DT::datatable(
+        wide_data(),
+        options = list(pageLength = 20, autoWidth = TRUE)
+      )
+    })
 
-      #                 message("run_DEG pressed: reactive values updated.")
-      #               }))
+    observeEvent(results$db_info$selected_db(), {
+      req(results$coldata, results$normcount_data, results$exacttest_data)
+      DEG_table(results$exacttest_data)
+      wide_data(results$normcount_data)
+      maeColData(results$coldata)
+      assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
+      if ("GeneSymbol" %in% colnames(wide_data())) {
+        rownames(assay_data) <- wide_data()[, "GeneSymbol"]
+      }
 
-      output$wide_table_dt <- DT::renderDataTable({
-        req(wide_data())
-        print("send wide data to UI")
-        DT::datatable(
-          wide_data(),
+      deg_data <- results$exacttest_data
+      if ("GeneSymbol" %in% colnames(deg_data)) {
+        rownames(deg_data) <- deg_data$GeneSymbol
+      }
+
+      output$download_DEG <- downloadHandler(
+        filename = function() {
+          paste("DEG_table_", Sys.Date(), ".csv", sep = "")
+        },
+        content = function(file) {
+          write.csv(DEG_table(), file, row.names = FALSE)
+        }
+      )
+      common_genes <- intersect(rownames(assay_data), rownames(deg_data))
+      assay_data <- assay_data[common_genes, , drop = FALSE]
+      deg_data_sub <- deg_data[common_genes, , drop = FALSE]
+      sample_info_table <- maeColData()
+      rownames(sample_info_table) <- colnames(assay_data)
+
+      se_expression_matrix <- SummarizedExperiment(
+        assays = list(normCount = assay_data),
+        colData = sample_info_table,
+        rowData = S4Vectors::DataFrame(deg_data_sub)
+      )
+
+      mae <- MultiAssayExperiment(
+        experiments = list(
+          RNAseq = se_expression_matrix
+        ),
+        colData = sample_info_table
+      )
+      settingMAE(mae)
+    })
+
+    observe({
+      req(results$coldata, results$normcount_data, results$exacttest_data)
+      mae <- settingMAE()
+      output$DEG_table <- renderDT({
+        datatable(
+          DEG_table(),
           options = list(pageLength = 20, autoWidth = TRUE)
         )
-      })
+      }, server = FALSE)
+    })
 
-      observeEvent(input$run_DEG, {
-        mae <- settingMAE()
+    observe({
+          req(DEG_table(), maeColData(), wide_data())
+          params <- reactive({
+            list(
+              lfc_cut    = input$lfc_cut,
+              pval_cut   = input$pval_cut,
+              pointSize  = input$pointSize,
+              ptAlpha    = input$ptAlpha,
+              labelSize  = input$labelSize,
+              topN       = input$topN,
+              use_adjP   = input$use_adjP
+            )
+          })
+          print("params")
+          print(params)
 
-        output$DEG_table <- renderDT({
-          datatable(
-            DEG_table(),
-            options = list(pageLength = 10, autoWidth = TRUE)
-          )
-        }, server = FALSE)
-      })
-
-      observeEvent(input$run_DEG, {
-        req(DEG_table(), maeColData(), wide_data())
-        params <- reactive({
-          list(
-            lfc_cut    = input$lfc_cut,
-            pval_cut   = input$pval_cut,
-            pointSize  = input$pointSize,
-            ptAlpha    = input$ptAlpha,
-            labelSize  = input$labelSize,
-            topN       = input$topN,
-            use_adjP   = input$use_adjP
-          )
-        })
-        normCount <- wide_data()
-        volcanoData <- DEG_table()
-        colData <- maeColData()
-        print(str(normCount))
-        print(str(volcanoData))
-        print(str(colData))
-        exprData <- transfExprFormat( normCount, colData)
-        interactivePlotsServer("plotVolcano",
+          normCount <- wide_data()
+          volcanoData <- DEG_table()
+          colData <- maeColData()
+          print(str(normCount))
+          print(str(volcanoData))
+          print(str(colData))
+          exprData <- transfExprFormat(normCount, colData)
+          interactivePlotsServer("plotVolcano",
                                 volcanoData = volcanoData,
                                 exprData = exprData, params)
-        print(str(exprData))
-      })
 
-      observeEvent(input$run_DEG, {
-        req(DEG_table())
-        DEG_table <- DEG_table()
+    })
 
-        DEG_table_filtered <- DEG_table[DEG_table$PValue < input$pval_cut & abs(DEG_table$logFC) > input$lfc_cut, ]
-        sorted_DEG <- DEG_table_filtered[order(DEG_table_filtered$logFC, decreasing = TRUE),]
-        gene_list_symbol <- sorted_DEG$GeneSymbol
 
-        topGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == 1, "GeneSymbol"])
-        downGeneList(DEG_table[DEG_table$PValue < input$pval_cut & sign(DEG_table$logFC) == -1, "GeneSymbol"])
+    
+    observe({
+        req(results$exacttest_data, results$normcount_data, results$coldata)
+        DEG_table(results$exacttest_data)
+        wide_data(results$normcount_data)
+        maeColData(results$coldata)
 
-        gene_list_string <- paste(c(topGeneList(), downGeneList()), collapse = ",")
-        updateTextInput(session, "geneListheatmap", value = gene_list_string)
+        message("assign reactiveVal: DEG_table, wide_data, maeColData")
+    })
 
-      })
+    topGeneList <- reactiveVal(NULL)
+    downGeneList <- reactiveVal(NULL)
 
-      observeEvent(input$generate_go, {
-        req(topGeneList(), downGeneList(), settingMAE())
-        mae <- settingMAE()
-        sample_info <- colData(mae[["RNAseq"]])
-        groups_list <- c("G1", "G2")
-        group1_fc_gene_profile <- topGeneList()
-        group2_fc_gene_profile <- downGeneList()
-        for (n in seq_len(length(groups_list))) {
-          col <- groups_list[n]
-          print(col)
-          gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-          for (mode in c("CC", "BP", "MF")) {
-            print(mode)
+
+    geneListReactive <- eventReactive(input$run_DEG, {
+      print("geneListReactive section before req")
+      req(DEG_table(), maeColData(), wide_data())
+      DEG_table_data <- DEG_table()
+
+
+      topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
+      downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
+
+      topGeneList(topGenes)
+      downGeneList(downGenes)
+      print("=====Case DEG List=====")
+      print(topGeneList())
+      print("=====Control DEG List=====")
+      print(downGeneList())
+
+      gene_list <- paste(c(topGenes, downGenes), collapse = ",")
+      gene_list
+    })
+
+
+    observe({
+      new_gene_list <- geneListReactive()
+      updateTextInput(session, "geneListheatmap", value = new_gene_list)
+      updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
+      print("update geneListheatmap and geneLisEnrichment")
+      print(new_gene_list)
+    })
+
+
+    cat("==================================== \n")
+    cat("experiment \n")
+    cat("==================================== \n")
+
+        observeEvent(geneListReactive(), {
+          req(topGeneList(), downGeneList(), settingMAE())
+          mae <- settingMAE()
+          sample_info <- colData(mae[["RNAseq"]])
+          groups_list <- c("G1", "G2")
+          group1_fc_gene_profile <- topGeneList()
+          group2_fc_gene_profile <- downGeneList()
+          for (n in seq_len(length(groups_list))) {
+            col <- groups_list[n]
+            print(col)
+            gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+            for (mode in c("CC", "BP", "MF")) {
+              print(mode)
+              future_promise({
+                start_time <- as.character(Sys.time())
+                tic()
+                result <- go_enrich_dotplot(
+                  gene_list_ = unique(gene_list),
+                  save_path_ = NULL,
+                  save_filename_ = NULL,
+                  mode_ = mode,
+                  showCategory_ = 10)
+                elapsed <- toc(quiet = TRUE)
+                end_time <- as.character(Sys.time())
+                list(r = result, c = col, m = mode,start_time = start_time,
+               end_time = end_time,
+               elapsed = elapsed$toc - elapsed$tic)
+              }) %...>% {
+                if (!is.null(.)) {
+                  var <- paste0(.$c, "_", .$m)
+                  cat(var, " started at:", .$start_time, "\n")
+                  cat(var, " ended at:", .$end_time, "\n")
+                  cat(var, " elapsed:", .$elapsed, " seconds\n")
+                  output[[var]] <- renderPlot(.$r)
+                }
+              }
+            }
+          }
+        })
+
+        observeEvent(geneListReactive(), {
+          req(topGeneList(), downGeneList(), settingMAE())
+          mae <- settingMAE()
+          sample_info <- colData(mae[["RNAseq"]])
+          groups_list <- c("G1", "G2")
+          group1_fc_gene_profile <- topGeneList()
+          group2_fc_gene_profile <- downGeneList()
+          for (n in seq_len(length(groups_list))) {
+            col <- groups_list[n]
+            print(col)
+            print("KEGG")
+            gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
             future_promise({
               start_time <- as.character(Sys.time())
               tic()
-              result <- go_enrich_dotplot(
-                        gene_list_ = unique(gene_list),
-                        save_path_ = NULL,
-                        save_filename_ = NULL,
-                        mode_ = mode,
-                        showCategory_ = 10
+              result <- kegg_enrich_dotplot(
+                gene_list_ = unique(gene_list),
+                save_path_ = NULL,
+                save_filename_ = NULL,
+                showCategory_ = 10
               )
               elapsed <- toc(quiet = TRUE)
               end_time <- as.character(Sys.time())
-              list( r = result,
-                    c = col,
-                    m = mode,
-                    start_time = start_time,
-                    end_time = end_time,
-                    elapsed = elapsed$toc - elapsed$tic
-              )
+              list(r = result, c = col, start_time = start_time,
+               end_time = end_time,
+               elapsed = elapsed$toc - elapsed$tic)
             }) %...>% {
-              var <- paste0(.$c, "_", .$m)
-              output[[var]] <- renderPlot(.$r)
+              if (!is.null(.)) {
+                var <- paste0(.$c, "_", "KEGG")
+                cat(var, " started at:", .$start_time, "\n")
+                cat(var, " ended at:", .$end_time, "\n")
+                cat(var, " elapsed:", .$elapsed, " seconds\n")
+                output[[var]] <- renderPlot(.$r)
+              }
             }
           }
-        }
-      }, ignoreInit=TRUE)
+        })
 
-      observeEvent(input$generate_go, {
-        req(topGeneList(), downGeneList(), settingMAE())
-        mae <- settingMAE()
-        sample_info <- colData(mae[["RNAseq"]])
-        groups_list <- c("G1", "G2")
-        group1_fc_gene_profile <- topGeneList()
-        group2_fc_gene_profile <- downGeneList()
-        for (n in seq_len(length(groups_list))) {
-          col <- groups_list[n]
-          print(col)
-          print("KEGG")
-          gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-          future_promise({
-            start_time <- as.character(Sys.time())
-            tic()
-            result <- kegg_enrich_dotplot(
-                      gene_list_ = unique(gene_list),
-                      save_path_ = NULL,
-                      save_filename_ = NULL,
-                      showCategory_ = 10
-            )
-            elapsed <- toc(quiet = TRUE)
-            end_time <- as.character(Sys.time())
-            list( r = result,
-                  c = col,
-                  start_time = start_time,
-                  end_time = end_time,
-                  elapsed = elapsed$toc - elapsed$tic
-            )
-          }) %...>% {
-            var <- paste0(.$c, "_", "KEGG")
-            output[[var]] <- renderPlot(.$r)
-          }
-        }
-      }, ignoreInit=TRUE)
 
-      observeEvent(input$targetGeneID, {
-        req(settingMAE())
-        mae <- settingMAE()
-        geneList <- unlist(strsplit(input$geneListheatmap, ","))
-        geneList <- trimws(geneList)
-        ht <- make_heatmap_mae(mae, geneList)
+    observeEvent(geneListReactive(), {
+      req(geneListReactive(), settingMAE())
+      mae <- settingMAE()
 
-        if (!is.null(ht)) {
-          makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-        } else {
-          output$ht_heatmap <- renderPlot({
-            grid::grid.newpage()
-            grid::grid.text("No data available.")
-          })
-        }
-      })
+      print(geneListReactive())
       
+      geneListVec <- unlist(strsplit(geneListReactive(), ","))
+      geneListVec <- trimws(geneListVec)
+      ht <- make_heatmap_mae(mae, geneListVec)
+      if (!is.null(ht)) {
+        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+      } else {
+        output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+        })
+      }
     })
   }
-
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
+
 }
 
-# library(shiny)
-# library(DBI)
-# library(shinybusy)
-# library(bslib)
-# library(pheatmap)
-# library(oncoexpr)
-# library(sparklyr)
-# library(InteractiveComplexHeatmap)
-# library(promises)
-# library(future)
-# plan(multisession)
-# RNAseqShinyAppSpark()
+
+
