@@ -60,7 +60,8 @@ NULL
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  plan(multisession, workers = 2 )
+  plan(multisession, workers = 3 )
+  #plan(sequential) 
   print(future::plan())
   ui <- fluidPage(
     navbarPage(
@@ -263,45 +264,40 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(exacttest_tbls)
       print("====coldata_tbls====")
       print(coldata_tbls)
-      spark_disconnect(sc())
+
       normcount_promise <- future_promise({
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 normcounts 資料表", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
 
-        print(sc_conn)
-        print(normcount_tbls[1])
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+
         colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
         normcount <- normcount[,colnames(normcount)!="_c0"]
-        #spark_disconnect(sc_conn)
         end_time <- Sys.time()
         message(sprintf("[%s] 完成 normcounts 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+        on.exit(sc_conn$session$stop())
         normcount
-        #print(head(normcount))
-      }, globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name))
+      }, globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name), seed=TRUE)
 
       exacttest_promise <- future_promise({
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 exacttest 資料表", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
 
-        #print(sc_conn)
-        print(exacttest_tbls[1])
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+
         colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
         exacttest <- exacttest[,colnames(exacttest)!="_c0"]
-        #spark_disconnect(sc_conn)
         end_time <- Sys.time()
-        message(sprintf("[%s] 完成 exacttest 查詢 (耗時 %.2f 秒)", 
-                        end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+        message(sprintf("[%s] 完成 exacttest 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+        sc_conn$session$stop()
         exacttest
-        #print(head(exacttest))
-      }, globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls , selected_db_name = selected_db_name))
+      }, globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls , selected_db_name = selected_db_name), seed=TRUE)
 
       coldata_promise <-
         if (length(coldata_tbls) > 0) {
@@ -310,27 +306,25 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             message(sprintf("[%s] 開始查詢 coldata 資料表", start_time))
             sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
 
-            #print(sc_conn)
-            print(coldata_tbls[1])
             DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
-            #spark_disconnect(sc_conn)
+
             end_time <- Sys.time()
             message(sprintf("[%s] 完成 coldata 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+            sc_conn$session$stop()
             coldata
-            #print(head(coldata))
-          }, globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls , selected_db_name = selected_db_name))
+          }, globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls , selected_db_name = selected_db_name),seed=TRUE)
         } else {
           normcount_promise %...>% (function(normcount) {
             future_promise({
               generate_colData_random(normcount, genecol = "GeneSymbol")
-            })
+            }, seed=TRUE)
           })
         }
 
 
-        promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% (function(normcount_data, exacttest_data, coldata) {
+        promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
             results$normcount_data <- normcount_data
             results$exacttest_data <- exacttest_data
             results$coldata <- coldata
@@ -342,31 +336,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             print(head(results$coldata))
         })
 
-
-      
-      #colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-      #colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-      #results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-      #results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
-                if (is.numeric(x)) round(x, 4) else x
-            }))
+      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) { if (is.numeric(x)) round(x, 4) else x  }))
       results$exacttest_data[,"logFC"] <- if(is.numeric(results$exacttest_data[,"logFC"])) round(results$exacttest_data[,"logFC"], 4) else results$exacttest_data[,"logFC"]
       results$exacttest_data[,"logCPM"] <- if(is.numeric(results$exacttest_data[,"logCPM"])) round(results$exacttest_data[,"logCPM"], 4) else results$exacttest_data[,"logCPM"]
 
+      print(Sys.getpid())
+      sc()$session$stop()
+      sc(NULL)
+      print(Sys.getpid())
      })
-
-    output$normcount_table <- DT::renderDataTable({
-      req(results$normcount_data)
-      DT::datatable(results$normcount_data)
-    })
-
-    output$exacttest_table <- DT::renderDataTable({
-      req(results$exacttest_data)
-      DT::datatable(results$exacttest_data)
-    })
-
-
 
 
     output$wide_table_dt <- DT::renderDataTable({
@@ -378,17 +356,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       )
     })
 
-    observeEvent(results$db_info$selected_db(), {
-      req(results$coldata, results$normcount_data, results$exacttest_data)
-      DEG_table(results$exacttest_data)
-      wide_data(results$normcount_data)
-      maeColData(results$coldata)
+    observe({
+
+      req(DEG_table(), wide_data(), maeColData())
+    
       assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
       if ("GeneSymbol" %in% colnames(wide_data())) {
         rownames(assay_data) <- wide_data()[, "GeneSymbol"]
       }
 
-      deg_data <- results$exacttest_data
+      deg_data <- DEG_table()
       if ("GeneSymbol" %in% colnames(deg_data)) {
         rownames(deg_data) <- deg_data$GeneSymbol
       }
@@ -420,11 +397,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         colData = sample_info_table
       )
       settingMAE(mae)
+
     })
 
     observe({
       req(results$coldata, results$normcount_data, results$exacttest_data)
-      mae <- settingMAE()
       output$DEG_table <- renderDT({
         datatable(
           DEG_table(),
@@ -446,15 +423,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               use_adjP   = input$use_adjP
             )
           })
-          print("params")
-          print(params)
+ 
 
           normCount <- wide_data()
           volcanoData <- DEG_table()
           colData <- maeColData()
-          print(str(normCount))
-          print(str(volcanoData))
-          print(str(colData))
+
           exprData <- transfExprFormat(normCount, colData)
           interactivePlotsServer("plotVolcano",
                                 volcanoData = volcanoData,
@@ -478,10 +452,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
     geneListReactive <- eventReactive(input$run_DEG, {
-      print("geneListReactive section before req")
       req(DEG_table(), maeColData(), wide_data())
-      DEG_table_data <- DEG_table()
 
+      DEG_table_data <- DEG_table()
 
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
@@ -489,9 +462,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       topGeneList(topGenes)
       downGeneList(downGenes)
       print("=====Case DEG List=====")
-      print(topGeneList())
+      print(length(topGeneList()))
       print("=====Control DEG List=====")
-      print(downGeneList())
+      print(length(downGeneList()))
 
       gene_list <- paste(c(topGenes, downGenes), collapse = ",")
       gene_list
@@ -503,7 +476,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       updateTextInput(session, "geneListheatmap", value = new_gene_list)
       updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
       print("update geneListheatmap and geneLisEnrichment")
-      print(new_gene_list)
+      print(length(new_gene_list))
     })
 
 
@@ -513,6 +486,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
+
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
@@ -593,8 +567,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
       mae <- settingMAE()
-
-      print(geneListReactive())
       
       geneListVec <- unlist(strsplit(geneListReactive(), ","))
       geneListVec <- trimws(geneListVec)
@@ -609,10 +581,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
   }
+
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
+  spark_disconnection(sc())
 
- 
+
 }
 
 
