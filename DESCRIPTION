@@ -39,7 +39,6 @@ Imports:
     promises,
     future,
     purrr
-    
 Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/MultiAssayExperiment,
