@@ -29,7 +29,6 @@
 #' @import shinydashboard
 #' @import promises
 #' @import future
-#' @import tictoc
 #' @import purrr
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
@@ -213,6 +212,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       sc(sparklyr::spark_connect(master = master, method = method, version = version))
     })
 
+    session$onSessionEnded(function(){
+      if (!is.null(sc())) {
+          sparklyr::spark_disconnect(sc())
+          message("Spark connection disconnected.")
+        }
+    })
+
     observe({
       req(sc())
       print("dbbrowser")
@@ -269,7 +275,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 normcounts 資料表", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-
+        on.exit(sparklyr::spark_disconnect(sc_conn))
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
         normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
@@ -278,7 +284,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         normcount <- normcount[,colnames(normcount)!="_c0"]
         end_time <- Sys.time()
         message(sprintf("[%s] 完成 normcounts 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
-        on.exit(sc_conn$session$stop())
+
         normcount
       }, globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name), seed=TRUE)
 
@@ -286,7 +292,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         start_time <- Sys.time()
         message(sprintf("[%s] 開始查詢 exacttest 資料表", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-
+        on.exit(sparklyr::spark_disconnect(sc_conn))
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
         query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
         exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
@@ -295,7 +301,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         exacttest <- exacttest[,colnames(exacttest)!="_c0"]
         end_time <- Sys.time()
         message(sprintf("[%s] 完成 exacttest 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
-        sc_conn$session$stop()
+
         exacttest
       }, globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls , selected_db_name = selected_db_name), seed=TRUE)
 
@@ -305,14 +311,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             start_time <- Sys.time()
             message(sprintf("[%s] 開始查詢 coldata 資料表", start_time))
             sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-
+            on.exit(sparklyr::spark_disconnect(sc_conn))
             DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
             query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
             coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
 
             end_time <- Sys.time()
             message(sprintf("[%s] 完成 coldata 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
-            sc_conn$session$stop()
+            
             coldata
           }, globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls , selected_db_name = selected_db_name),seed=TRUE)
         } else {
@@ -341,9 +347,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$exacttest_data[,"logCPM"] <- if(is.numeric(results$exacttest_data[,"logCPM"])) round(results$exacttest_data[,"logCPM"], 4) else results$exacttest_data[,"logCPM"]
 
       print(Sys.getpid())
-      sc()$session$stop()
-      sc(NULL)
-      print(Sys.getpid())
+
      })
 
 
@@ -443,7 +447,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         DEG_table(results$exacttest_data)
         wide_data(results$normcount_data)
         maeColData(results$coldata)
-
         message("assign reactiveVal: DEG_table, wide_data, maeColData")
     })
 
@@ -499,25 +502,25 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         for (mode in c("CC", "BP", "MF")) {
           print(mode)
           future_promise({
-            start_time <- as.character(Sys.time())
-            tic()
+            start_time <- Sys.time()
+            #tic()
             result <- go_enrich_dotplot(
               gene_list_ = unique(gene_list),
               save_path_ = NULL,
               save_filename_ = NULL,
               mode_ = mode,
               showCategory_ = 10)
-            elapsed <- toc(quiet = TRUE)
-            end_time <- as.character(Sys.time())
+            #elapsed <- toc(quiet = TRUE)
+            end_time <- Sys.time()
             list(r = result, c = col, m = mode,start_time = start_time,
             end_time = end_time,
-            elapsed = elapsed$toc - elapsed$tic)
+            elapsed = as.numeric(difftime(end_time, start_time, units="secs")))
           }) %...>% {
             if (!is.null(.)) {
               var <- paste0(.$c, "_", .$m)
-              cat(var, " started at:", .$start_time, "\n")
-              cat(var, " ended at:", .$end_time, "\n")
-              cat(var, " elapsed:", .$elapsed, " seconds\n")
+              cat(var, " started at:", as.character(.$start_time), "\n")
+              cat(var, " ended at:", as.character(.$end_time), "\n")
+              cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
               output[[var]] <- renderPlot(.$r)
             }
           }
@@ -538,25 +541,25 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         print("KEGG")
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
         future_promise({
-          start_time <- as.character(Sys.time())
-          tic()
+          start_time <- Sys.time()
+          #tic()
           result <- kegg_enrich_dotplot(
             gene_list_ = unique(gene_list),
             save_path_ = NULL,
             save_filename_ = NULL,
             showCategory_ = 10
           )
-          elapsed <- toc(quiet = TRUE)
-          end_time <- as.character(Sys.time())
+          #elapsed <- toc(quiet = TRUE)
+          end_time <- Sys.time()
           list(r = result, c = col, start_time = start_time,
             end_time = end_time,
-            elapsed = elapsed$toc - elapsed$tic)
+            elapsed = as.numeric(difftime(end_time, start_time, units="secs")))
         }) %...>% {
           if (!is.null(.)) {
             var <- paste0(.$c, "_", "KEGG")
-            cat(var, " started at:", .$start_time, "\n")
-            cat(var, " ended at:", .$end_time, "\n")
-            cat(var, " elapsed:", .$elapsed, " seconds\n")
+            cat(var, " started at:", as.character(.$start_time), "\n")
+            cat(var, " ended at:", as.character(.$end_time), "\n")
+            cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
             output[[var]] <- renderPlot(.$r)
           }
         }
