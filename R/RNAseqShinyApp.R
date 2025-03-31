@@ -587,7 +587,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
-  spark_disconnection(sc())
 
 
 }
