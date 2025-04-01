@@ -89,12 +89,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 tabsetPanel(
                   tabPanel(
                     "normCount Table",
-                    DT::dataTableOutput("wide_table_dt", width = "100%")
+                    withSpinner(DT::dataTableOutput("wide_table_dt", width = "100%"))
                   ),
                   tabPanel(
                     "DEG Table",
                     downloadButton("download_DEG", "Download DEG CSV"),
-                    DT::dataTableOutput("DEG_table", width = "100%")
+                    withSpinner((DT::dataTableOutput("DEG_table", width = "100%")))
                   )
                 )
               )
@@ -170,10 +170,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                     12,
                     h4("UPregulated DEGs"),
                     tabsetPanel(
-                      tabPanel("KEGG", plotOutput("G1_KEGG")),
-                      tabPanel("MF", plotOutput("G1_MF")),
-                      tabPanel("BP", plotOutput("G1_BP")),
-                      tabPanel("CC", plotOutput("G1_CC"))
+                      tabPanel("KEGG", withSpinner(plotOutput("G1_KEGG"))),
+                      tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
+                      tabPanel("BP", withSpinner(plotOutput("G1_BP"))),
+                      tabPanel("CC", withSpinner(plotOutput("G1_CC")))
                     )
                   )
                 ),
@@ -182,10 +182,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                     12,
                     h4("DOWNregulated DEGs"),
                     tabsetPanel(
-                      tabPanel("KEGG", plotOutput("G2_KEGG")),
-                      tabPanel("MF", plotOutput("G2_MF")),
-                      tabPanel("BP", plotOutput("G2_BP")),
-                      tabPanel("CC", plotOutput("G2_CC"))
+                      tabPanel("KEGG", withSpinner(plotOutput("G2_KEGG"))),
+                      tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
+                      tabPanel("BP", withSpinner(plotOutput("G2_BP"))),
+                      tabPanel("CC", withSpinner(plotOutput("G2_CC")))
                     )
                   )
                 )
@@ -199,6 +199,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
   server <- function(input, output, session) {
     sc <- reactiveVal(NULL)
+
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
@@ -583,23 +584,122 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("update geneListheatmap and geneLisEnrichment")
       print(length(new_gene_list))
     })
+    
 
 
+    # observeEvent(geneListReactive(), {
+    #   req(topGeneList(), downGeneList(), settingMAE())
+    #   mae <- settingMAE()
+    #   sample_info <- colData(mae[["RNAseq"]])
+    #   groups_list <- c("G1", "G2")
+    #   group1_fc_gene_profile <- topGeneList()
+    #   group2_fc_gene_profile <- downGeneList()
 
+    #   for (n in seq_len(length(groups_list))) {
+    #     col <- groups_list[n]
+    #     print(col)
+    #     gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+    #     for (mode in c("CC", "BP", "MF")) {
+    #       print(mode)
+    #       future_promise({
+    #         start_time <- Sys.time()
+    #         result <- go_enrich_dotplot(
+    #           gene_list_ = unique(gene_list),
+    #           save_path_ = NULL,
+    #           save_filename_ = NULL,
+    #           mode_ = mode,
+    #           showCategory_ = 10
+    #         )
+    #         end_time <- Sys.time()
+    #         list(
+    #           r = result, c = col, m = mode, start_time = start_time,
+    #           end_time = end_time,
+    #           elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+    #         )
+    #       }) %...>% {
+    #         if (!is.null(.)) {
+    #           var <- paste0(.$c, "_", .$m)
+    #           cat(var, " started at:", as.character(.$start_time), "\n")
+    #           cat(var, " ended at:", as.character(.$end_time), "\n")
+    #           cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
+    #           output[[var]] <- renderPlot(.$r)
+    #         }
+    #       }
+    #     }
+    #   }
+    # })
+
+    # observeEvent(geneListReactive(), {
+    #   req(topGeneList(), downGeneList(), settingMAE())
+
+    #   mae <- settingMAE()
+    #   sample_info <- colData(mae[["RNAseq"]])
+    #   groups_list <- c("G1", "G2")
+    #   group1_fc_gene_profile <- topGeneList()
+    #   group2_fc_gene_profile <- downGeneList()
+
+    #   for (n in seq_len(length(groups_list))) {
+    #     col <- groups_list[n]
+    #     print(col)
+    #     print("KEGG")
+    #     gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+    #     future_promise({
+    #       start_time <- Sys.time()
+    #       result <- kegg_enrich_dotplot(
+    #         gene_list_ = unique(gene_list),
+    #         save_path_ = NULL,
+    #         save_filename_ = NULL,
+    #         showCategory_ = 10
+    #       )
+    #       end_time <- Sys.time()
+    #       list(
+    #         r = result, c = col, start_time = start_time,
+    #         end_time = end_time,
+    #         elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+    #       )
+    #     }) %...>% {
+    #       if (!is.null(.)) {
+    #         var <- paste0(.$c, "_", "KEGG")
+    #         cat(var, " started at:", as.character(.$start_time), "\n")
+    #         cat(var, " ended at:", as.character(.$end_time), "\n")
+    #         cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
+    #         output[[var]] <- renderPlot(.$r)
+    #       }
+    #     }
+    #   }
+    # })
+    # 先在 server 最上層宣告 reactiveVal，儲存各個圖形結果
+    result_G1_CC   <- reactiveVal(NULL)
+    result_G1_BP   <- reactiveVal(NULL)
+    result_G1_MF   <- reactiveVal(NULL)
+    result_G1_KEGG <- reactiveVal(NULL)
+    result_G2_CC   <- reactiveVal(NULL)
+    result_G2_BP   <- reactiveVal(NULL)
+    result_G2_MF   <- reactiveVal(NULL)
+    result_G2_KEGG <- reactiveVal(NULL)
+
+    # GO 分析 (CC, BP, MF)
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
+      
+      # 清除舊結果
+      result_G1_CC(NULL)
+      result_G1_BP(NULL)
+      result_G1_MF(NULL)
+      result_G2_CC(NULL)
+      result_G2_BP(NULL)
+      result_G2_MF(NULL)
+      
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
       group1_fc_gene_profile <- topGeneList()
       group2_fc_gene_profile <- downGeneList()
 
-      for (n in seq_len(length(groups_list))) {
+      for (n in seq_along(groups_list)) {
         col <- groups_list[n]
-        print(col)
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
         for (mode in c("CC", "BP", "MF")) {
-          print(mode)
           future_promise({
             start_time <- Sys.time()
             result <- go_enrich_dotplot(
@@ -611,36 +711,47 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             )
             end_time <- Sys.time()
             list(
-              r = result, c = col, m = mode, start_time = start_time,
+              r = result, c = col, m = mode, 
+              start_time = start_time,
               end_time = end_time,
               elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
             )
           }) %...>% {
             if (!is.null(.)) {
-              var <- paste0(.$c, "_", .$m)
+              var <- paste0(.$c, "_", .$m)  # 例如 "G1_CC"
               cat(var, " started at:", as.character(.$start_time), "\n")
               cat(var, " ended at:", as.character(.$end_time), "\n")
               cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
-              output[[var]] <- renderPlot(.$r)
+              
+              # 將結果存入對應的 reactiveVal
+              if (var == "G1_CC") result_G1_CC(.$r)
+              if (var == "G1_BP") result_G1_BP(.$r)
+              if (var == "G1_MF") result_G1_MF(.$r)
+              if (var == "G2_CC") result_G2_CC(.$r)
+              if (var == "G2_BP") result_G2_BP(.$r)
+              if (var == "G2_MF") result_G2_MF(.$r)
             }
           }
         }
       }
     })
 
+    # KEGG 分析
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
-
+      
+      # 清除舊結果
+      result_G1_KEGG(NULL)
+      result_G2_KEGG(NULL)
+      
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
       group1_fc_gene_profile <- topGeneList()
       group2_fc_gene_profile <- downGeneList()
 
-      for (n in seq_len(length(groups_list))) {
+      for (n in seq_along(groups_list)) {
         col <- groups_list[n]
-        print(col)
-        print("KEGG")
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
         future_promise({
           start_time <- Sys.time()
@@ -652,22 +763,90 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           )
           end_time <- Sys.time()
           list(
-            r = result, c = col, start_time = start_time,
+            r = result, c = col, 
+            start_time = start_time,
             end_time = end_time,
             elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
           )
         }) %...>% {
           if (!is.null(.)) {
-            var <- paste0(.$c, "_", "KEGG")
+            var <- paste0(.$c, "_", "KEGG")  # 例如 "G1_KEGG"
             cat(var, " started at:", as.character(.$start_time), "\n")
             cat(var, " ended at:", as.character(.$end_time), "\n")
             cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
-            output[[var]] <- renderPlot(.$r)
+            
+            if (var == "G1_KEGG") result_G1_KEGG(.$r)
+            if (var == "G2_KEGG") result_G2_KEGG(.$r)
           }
         }
       }
     })
 
+    # 各輸出對應的 renderPlot 皆加入 validate(need()) 強制呈現 "Loading..." 狀態
+    # output$G1_CC <- renderPlot({
+    #   validate(need(result_G1_CC(), "Loading..."))
+    #   result_G1_CC()
+    # })
+    # output$G1_BP <- renderPlot({
+    #   validate(need(result_G1_BP(), "Loading..."))
+    #   result_G1_BP()
+    # })
+    # output$G1_MF <- renderPlot({
+    #   validate(need(result_G1_MF(), "Loading..."))
+    #   result_G1_MF()
+    # })
+    # output$G2_CC <- renderPlot({
+    #   validate(need(result_G2_CC(), "Loading..."))
+    #   result_G2_CC()
+    # })
+    # output$G2_BP <- renderPlot({
+    #   validate(need(result_G2_BP(), "Loading..."))
+    #   result_G2_BP()
+    # })
+    # output$G2_MF <- renderPlot({
+    #   validate(need(result_G2_MF(), "Loading..."))
+    #   result_G2_MF()
+    # })
+    # output$G1_KEGG <- renderPlot({
+    #   validate(need(result_G1_KEGG(), "Loading..."))
+    #   result_G1_KEGG()
+    # })
+    # output$G2_KEGG <- renderPlot({
+    #   validate(need(result_G2_KEGG(), "Loading..."))
+    #   result_G2_KEGG()
+    # })
+    output$G1_CC <- renderPlot({
+      req(result_G1_CC())
+      result_G1_CC()
+    })
+    output$G1_BP <- renderPlot({
+      req(result_G1_BP())
+      result_G1_BP()
+    })
+    output$G1_MF <- renderPlot({
+      req(result_G1_MF())
+      result_G1_MF()
+    })
+    output$G2_CC <- renderPlot({
+      req(result_G2_CC())
+      result_G2_CC()
+    })
+    output$G2_BP <- renderPlot({
+      req(result_G2_BP())
+      result_G2_BP()
+    })
+    output$G2_MF <- renderPlot({
+      req(result_G2_MF())
+      result_G2_MF()
+    })
+    output$G1_KEGG <- renderPlot({
+      req(result_G1_KEGG())
+      result_G1_KEGG()
+    })
+    output$G2_KEGG <- renderPlot({
+      req(result_G2_KEGG())
+      result_G2_KEGG()
+    })
 
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
