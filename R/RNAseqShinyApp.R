@@ -528,9 +528,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       colData <- maeColData()
 
       exprData <- transfExprFormat(normCount, colData)
+      
+      
+      DEG_table_data <- DEG_table()
+      topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
+      downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
 
+      geneListVec <- c(topGenes, downGenes)
       if (!is.null(geneListReactive)) {
-        selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, volcanoData$"GeneSymbol")
+        selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, geneListVec)
       } else {
         (selected_gene <- NULL)
       }
@@ -555,7 +561,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(DEG_table(), maeColData(), wide_data())
 
       DEG_table_data <- DEG_table()
-
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
 
