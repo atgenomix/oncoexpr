@@ -4,7 +4,7 @@
 \alias{interactivePlotsServer}
 \title{Interactive Plots Server Module}
 \usage{
-interactivePlotsServer(id, volcanoData, exprData, params)
+interactivePlotsServer(id, volcanoData, exprData, params, selectedGene = NULL)
 }
 \arguments{
 \item{id}{A character string specifying the module ID.}
