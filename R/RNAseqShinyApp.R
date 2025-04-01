@@ -668,7 +668,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     #     }
     #   }
     # })
-    # 先在 server 最上層宣告 reactiveVal，儲存各個圖形結果
+
     result_G1_CC   <- reactiveVal(NULL)
     result_G1_BP   <- reactiveVal(NULL)
     result_G1_MF   <- reactiveVal(NULL)
@@ -678,11 +678,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     result_G2_MF   <- reactiveVal(NULL)
     result_G2_KEGG <- reactiveVal(NULL)
 
-    # GO 分析 (CC, BP, MF)
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
       
-      # 清除舊結果
       result_G1_CC(NULL)
       result_G1_BP(NULL)
       result_G1_MF(NULL)
@@ -718,12 +716,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             )
           }) %...>% {
             if (!is.null(.)) {
-              var <- paste0(.$c, "_", .$m)  # 例如 "G1_CC"
+              var <- paste0(.$c, "_", .$m)
               cat(var, " started at:", as.character(.$start_time), "\n")
               cat(var, " ended at:", as.character(.$end_time), "\n")
               cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
               
-              # 將結果存入對應的 reactiveVal
+
               if (var == "G1_CC") result_G1_CC(.$r)
               if (var == "G1_BP") result_G1_BP(.$r)
               if (var == "G1_MF") result_G1_MF(.$r)
@@ -736,11 +734,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
-    # KEGG 分析
+
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
       
-      # 清除舊結果
       result_G1_KEGG(NULL)
       result_G2_KEGG(NULL)
       
@@ -782,71 +779,40 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
-    # 各輸出對應的 renderPlot 皆加入 validate(need()) 強制呈現 "Loading..." 狀態
-    # output$G1_CC <- renderPlot({
-    #   validate(need(result_G1_CC(), "Loading..."))
-    #   result_G1_CC()
-    # })
-    # output$G1_BP <- renderPlot({
-    #   validate(need(result_G1_BP(), "Loading..."))
-    #   result_G1_BP()
-    # })
-    # output$G1_MF <- renderPlot({
-    #   validate(need(result_G1_MF(), "Loading..."))
-    #   result_G1_MF()
-    # })
-    # output$G2_CC <- renderPlot({
-    #   validate(need(result_G2_CC(), "Loading..."))
-    #   result_G2_CC()
-    # })
-    # output$G2_BP <- renderPlot({
-    #   validate(need(result_G2_BP(), "Loading..."))
-    #   result_G2_BP()
-    # })
-    # output$G2_MF <- renderPlot({
-    #   validate(need(result_G2_MF(), "Loading..."))
-    #   result_G2_MF()
-    # })
-    # output$G1_KEGG <- renderPlot({
-    #   validate(need(result_G1_KEGG(), "Loading..."))
-    #   result_G1_KEGG()
-    # })
-    # output$G2_KEGG <- renderPlot({
-    #   validate(need(result_G2_KEGG(), "Loading..."))
-    #   result_G2_KEGG()
-    # })
+
     output$G1_CC <- renderPlot({
-      req(result_G1_CC())
+      validate(need(result_G1_CC(), "Loading..."))
       result_G1_CC()
     })
     output$G1_BP <- renderPlot({
-      req(result_G1_BP())
+      validate(need(result_G1_BP(), "Loading..."))
       result_G1_BP()
     })
     output$G1_MF <- renderPlot({
-      req(result_G1_MF())
+      validate(need(result_G1_MF(), "Loading..."))
       result_G1_MF()
     })
     output$G2_CC <- renderPlot({
-      req(result_G2_CC())
+      validate(need(result_G2_CC(), "Loading..."))
       result_G2_CC()
     })
     output$G2_BP <- renderPlot({
-      req(result_G2_BP())
+      validate(need(result_G2_BP(), "Loading..."))
       result_G2_BP()
     })
     output$G2_MF <- renderPlot({
-      req(result_G2_MF())
+      validate(need(result_G2_MF(), "Loading..."))
       result_G2_MF()
     })
     output$G1_KEGG <- renderPlot({
-      req(result_G1_KEGG())
+      validate(need(result_G1_KEGG(), "Loading..."))
       result_G1_KEGG()
     })
     output$G2_KEGG <- renderPlot({
-      req(result_G2_KEGG())
+      validate(need(result_G2_KEGG(), "Loading..."))
       result_G2_KEGG()
     })
+
 
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
