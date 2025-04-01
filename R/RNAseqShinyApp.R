@@ -148,13 +148,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 "Heatmap",
                 fluidRow(
                   column(
-                    2,
-
-                    # textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                  )
-                ),
-                fluidRow(
-                  column(
                     width = 6,
                     box(
                       title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
@@ -172,13 +165,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               ),
               tabPanel(
                 "Gene Set Enrichment",
-                fluidRow(
-                  column(
-                    2,
-
-                    # textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                  )
-                ),
                 fluidRow(
                   column(
                     12,
