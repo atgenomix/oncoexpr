@@ -49,18 +49,18 @@ NULL
 #'
 #' @examples
 #' \dontrun{
-#'   library(sparklyr)
-#'   sc <- spark_connect(master = "local")
-#'   input_data <- read.csv("path/to/rnaseq_data.csv")
-#'   RNAseqShinyAppSpark(input_data, sc, "RNAseq Analysis", 8080)
+#' library(sparklyr)
+#' sc <- spark_connect(master = "local")
+#' input_data <- read.csv("path/to/rnaseq_data.csv")
+#' RNAseqShinyAppSpark(input_data, sc, "RNAseq Analysis", 8080)
 #' }
 #'
 #' @export
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  plan(multisession, workers = 3 )
-  #plan(sequential) 
+  plan(multisession, workers = 3)
+  # plan(sequential)
   print(future::plan())
   ui <- fluidPage(
     navbarPage(
@@ -87,16 +87,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               column(
                 width = 12,
                 tabsetPanel(
-                    tabPanel("normCount Table",
-                            DT::dataTableOutput("wide_table_dt", width = "100%")
-                    ),
-                    tabPanel("DEG Table",
-                            downloadButton("download_DEG", "Download DEG CSV"),
-                            DT::dataTableOutput('DEG_table', width = "100%")
-                    )
-
+                  tabPanel(
+                    "normCount Table",
+                    DT::dataTableOutput("wide_table_dt", width = "100%")
+                  ),
+                  tabPanel(
+                    "DEG Table",
+                    downloadButton("download_DEG", "Download DEG CSV"),
+                    DT::dataTableOutput("DEG_table", width = "100%")
+                  )
                 )
-
               )
             )
           )
@@ -109,80 +109,92 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sidebar = sidebar(
             style = "min-height: 600px; overflow-y: auto;",
             sliderInput("lfc_cut", "Fold Change Threshold (log2):",
-                        min = 0, max = 10, value = 1, step = 0.1),
+              min = 0, max = 10, value = 1, step = 0.1
+            ),
             sliderInput("pval_cut", "p-value Threshold:",
-                        min = 0.001, max = 1, value = 0.05, step = 0.001),
+              min = 0.001, max = 1, value = 0.05, step = 0.001
+            ),
             sliderInput("pointSize", "Point Size:",
-                        min = 1, max = 5, value = 2, step = 0.5),
+              min = 1, max = 5, value = 2, step = 0.5
+            ),
             sliderInput("ptAlpha", "Transparent:",
-                        min = 0.1, max = 1, value = 0.6, step = 0.1),
+              min = 0.1, max = 1, value = 0.6, step = 0.1
+            ),
             sliderInput("labelSize", "Gene Label Size:",
-                        min = 1, max = 6, value = 3, step = 0.5),
+              min = 1, max = 6, value = 3, step = 0.5
+            ),
             numericInput("topN", "Label N number of Genes (0 is no labeling):",
-                         value = 100, min = 0, max = 1000),
-
+              value = 100, min = 0, max = 1000
+            ),
             actionButton("run_DEG", "Update DEG")
           ),
           mainPanel(
             width = 12,
             tabsetPanel(
-              tabPanel("Volcano Plot", 
-                       interactivePlotsUI("plotVolcano")
+              tabPanel(
+                "Volcano Plot",
+                interactivePlotsUI("plotVolcano")
               ),
-              tabPanel("Heatmap",
-                        fluidRow(
-                          column(2,
-                                
-                                #textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-           
-                          )
-                        ),
-                        fluidRow(
-                          column(width = 6,
-                                box(title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                                    originalHeatmapOutput("ht", height = 1000, containment = TRUE)
-                                )
-                          ),
-                          column(width = 6,
-                                box(title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                                    subHeatmapOutput("ht", title = NULL, containment = TRUE)
-                                )
-                          )
-                        )
-              ),
-              tabPanel("Gene Set Enrichment",
-                        fluidRow(
-                          column(2, 
-                                
-                                #textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                       
-                          )
-                        ),
-                        fluidRow(
-                          column(12,
-                                h4("UPregulated DEGs"),
-                                tabsetPanel(
-                                  tabPanel("KEGG", plotOutput("G1_KEGG")),
-                                  tabPanel("MF", plotOutput("G1_MF")),
-                                  tabPanel("BP", plotOutput("G1_BP")),
-                                  tabPanel("CC", plotOutput("G1_CC"))
-                                )
-                          )
-                        ),
-                        fluidRow(
-                          column(12,
-                                h4("DOWNregulated DEGs"),
-                                tabsetPanel(
-                                  tabPanel("KEGG", plotOutput("G2_KEGG")),
-                                  tabPanel("MF", plotOutput("G2_MF")),
-                                  tabPanel("BP", plotOutput("G2_BP")),
-                                  tabPanel("CC", plotOutput("G2_CC"))
-                                )
-                          )
-                        )
-              )
-              
+              tabPanel(
+                "Heatmap",
+                fluidRow(
+                  column(
+                    2,
 
+                    # textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+                  )
+                ),
+                fluidRow(
+                  column(
+                    width = 6,
+                    box(
+                      title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                      originalHeatmapOutput("ht", height = 1000, containment = TRUE)
+                    )
+                  ),
+                  column(
+                    width = 6,
+                    box(
+                      title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
+                      subHeatmapOutput("ht", title = NULL, containment = TRUE)
+                    )
+                  )
+                )
+              ),
+              tabPanel(
+                "Gene Set Enrichment",
+                fluidRow(
+                  column(
+                    2,
+
+                    # textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
+                  )
+                ),
+                fluidRow(
+                  column(
+                    12,
+                    h4("UPregulated DEGs"),
+                    tabsetPanel(
+                      tabPanel("KEGG", plotOutput("G1_KEGG")),
+                      tabPanel("MF", plotOutput("G1_MF")),
+                      tabPanel("BP", plotOutput("G1_BP")),
+                      tabPanel("CC", plotOutput("G1_CC"))
+                    )
+                  )
+                ),
+                fluidRow(
+                  column(
+                    12,
+                    h4("DOWNregulated DEGs"),
+                    tabsetPanel(
+                      tabPanel("KEGG", plotOutput("G2_KEGG")),
+                      tabPanel("MF", plotOutput("G2_MF")),
+                      tabPanel("BP", plotOutput("G2_BP")),
+                      tabPanel("CC", plotOutput("G2_CC"))
+                    )
+                  )
+                )
+              )
             )
           )
         )
@@ -191,7 +203,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   )
 
   server <- function(input, output, session) {
-
     sc <- reactiveVal(NULL)
     results <- reactiveValues(
       db_info = NULL,
@@ -212,11 +223,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       sc(sparklyr::spark_connect(master = master, method = method, version = version))
     })
 
-    session$onSessionEnded(function(){
+    session$onSessionEnded(function() {
       if (!is.null(sc())) {
-          sparklyr::spark_disconnect(sc())
-          message("Spark connection disconnected.")
-        }
+        sparklyr::spark_disconnect(sc())
+        message("Spark connection disconnected.")
+      }
     })
 
     observe({
@@ -237,7 +248,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       prefix <- c("^normcounts|^exacttest|^coldata")
 
-      tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls),]
+      tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
       print("====tbl_list_query_prefix====")
       print(tbl_list_query_prefix)
       tbls_with_prefix <- tbl_list_query_prefix$tableName
@@ -246,16 +257,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("====tbls_with_time_filter====")
       print(tbls_with_time_filter)
 
-      if(sum(tbls_with_time_filter$is_latest)==0){
+      if (sum(tbls_with_time_filter$is_latest) == 0) {
         print("no latest table")
-        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==FALSE,]
-        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
       } else {
         print("latest table")
-        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==TRUE,]
-        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
       }
-      
+
       tbls_with_prefix_time <- summary_table$"file"
       print("====summary_table====")
       print(summary_table)
@@ -264,6 +275,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
       exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
       coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+
       print("====normcount_tbls====")
       print(normcount_tbls)
       print("====exacttest_tbls====")
@@ -271,89 +283,109 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("====coldata_tbls====")
       print(coldata_tbls)
 
-      normcount_promise <- future_promise({
-        start_time <- Sys.time()
-        message(sprintf("[%s] Start querying normcounts table", start_time))
-        sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-        on.exit(sparklyr::spark_disconnect(sc_conn))
-        DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-        query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-        normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+      normcount_promise <- future_promise(
+        {
+          start_time <- Sys.time()
+          message(sprintf("[%s] Start querying normcounts table", start_time))
 
-        colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
-        normcount <- normcount[,colnames(normcount)!="_c0"]
-        end_time <- Sys.time()
-        message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          on.exit(sparklyr::spark_disconnect(sc_conn))
+          DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+          query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
 
-        normcount
-      }, globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name), seed=TRUE)
+          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
+          normcount <- normcount[, colnames(normcount) != "_c0"]
+          end_time <- Sys.time()
 
-      exacttest_promise <- future_promise({
-        start_time <- Sys.time()
-        message(sprintf("[%s] Start querying exacttest table", start_time))
-        sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-        on.exit(sparklyr::spark_disconnect(sc_conn))
-        DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-        query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-        exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+          message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
 
-        colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
-        exacttest <- exacttest[,colnames(exacttest)!="_c0"]
-        end_time <- Sys.time()
-        message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+          normcount
+        },
+        globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
+        seed = TRUE
+      )
 
-        exacttest
-      }, globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls , selected_db_name = selected_db_name), seed=TRUE)
+      exacttest_promise <- future_promise(
+        {
+          start_time <- Sys.time()
+          message(sprintf("[%s] Start querying exacttest table", start_time))
+          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          on.exit(sparklyr::spark_disconnect(sc_conn))
+          DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+          query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+
+          colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
+          exacttest <- exacttest[, colnames(exacttest) != "_c0"]
+          end_time <- Sys.time()
+          message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+
+          exacttest
+        },
+        globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name),
+        seed = TRUE
+      )
 
       coldata_promise <-
         if (length(coldata_tbls) > 0) {
-          future_promise({
-            start_time <- Sys.time()
-            message(sprintf("[%s] Start querying coldata table", start_time))
-            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-            on.exit(sparklyr::spark_disconnect(sc_conn))
-            DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+          future_promise(
+            {
+              start_time <- Sys.time()
+              message(sprintf("[%s] Start querying coldata table", start_time))
+              sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+              on.exit(sparklyr::spark_disconnect(sc_conn))
+              DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+              query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+              coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
 
-            end_time <- Sys.time()
-            message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
-            
-            coldata
-          }, globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls , selected_db_name = selected_db_name),seed=TRUE)
+              end_time <- Sys.time()
+              message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+
+              coldata
+            },
+            globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls, selected_db_name = selected_db_name),
+            seed = TRUE
+          )
         } else {
           normcount_promise %...>% (function(normcount) {
-            future_promise({
-              generate_colData_random(normcount, genecol = "GeneSymbol")
-            }, seed=TRUE)
+            future_promise(
+              {
+                generate_colData_random(normcount, genecol = "GeneSymbol")
+              },
+              seed = TRUE
+            )
           })
         }
 
 
-        promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
-            results$normcount_data <- normcount_data
-            results$exacttest_data <- exacttest_data
-            results$coldata <- coldata
-            print("===normcount_data===")
-            print(head(results$normcount_data))
-            print("===exacttest_data===")
-            print(head(results$exacttest_data))
-            print("===coldata===")
-            print(head(results$coldata))
-        })
+      promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
+        results$normcount_data <- normcount_data
+        results$exacttest_data <- exacttest_data
+        results$coldata <- coldata
+        print("===normcount_data===")
+        print(head(results$normcount_data))
+        print("===exacttest_data===")
+        print(head(results$exacttest_data))
+        print("===coldata===")
+        print(head(results$coldata))
+      })
 
-      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) { if (is.numeric(x)) round(x, 4) else x  }))
-      results$exacttest_data[,"logFC"] <- if(is.numeric(results$exacttest_data[,"logFC"])) round(results$exacttest_data[,"logFC"], 4) else results$exacttest_data[,"logFC"]
-      results$exacttest_data[,"logCPM"] <- if(is.numeric(results$exacttest_data[,"logCPM"])) round(results$exacttest_data[,"logCPM"], 4) else results$exacttest_data[,"logCPM"]
+      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
+        if (is.numeric(x)) round(x, 4) else x
+      }))
+      results$exacttest_data[, "logFC"] <- if (is.numeric(results$exacttest_data[, "logFC"])) round(results$exacttest_data[, "logFC"], 4) else results$exacttest_data[, "logFC"]
+      results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
 
       print(Sys.getpid())
-
-     })
+    })
 
 
     output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
+
       print("send wide data to UI")
+
       DT::datatable(
         wide_data(),
         options = list(pageLength = 20, autoWidth = TRUE)
@@ -361,9 +393,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
     observe({
-
       req(DEG_table(), wide_data(), maeColData())
-    
+
       assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
       if ("GeneSymbol" %in% colnames(wide_data())) {
         rownames(assay_data) <- wide_data()[, "GeneSymbol"]
@@ -401,53 +432,55 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         colData = sample_info_table
       )
       settingMAE(mae)
-
     })
 
     observe({
       req(results$coldata, results$normcount_data, results$exacttest_data)
-      output$DEG_table <- renderDT({
-        datatable(
-          DEG_table(),
-          options = list(pageLength = 20, autoWidth = TRUE)
+      output$DEG_table <- renderDT(
+        {
+          datatable(
+            DEG_table(),
+            options = list(pageLength = 20, autoWidth = TRUE)
+          )
+        },
+        server = FALSE
+      )
+    })
+
+    observe({
+      req(DEG_table(), maeColData(), wide_data())
+      params <- reactive({
+        list(
+          lfc_cut    = input$lfc_cut,
+          pval_cut   = input$pval_cut,
+          pointSize  = input$pointSize,
+          ptAlpha    = input$ptAlpha,
+          labelSize  = input$labelSize,
+          topN       = input$topN,
+          use_adjP   = input$use_adjP
         )
-      }, server = FALSE)
-    })
+      })
 
-    observe({
-          req(DEG_table(), maeColData(), wide_data())
-          params <- reactive({
-            list(
-              lfc_cut    = input$lfc_cut,
-              pval_cut   = input$pval_cut,
-              pointSize  = input$pointSize,
-              ptAlpha    = input$ptAlpha,
-              labelSize  = input$labelSize,
-              topN       = input$topN,
-              use_adjP   = input$use_adjP
-            )
-          })
- 
 
-          normCount <- wide_data()
-          volcanoData <- DEG_table()
-          colData <- maeColData()
+      normCount <- wide_data()
+      volcanoData <- DEG_table()
+      colData <- maeColData()
 
-          exprData <- transfExprFormat(normCount, colData)
-          interactivePlotsServer("plotVolcano",
-                                volcanoData = volcanoData,
-                                exprData = exprData, params)
-
+      exprData <- transfExprFormat(normCount, colData)
+      interactivePlotsServer("plotVolcano",
+        volcanoData = volcanoData,
+        exprData = exprData, params
+      )
     })
 
 
-    
+
     observe({
-        req(results$exacttest_data, results$normcount_data, results$coldata)
-        DEG_table(results$exacttest_data)
-        wide_data(results$normcount_data)
-        maeColData(results$coldata)
-        message("assign reactiveVal: DEG_table, wide_data, maeColData")
+      req(results$exacttest_data, results$normcount_data, results$coldata)
+      DEG_table(results$exacttest_data)
+      wide_data(results$normcount_data)
+      maeColData(results$coldata)
+      message("assign reactiveVal: DEG_table, wide_data, maeColData")
     })
 
     topGeneList <- reactiveVal(NULL)
@@ -491,6 +524,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       groups_list <- c("G1", "G2")
       group1_fc_gene_profile <- topGeneList()
       group2_fc_gene_profile <- downGeneList()
+
       for (n in seq_len(length(groups_list))) {
         col <- groups_list[n]
         print(col)
@@ -504,11 +538,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               save_path_ = NULL,
               save_filename_ = NULL,
               mode_ = mode,
-              showCategory_ = 10)
+              showCategory_ = 10
+            )
             end_time <- Sys.time()
-            list(r = result, c = col, m = mode,start_time = start_time,
-            end_time = end_time,
-            elapsed = as.numeric(difftime(end_time, start_time, units="secs")))
+            list(
+              r = result, c = col, m = mode, start_time = start_time,
+              end_time = end_time,
+              elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+            )
           }) %...>% {
             if (!is.null(.)) {
               var <- paste0(.$c, "_", .$m)
@@ -524,11 +561,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
+
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
       group1_fc_gene_profile <- topGeneList()
       group2_fc_gene_profile <- downGeneList()
+
       for (n in seq_len(length(groups_list))) {
         col <- groups_list[n]
         print(col)
@@ -543,9 +582,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             showCategory_ = 10
           )
           end_time <- Sys.time()
-          list(r = result, c = col, start_time = start_time,
+          list(
+            r = result, c = col, start_time = start_time,
             end_time = end_time,
-            elapsed = as.numeric(difftime(end_time, start_time, units="secs")))
+            elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+          )
         }) %...>% {
           if (!is.null(.)) {
             var <- paste0(.$c, "_", "KEGG")
@@ -562,10 +603,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
       mae <- settingMAE()
-      
+
       geneListVec <- unlist(strsplit(geneListReactive(), ","))
       geneListVec <- trimws(geneListVec)
       ht <- make_heatmap_mae(mae, geneListVec)
+
       if (!is.null(ht)) {
         makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
       } else {
@@ -579,9 +621,4 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
   for_run <- shinyApp(ui = ui, server = server)
   runApp(for_run)
-
-
 }
-
-
-
