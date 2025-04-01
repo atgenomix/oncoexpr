@@ -38,8 +38,7 @@ Imports:
     org.Hs.eg.db,
     promises,
     future,
-    purrr,
-    tictoc
+    purrr
 Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/MultiAssayExperiment,
