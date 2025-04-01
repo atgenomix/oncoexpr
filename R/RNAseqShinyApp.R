@@ -273,7 +273,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       normcount_promise <- future_promise({
         start_time <- Sys.time()
-        message(sprintf("[%s] 開始查詢 normcounts 資料表", start_time))
+        message(sprintf("[%s] Start querying normcounts table", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
         on.exit(sparklyr::spark_disconnect(sc_conn))
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
@@ -283,14 +283,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
         normcount <- normcount[,colnames(normcount)!="_c0"]
         end_time <- Sys.time()
-        message(sprintf("[%s] 完成 normcounts 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+        message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
 
         normcount
       }, globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name), seed=TRUE)
 
       exacttest_promise <- future_promise({
         start_time <- Sys.time()
-        message(sprintf("[%s] 開始查詢 exacttest 資料表", start_time))
+        message(sprintf("[%s] Start querying exacttest table", start_time))
         sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
         on.exit(sparklyr::spark_disconnect(sc_conn))
         DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
@@ -300,7 +300,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
         exacttest <- exacttest[,colnames(exacttest)!="_c0"]
         end_time <- Sys.time()
-        message(sprintf("[%s] 完成 exacttest 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+        message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
 
         exacttest
       }, globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls , selected_db_name = selected_db_name), seed=TRUE)
@@ -309,7 +309,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         if (length(coldata_tbls) > 0) {
           future_promise({
             start_time <- Sys.time()
-            message(sprintf("[%s] 開始查詢 coldata 資料表", start_time))
+            message(sprintf("[%s] Start querying coldata table", start_time))
             sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
             on.exit(sparklyr::spark_disconnect(sc_conn))
             DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
@@ -317,7 +317,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
 
             end_time <- Sys.time()
-            message(sprintf("[%s] 完成 coldata 查詢 (耗時 %.2f 秒)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
+            message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units="secs"))))
             
             coldata
           }, globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls , selected_db_name = selected_db_name),seed=TRUE)
@@ -483,13 +483,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
 
-    cat("==================================== \n")
-    cat("experiment \n")
-    cat("==================================== \n")
 
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
-
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
@@ -503,14 +499,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           print(mode)
           future_promise({
             start_time <- Sys.time()
-            #tic()
             result <- go_enrich_dotplot(
               gene_list_ = unique(gene_list),
               save_path_ = NULL,
               save_filename_ = NULL,
               mode_ = mode,
               showCategory_ = 10)
-            #elapsed <- toc(quiet = TRUE)
             end_time <- Sys.time()
             list(r = result, c = col, m = mode,start_time = start_time,
             end_time = end_time,
@@ -542,14 +536,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
         future_promise({
           start_time <- Sys.time()
-          #tic()
           result <- kegg_enrich_dotplot(
             gene_list_ = unique(gene_list),
             save_path_ = NULL,
             save_filename_ = NULL,
             showCategory_ = 10
           )
-          #elapsed <- toc(quiet = TRUE)
           end_time <- Sys.time()
           list(r = result, c = col, start_time = start_time,
             end_time = end_time,
