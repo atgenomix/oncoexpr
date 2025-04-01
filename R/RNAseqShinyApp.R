@@ -782,35 +782,35 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
     output$G1_CC <- renderPlot({
-      validate(need(result_G1_CC(), "Loading..."))
+      validate(need(result_G1_CC(), "Please update the DEG list, then wait while it loads..."))
       result_G1_CC()
     })
     output$G1_BP <- renderPlot({
-      validate(need(result_G1_BP(), "Loading..."))
+      validate(need(result_G1_BP(), "Please update the DEG list, then wait while it loads..."))
       result_G1_BP()
     })
     output$G1_MF <- renderPlot({
-      validate(need(result_G1_MF(), "Loading..."))
+      validate(need(result_G1_MF(), "Please update the DEG list, then wait while it loads..."))
       result_G1_MF()
     })
     output$G2_CC <- renderPlot({
-      validate(need(result_G2_CC(), "Loading..."))
+      validate(need(result_G2_CC(), "Please update the DEG list, then wait while it loads..."))
       result_G2_CC()
     })
     output$G2_BP <- renderPlot({
-      validate(need(result_G2_BP(), "Loading..."))
+      validate(need(result_G2_BP(), "Please update the DEG list, then wait while it loads..."))
       result_G2_BP()
     })
     output$G2_MF <- renderPlot({
-      validate(need(result_G2_MF(), "Loading..."))
+      validate(need(result_G2_MF(), "Please update the DEG list, then wait while it loads..."))
       result_G2_MF()
     })
     output$G1_KEGG <- renderPlot({
-      validate(need(result_G1_KEGG(), "Loading..."))
+      validate(need(result_G1_KEGG(), "Please update the DEG list, then wait while it loads..."))
       result_G1_KEGG()
     })
     output$G2_KEGG <- renderPlot({
-      validate(need(result_G2_KEGG(), "Loading..."))
+      validate(need(result_G2_KEGG(), "Please update the DEG list, then wait while it loads..."))
       result_G2_KEGG()
     })
 
