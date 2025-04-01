@@ -443,15 +443,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     #   # sc(NULL)
     # })
 
-    output$wide_table_dt <- DT::renderDataTable({
-      req(wide_data())
 
-      print("send wide data to UI")
-
-      DT::datatable(
-        wide_data(),
-        options = list(pageLength = 20, autoWidth = TRUE)
-      )
+    observe({
+        req(wide_data())
+        output$wide_table_dt <- DT::renderDataTable({
+          print("send wide data to UI")
+          DT::datatable(
+            wide_data(),
+            options = list(pageLength = 20, autoWidth = TRUE)
+          )
+        })
     })
 
     observe({
