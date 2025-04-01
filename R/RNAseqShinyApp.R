@@ -134,15 +134,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               tabPanel(
                 "Volcano Plot",
                 fluidRow(
-                  
-                  column(width = 12,
-                        interactivePlotsUI("volcano_plots")
+                  column(
+                    width = 12,
+                    interactivePlotsUI("volcano_plots")
                   ),
-                  column(width = 12,
-                        mod_geneSelector_ui("gene_selector")
+                  column(
+                    width = 12,
+                    mod_geneSelector_ui("gene_selector")
                   )
                 )
-                
               ),
               tabPanel(
                 "Heatmap",
@@ -245,6 +245,150 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$db_info <- dbBrowserServer("dbBrowser1", sc())
     })
 
+    observeEvent(results$db_info$selected_db(), {
+      req(results$db_info$selected_db())
+      selected_db_name <- results$db_info$selected_db()
+
+      DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+      tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+      tbls <- tbl_list_query$tableName
+      print("====tbls====")
+      print(tbls)
+
+      prefix <- c("^normcounts|^exacttest|^coldata")
+
+      tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
+      print("====tbl_list_query_prefix====")
+      print(tbl_list_query_prefix)
+      tbls_with_prefix <- tbl_list_query_prefix$tableName
+
+      tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+      print("====tbls_with_time_filter====")
+      print(tbls_with_time_filter)
+
+      if (sum(tbls_with_time_filter$is_latest) == 0) {
+        print("no latest table")
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
+      } else {
+        print("latest table")
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
+        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
+      }
+
+      tbls_with_prefix_time <- summary_table$"file"
+      print("====summary_table====")
+      print(summary_table)
+      results$table_list <- tbl_list_query_prefix_time
+
+      normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+
+      print("====normcount_tbls====")
+      print(normcount_tbls)
+      print("====exacttest_tbls====")
+      print(exacttest_tbls)
+      print("====coldata_tbls====")
+      print(coldata_tbls)
+
+      normcount_promise <- future_promise(
+        {
+          start_time <- Sys.time()
+          message(sprintf("[%s] Start querying normcounts table", start_time))
+
+          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          on.exit(sparklyr::spark_disconnect(sc_conn))
+          DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+          query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+
+          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
+          normcount <- normcount[, colnames(normcount) != "_c0"]
+          end_time <- Sys.time()
+
+          message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+
+          normcount
+        },
+        globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
+        seed = TRUE
+      )
+
+      exacttest_promise <- future_promise(
+        {
+          start_time <- Sys.time()
+          message(sprintf("[%s] Start querying exacttest table", start_time))
+          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          on.exit(sparklyr::spark_disconnect(sc_conn))
+          DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+          query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+
+          colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
+          exacttest <- exacttest[, colnames(exacttest) != "_c0"]
+          end_time <- Sys.time()
+          message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+
+          exacttest
+        },
+        globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name),
+        seed = TRUE
+      )
+
+      coldata_promise <-
+        if (length(coldata_tbls) > 0) {
+          future_promise(
+            {
+              start_time <- Sys.time()
+              message(sprintf("[%s] Start querying coldata table", start_time))
+              sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+              on.exit(sparklyr::spark_disconnect(sc_conn))
+              DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+              query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+              coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+
+              end_time <- Sys.time()
+              message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+
+              coldata
+            },
+            globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls, selected_db_name = selected_db_name),
+            seed = TRUE
+          )
+        } else {
+          normcount_promise %...>% (function(normcount) {
+            future_promise(
+              {
+                generate_colData_random(normcount, genecol = "GeneSymbol")
+              },
+              seed = TRUE
+            )
+          })
+        }
+
+
+      promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
+        results$normcount_data <- normcount_data
+        results$exacttest_data <- exacttest_data
+        results$coldata <- coldata
+        print("===normcount_data===")
+        print(head(results$normcount_data))
+        print("===exacttest_data===")
+        print(head(results$exacttest_data))
+        print("===coldata===")
+        print(head(results$coldata))
+      })
+
+      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
+        if (is.numeric(x)) round(x, 4) else x
+      }))
+      results$exacttest_data[, "logFC"] <- if (is.numeric(results$exacttest_data[, "logFC"])) round(results$exacttest_data[, "logFC"], 4) else results$exacttest_data[, "logFC"]
+      results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
+
+      print(Sys.getpid())
+    })
+
     # observeEvent(results$db_info$selected_db(), {
     #   req(results$db_info$selected_db())
     #   selected_db_name <- results$db_info$selected_db()
@@ -252,209 +396,65 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     #   DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
     #   tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
     #   tbls <- tbl_list_query$tableName
-    #   print("====tbls====")
     #   print(tbls)
-
+    #   print(tbl_list_query)
     #   prefix <- c("^normcounts|^exacttest|^coldata")
 
-    #   tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
-    #   print("====tbl_list_query_prefix====")
-    #   print(tbl_list_query_prefix)
-    #   tbls_with_prefix <- tbl_list_query_prefix$tableName
-
-    #   tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
-    #   print("====tbls_with_time_filter====")
+    #   tbls_with_time_filter <- get_latest_file_group_df(tbls)
     #   print(tbls_with_time_filter)
 
     #   if (sum(tbls_with_time_filter$is_latest) == 0) {
     #     print("no latest table")
-    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
+    #     tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest == FALSE, ]
     #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
     #   } else {
     #     print("latest table")
-    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
+    #     tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest == TRUE, ]
     #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
     #   }
 
-    #   tbls_with_prefix_time <- summary_table$"file"
-    #   print("====summary_table====")
+    #   tbls <- summary_table$"file"
+    #   print("time filtered result")
     #   print(summary_table)
-    #   results$table_list <- tbl_list_query_prefix_time
+    #   print("tbl_list_query")
 
-    #   normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-    #   exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-    #   coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   print(tbls_with_prefix)
+    #   grepl(prefix, tbls)
+    #   # tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==TRUE,]
+    #   # tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
+    #   print("tbls_with_prefix")
+    #   print(tbls_with_prefix)
+    #   results$table_list <- tbls_with_prefix
 
-    #   print("====normcount_tbls====")
-    #   print(normcount_tbls)
-    #   print("====exacttest_tbls====")
-    #   print(exacttest_tbls)
-    #   print("====coldata_tbls====")
-    #   print(coldata_tbls)
+    #   normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
+    #   exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
+    #   coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
 
-    #   normcount_promise <- future_promise(
-    #     {
-    #       start_time <- Sys.time()
-    #       message(sprintf("[%s] Start querying normcounts table", start_time))
+    #   if (length(normcount_tbls) > 0) {
+    #     query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+    #     results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+    #   }
 
-    #       sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-    #       on.exit(sparklyr::spark_disconnect(sc_conn))
-    #       DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-    #       query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-    #       normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+    #   if (length(exacttest_tbls) > 0) {
+    #     query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+    #     results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+    #   }
 
-    #       colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
-    #       normcount <- normcount[, colnames(normcount) != "_c0"]
-    #       end_time <- Sys.time()
-
-    #       message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
-
-    #       normcount
-    #     },
-    #     globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
-    #     seed = TRUE
-    #   )
-
-    #   exacttest_promise <- future_promise(
-    #     {
-    #       start_time <- Sys.time()
-    #       message(sprintf("[%s] Start querying exacttest table", start_time))
-    #       sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-    #       on.exit(sparklyr::spark_disconnect(sc_conn))
-    #       DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-    #       query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-    #       exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-
-    #       colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
-    #       exacttest <- exacttest[, colnames(exacttest) != "_c0"]
-    #       end_time <- Sys.time()
-    #       message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
-
-    #       exacttest
-    #     },
-    #     globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name),
-    #     seed = TRUE
-    #   )
-
-    #   coldata_promise <-
-    #     if (length(coldata_tbls) > 0) {
-    #       future_promise(
-    #         {
-    #           start_time <- Sys.time()
-    #           message(sprintf("[%s] Start querying coldata table", start_time))
-    #           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-    #           on.exit(sparklyr::spark_disconnect(sc_conn))
-    #           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-    #           query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-    #           coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
-
-    #           end_time <- Sys.time()
-    #           message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
-
-    #           coldata
-    #         },
-    #         globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls, selected_db_name = selected_db_name),
-    #         seed = TRUE
-    #       )
-    #     } else {
-    #       normcount_promise %...>% (function(normcount) {
-    #         future_promise(
-    #           {
-    #             generate_colData_random(normcount, genecol = "GeneSymbol")
-    #           },
-    #           seed = TRUE
-    #         )
-    #       })
-    #     }
-
-
-    #   promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
-    #     results$normcount_data <- normcount_data
-    #     results$exacttest_data <- exacttest_data
-    #     results$coldata <- coldata
-    #     print("===normcount_data===")
-    #     print(head(results$normcount_data))
-    #     print("===exacttest_data===")
-    #     print(head(results$exacttest_data))
-    #     print("===coldata===")
-    #     print(head(results$coldata))
-    #   })
-
-    #   results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
-    #     if (is.numeric(x)) round(x, 4) else x
-    #   }))
-    #   results$exacttest_data[, "logFC"] <- if (is.numeric(results$exacttest_data[, "logFC"])) round(results$exacttest_data[, "logFC"], 4) else results$exacttest_data[, "logFC"]
-    #   results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
-
-    #   print(Sys.getpid())
+    #   if (length(coldata_tbls) > 0) {
+    #     query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+    #     results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+    #   } else {
+    #     colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") # pseudo coldata
+    #     results$coldata <- colData
+    #   }
+    #   colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+    #   colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+    #   results$normcount_data <- results$normcount_data[, colnames(results$normcount_data) != "_c0"]
+    #   results$exacttest_data <- results$exacttest_data[, colnames(results$exacttest_data) != "_c0"]
+    #   # spark_disconnect(sc())
+    #   # sc()$session$stop()
+    #   # sc(NULL)
     # })
-
-    observeEvent(results$db_info$selected_db(), {
-          req(results$db_info$selected_db())
-          selected_db_name <- results$db_info$selected_db()
-
-          DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-          tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
-          tbls <- tbl_list_query$tableName
-          print(tbls)
-          print(tbl_list_query)
-          prefix <- c("^normcounts|^exacttest|^coldata")
-
-          tbls_with_time_filter <- get_latest_file_group_df(tbls)
-          print(tbls_with_time_filter)
-
-          if(sum(tbls_with_time_filter$is_latest)==0){
-            print("no latest table")
-            tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==FALSE,]
-            summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
-          }else{
-            print("latest table")
-            tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==TRUE,]
-            summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
-          }
-          
-          tbls <- summary_table$"file"
-          print("time filtered result")
-          print(summary_table)
-          print("tbl_list_query")
-          
-          print(tbls_with_prefix)
-          grepl(prefix , tbls)
-          #tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==TRUE,]
-          #tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
-          print("tbls_with_prefix")
-          print(tbls_with_prefix)
-          results$table_list <- tbls_with_prefix
-
-          normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
-          exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
-          coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
-
-          if (length(normcount_tbls) > 0) {
-            query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-            results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
-          }
-
-          if (length(exacttest_tbls) > 0) {
-            query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-            results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
-          }
-
-          if (length(coldata_tbls) > 0) {
-            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-            results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
-          } else {
-            colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") #pseudo coldata
-            results$coldata <- colData
-          }
-          colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-          colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-          results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-          results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-          #spark_disconnect(sc())
-          #sc()$session$stop()
-          #sc(NULL)
-    })
 
     output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
@@ -542,13 +542,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       colData <- maeColData()
 
       exprData <- transfExprFormat(normCount, colData)
-      # interactivePlotsServer("plotVolcano",
-      #   volcanoData = volcanoData,
-      #   exprData = exprData, params
-      # )
-      if(!is.null(geneListReactive)){
-          selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, volcanoData$"GeneSymbol")      
-      }else(selected_gene <- NULL)
+
+      if (!is.null(geneListReactive)) {
+        selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, volcanoData$"GeneSymbol")
+      } else {
+        (selected_gene <- NULL)
+      }
       interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
     })
 
