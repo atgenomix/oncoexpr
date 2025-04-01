@@ -549,7 +549,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       if(!is.null(geneListReactive)){
           selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, volcanoData$"GeneSymbol")      
       }else(selected_gene <- NULL)
-      # 呼叫互動圖模組，並傳入表格模組的 reactive 單一 gene
       interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
     })
 
@@ -587,116 +586,116 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
 
-  #   observe({
-  #     new_gene_list <- geneListReactive()
-  #     updateTextInput(session, "geneListheatmap", value = new_gene_list)
-  #     updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
-  #     print("update geneListheatmap and geneLisEnrichment")
-  #     print(length(new_gene_list))
-  #   })
+    observe({
+      new_gene_list <- geneListReactive()
+      updateTextInput(session, "geneListheatmap", value = new_gene_list)
+      updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
+      print("update geneListheatmap and geneLisEnrichment")
+      print(length(new_gene_list))
+    })
 
 
 
-  #   observeEvent(geneListReactive(), {
-  #     req(topGeneList(), downGeneList(), settingMAE())
-  #     mae <- settingMAE()
-  #     sample_info <- colData(mae[["RNAseq"]])
-  #     groups_list <- c("G1", "G2")
-  #     group1_fc_gene_profile <- topGeneList()
-  #     group2_fc_gene_profile <- downGeneList()
+    observeEvent(geneListReactive(), {
+      req(topGeneList(), downGeneList(), settingMAE())
+      mae <- settingMAE()
+      sample_info <- colData(mae[["RNAseq"]])
+      groups_list <- c("G1", "G2")
+      group1_fc_gene_profile <- topGeneList()
+      group2_fc_gene_profile <- downGeneList()
 
-  #     for (n in seq_len(length(groups_list))) {
-  #       col <- groups_list[n]
-  #       print(col)
-  #       gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-  #       for (mode in c("CC", "BP", "MF")) {
-  #         print(mode)
-  #         future_promise({
-  #           start_time <- Sys.time()
-  #           result <- go_enrich_dotplot(
-  #             gene_list_ = unique(gene_list),
-  #             save_path_ = NULL,
-  #             save_filename_ = NULL,
-  #             mode_ = mode,
-  #             showCategory_ = 10
-  #           )
-  #           end_time <- Sys.time()
-  #           list(
-  #             r = result, c = col, m = mode, start_time = start_time,
-  #             end_time = end_time,
-  #             elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
-  #           )
-  #         }) %...>% {
-  #           if (!is.null(.)) {
-  #             var <- paste0(.$c, "_", .$m)
-  #             cat(var, " started at:", as.character(.$start_time), "\n")
-  #             cat(var, " ended at:", as.character(.$end_time), "\n")
-  #             cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
-  #             output[[var]] <- renderPlot(.$r)
-  #           }
-  #         }
-  #       }
-  #     }
-  #   })
+      for (n in seq_len(length(groups_list))) {
+        col <- groups_list[n]
+        print(col)
+        gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        for (mode in c("CC", "BP", "MF")) {
+          print(mode)
+          future_promise({
+            start_time <- Sys.time()
+            result <- go_enrich_dotplot(
+              gene_list_ = unique(gene_list),
+              save_path_ = NULL,
+              save_filename_ = NULL,
+              mode_ = mode,
+              showCategory_ = 10
+            )
+            end_time <- Sys.time()
+            list(
+              r = result, c = col, m = mode, start_time = start_time,
+              end_time = end_time,
+              elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+            )
+          }) %...>% {
+            if (!is.null(.)) {
+              var <- paste0(.$c, "_", .$m)
+              cat(var, " started at:", as.character(.$start_time), "\n")
+              cat(var, " ended at:", as.character(.$end_time), "\n")
+              cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
+              output[[var]] <- renderPlot(.$r)
+            }
+          }
+        }
+      }
+    })
 
-  #   observeEvent(geneListReactive(), {
-  #     req(topGeneList(), downGeneList(), settingMAE())
+    observeEvent(geneListReactive(), {
+      req(topGeneList(), downGeneList(), settingMAE())
 
-  #     mae <- settingMAE()
-  #     sample_info <- colData(mae[["RNAseq"]])
-  #     groups_list <- c("G1", "G2")
-  #     group1_fc_gene_profile <- topGeneList()
-  #     group2_fc_gene_profile <- downGeneList()
+      mae <- settingMAE()
+      sample_info <- colData(mae[["RNAseq"]])
+      groups_list <- c("G1", "G2")
+      group1_fc_gene_profile <- topGeneList()
+      group2_fc_gene_profile <- downGeneList()
 
-  #     for (n in seq_len(length(groups_list))) {
-  #       col <- groups_list[n]
-  #       print(col)
-  #       print("KEGG")
-  #       gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
-  #       future_promise({
-  #         start_time <- Sys.time()
-  #         result <- kegg_enrich_dotplot(
-  #           gene_list_ = unique(gene_list),
-  #           save_path_ = NULL,
-  #           save_filename_ = NULL,
-  #           showCategory_ = 10
-  #         )
-  #         end_time <- Sys.time()
-  #         list(
-  #           r = result, c = col, start_time = start_time,
-  #           end_time = end_time,
-  #           elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
-  #         )
-  #       }) %...>% {
-  #         if (!is.null(.)) {
-  #           var <- paste0(.$c, "_", "KEGG")
-  #           cat(var, " started at:", as.character(.$start_time), "\n")
-  #           cat(var, " ended at:", as.character(.$end_time), "\n")
-  #           cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
-  #           output[[var]] <- renderPlot(.$r)
-  #         }
-  #       }
-  #     }
-  #   })
+      for (n in seq_len(length(groups_list))) {
+        col <- groups_list[n]
+        print(col)
+        print("KEGG")
+        gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        future_promise({
+          start_time <- Sys.time()
+          result <- kegg_enrich_dotplot(
+            gene_list_ = unique(gene_list),
+            save_path_ = NULL,
+            save_filename_ = NULL,
+            showCategory_ = 10
+          )
+          end_time <- Sys.time()
+          list(
+            r = result, c = col, start_time = start_time,
+            end_time = end_time,
+            elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+          )
+        }) %...>% {
+          if (!is.null(.)) {
+            var <- paste0(.$c, "_", "KEGG")
+            cat(var, " started at:", as.character(.$start_time), "\n")
+            cat(var, " ended at:", as.character(.$end_time), "\n")
+            cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
+            output[[var]] <- renderPlot(.$r)
+          }
+        }
+      }
+    })
 
 
-  #   observeEvent(geneListReactive(), {
-  #     req(geneListReactive(), settingMAE())
-  #     mae <- settingMAE()
+    observeEvent(geneListReactive(), {
+      req(geneListReactive(), settingMAE())
+      mae <- settingMAE()
 
-  #     geneListVec <- unlist(strsplit(geneListReactive(), ","))
-  #     geneListVec <- trimws(geneListVec)
-  #     ht <- make_heatmap_mae(mae, geneListVec)
+      geneListVec <- unlist(strsplit(geneListReactive(), ","))
+      geneListVec <- trimws(geneListVec)
+      ht <- make_heatmap_mae(mae, geneListVec)
 
-  #     if (!is.null(ht)) {
-  #       makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-  #     } else {
-  #       output$ht_heatmap <- renderPlot({
-  #         grid::grid.newpage()
-  #         grid::grid.text("No data available.")
-  #       })
-  #     }
-  #   })
+      if (!is.null(ht)) {
+        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+      } else {
+        output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+        })
+      }
+    })
   }
 
   for_run <- shinyApp(ui = ui, server = server)
