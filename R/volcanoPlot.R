@@ -109,7 +109,7 @@ interactivePlotsUI <- function(id) {
 #'     \item \code{topN} (numeric): Number of top genes to label.
 #'     \item \code{use_adjP} (logical): Whether to use adjusted p-values.
 #'   }
-#'
+#' @param selectedGen selected single gene from DEG filtered table 
 #' @return This module does not return a value; instead, it creates server-side outputs for interactive plots.
 #'
 #' @examples

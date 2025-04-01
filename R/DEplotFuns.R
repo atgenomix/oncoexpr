@@ -188,6 +188,25 @@ ggvolcano_custom <- function (df, geneName, pValCol = "PValue", logFCCol = "logF
     return(p)
 }
 
+#' @title ggvolcano_custom_interactive
+#' @description ggvolcano_custom with custom parameters and interactive plot for RNAseq analysis
+#' @param df DEG table
+#' @param geneName gene symbol
+#' @param pValCol which col for p-value
+#' @param logFCCol which col for log fold-change
+#' @param coef coefficient for limma 
+#' @param pval_cut p-value for cut-off label
+#' @param lfc_cut log fold-change cut-off label
+#' @param useAdjP adjusted p-value
+#' @param title plot title
+#' @param ptAlpha transparent
+#' @param labelSize gene symbol text size
+#' @param geneCol gene symbol column
+#' @param pointSize point plot size
+#' @param topN show a number of genes symbol with high log fold-change
+#' @param highlight gene with highlight
+#' @return ggplot object
+#' @export
 
 ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC", 
                                            coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
