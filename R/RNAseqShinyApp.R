@@ -133,17 +133,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             tabsetPanel(
               tabPanel(
                 "Volcano Plot",
-                interactivePlotsUI("plotVolcano")
+                fluidRow(
+                  column(
+                    width = 12,
+                    interactivePlotsUI("volcano_plots")
+                  ),
+                  column(
+                    width = 12,
+                    mod_geneSelector_ui("gene_selector")
+                  )
+                )
               ),
               tabPanel(
                 "Heatmap",
-                fluidRow(
-                  column(
-                    2,
-
-                    # textInput("geneListheatmap", "DEG Gene List", value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                  )
-                ),
                 fluidRow(
                   column(
                     width = 6,
@@ -163,13 +165,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               ),
               tabPanel(
                 "Gene Set Enrichment",
-                fluidRow(
-                  column(
-                    2,
-
-                    # textInput("geneLisEnrichment", "DEG Gene List",  value = "EGFR,ESR1,KRAS,ERBB2,AKT1")
-                  )
-                ),
                 fluidRow(
                   column(
                     12,
@@ -380,6 +375,72 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(Sys.getpid())
     })
 
+    # observeEvent(results$db_info$selected_db(), {
+    #   req(results$db_info$selected_db())
+    #   selected_db_name <- results$db_info$selected_db()
+
+    #   DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+    #   tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+    #   tbls <- tbl_list_query$tableName
+    #   print(tbls)
+    #   print(tbl_list_query)
+    #   prefix <- c("^normcounts|^exacttest|^coldata")
+
+    #   tbls_with_time_filter <- get_latest_file_group_df(tbls)
+    #   print(tbls_with_time_filter)
+
+    #   if (sum(tbls_with_time_filter$is_latest) == 0) {
+    #     print("no latest table")
+    #     tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest == FALSE, ]
+    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
+    #   } else {
+    #     print("latest table")
+    #     tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest == TRUE, ]
+    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
+    #   }
+
+    #   tbls <- summary_table$"file"
+    #   print("time filtered result")
+    #   print(summary_table)
+    #   print("tbl_list_query")
+
+    #   print(tbls_with_prefix)
+    #   grepl(prefix, tbls)
+    #   # tbls_with_prefix <- tbl_list_query[tbls_with_time_filter$is_latest==TRUE,]
+    #   # tbls_with_prefix <- tbl_list_query[grepl(prefix , tbls),]
+    #   print("tbls_with_prefix")
+    #   print(tbls_with_prefix)
+    #   results$table_list <- tbls_with_prefix
+
+    #   normcount_tbls <- tbls_with_prefix[grepl("^normcounts", tbls, ignore.case = TRUE), "tableName"]
+    #   exacttest_tbls <- tbls_with_prefix[grepl("^exacttest", tbls, ignore.case = TRUE), "tableName"]
+    #   coldata_tbls <- tbls_with_prefix[grepl("^coldata", tbls, ignore.case = TRUE), "tableName"]
+
+    #   if (length(normcount_tbls) > 0) {
+    #     query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+    #     results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+    #   }
+
+    #   if (length(exacttest_tbls) > 0) {
+    #     query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+    #     results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+    #   }
+
+    #   if (length(coldata_tbls) > 0) {
+    #     query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+    #     results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+    #   } else {
+    #     colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol") # pseudo coldata
+    #     results$coldata <- colData
+    #   }
+    #   colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+    #   colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+    #   results$normcount_data <- results$normcount_data[, colnames(results$normcount_data) != "_c0"]
+    #   results$exacttest_data <- results$exacttest_data[, colnames(results$exacttest_data) != "_c0"]
+    #   # spark_disconnect(sc())
+    #   # sc()$session$stop()
+    #   # sc(NULL)
+    # })
 
     output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
@@ -467,10 +528,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       colData <- maeColData()
 
       exprData <- transfExprFormat(normCount, colData)
-      interactivePlotsServer("plotVolcano",
-        volcanoData = volcanoData,
-        exprData = exprData, params
-      )
+      
+      
+      DEG_table_data <- DEG_table()
+      topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
+      downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
+
+      geneListVec <- c(topGenes, downGenes)
+      if (!is.null(geneListReactive)) {
+        selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, geneListVec)
+      } else {
+        (selected_gene <- NULL)
+      }
+      interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
     })
 
 
@@ -491,7 +561,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(DEG_table(), maeColData(), wide_data())
 
       DEG_table_data <- DEG_table()
-
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
 

@@ -188,19 +188,44 @@ ggvolcano_custom <- function (df, geneName, pValCol = "PValue", logFCCol = "logF
     return(p)
 }
 
+#' @title ggvolcano_custom_interactive
+#' @description ggvolcano_custom with custom parameters and interactive plot for RNAseq analysis
+#' @param df DEG table
+#' @param geneName gene symbol
+#' @param pValCol which col for p-value
+#' @param logFCCol which col for log fold-change
+#' @param coef coefficient for limma 
+#' @param pval_cut p-value for cut-off label
+#' @param lfc_cut log fold-change cut-off label
+#' @param useAdjP adjusted p-value
+#' @param title plot title
+#' @param ptAlpha transparent
+#' @param labelSize gene symbol text size
+#' @param geneCol gene symbol column
+#' @param pointSize point plot size
+#' @param topN show a number of genes symbol with high log fold-change
+#' @param highlight gene with highlight
+#' @return ggplot object
+#' @export
 
 ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFCCol = "logFC", 
-                               coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
-                               title = "Volcano Plot", topN = 20, geneCol = NULL, 
-                               pointSize = 2, ptAlpha = 0.6, labelSize = 3) {
-  
+                                           coef = 2, lfc_cut = 1, pval_cut = 0.05, useAdjP = FALSE, 
+                                           title = "Volcano Plot", topN = 20, geneCol = NULL, 
+                                           pointSize = 2, ptAlpha = 0.6, labelSize = 3,
+                                           highlight = NULL) { 
   plotData <- data.frame(gene = geneName, 
                          logFC = df[[logFCCol]], 
                          pval = df[[pValCol]])
+  
+  plotData$negLogP <- -log10(plotData$pval)
+  
   plotData$color <- "grey"
   plotData$color[plotData$logFC >= lfc_cut & plotData$pval <= pval_cut] <- "red"
   plotData$color[plotData$logFC <= -lfc_cut & plotData$pval <= pval_cut] <- "blue"
-  plotData$negLogP <- -log10(plotData$pval)
+  
+  if (!is.null(highlight)) {
+    plotData$color[plotData$gene %in% highlight] <- "orange"
+  }
   
   p <- ggplot(plotData, aes(x = logFC, y = negLogP, color = color)) +
     ggiraph::geom_point_interactive(aes(tooltip = gene, data_id = gene), 
@@ -213,7 +238,7 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
          x = expression(log[2] ~ "Fold Change"), 
          y = bquote(-log[10] ~ .(pValCol)))
   
-  if (topN > 0&& nrow(plotData) > 0) {
+  if (topN > 0 && nrow(plotData) > 0) {
     topGenesDF <- head(plotData[order(plotData$pval), ], n = topN)
     p <- p + ggrepel::geom_text_repel(data = topGenesDF, 
                                       aes(label = gene), 

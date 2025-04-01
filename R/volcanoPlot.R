@@ -109,7 +109,7 @@ interactivePlotsUI <- function(id) {
 #'     \item \code{topN} (numeric): Number of top genes to label.
 #'     \item \code{use_adjP} (logical): Whether to use adjusted p-values.
 #'   }
-#'
+#' @param selectedGen selected single gene from DEG filtered table 
 #' @return This module does not return a value; instead, it creates server-side outputs for interactive plots.
 #'
 #' @examples
@@ -126,7 +126,7 @@ interactivePlotsUI <- function(id) {
 #' @export
 
 
-interactivePlotsServer <- function(id, volcanoData, exprData, params) {
+interactivePlotsServer <- function(id, volcanoData, exprData, params, selectedGene=NULL) {
   moduleServer(id, function(input, output, session) {
     
     persistent_gene <- reactiveVal(NULL)
@@ -135,13 +135,18 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
       if (!is.null(input$volcanoPlot_selected) && input$volcanoPlot_selected != "")
         persistent_gene(input$volcanoPlot_selected)
     })
-
+    
     observeEvent(input$scatterPlot_selected, {
       if (!is.null(input$scatterPlot_selected) && input$scatterPlot_selected != "")
         persistent_gene(input$scatterPlot_selected)
     })
     
-
+    observeEvent(selectedGene(), {
+      if (!is.null(selectedGene()) && length(selectedGene()) > 0) {
+        persistent_gene(selectedGene()[1])
+      }
+    })
+    
     output$volcanoPlot <- renderGirafe({
       p <- ggvolcano_custom_interactive(
         df        = volcanoData, 
@@ -154,7 +159,8 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
         topN      = params()$topN, 
         pointSize = params()$pointSize, 
         ptAlpha   = params()$ptAlpha, 
-        labelSize = params()$labelSize
+        labelSize = params()$labelSize,
+        highlight = persistent_gene()
       )
       girafe(ggobj = p,
              options = list(
@@ -163,58 +169,56 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params) {
              ))
     })
     
-   output$scatterPlot <- renderGirafe({
-        current_gene <- persistent_gene()
-        scatterData_local <- exprData %>%
-            group_by(GeneSymbol) %>%
-            summarise(
-            mean1 = mean(expression[group == "control"]),
-            mean2 = mean(expression[group == "case"])
-            ) %>% ungroup()
+    output$scatterPlot <- renderGirafe({
+      scatterData_local <- exprData %>%
+        group_by(GeneSymbol) %>%
+        summarise(
+          mean1 = mean(expression[group == "control"]),
+          mean2 = mean(expression[group == "case"])
+        ) %>% ungroup()
+      
+      current_gene <- persistent_gene()
+      
+      if (is.null(current_gene) || current_gene == "") {
+        scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
+        p <- ggplot(scatterData_local, aes(x = log2(mean1), y = log2(mean2))) +
+          geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol),
+                                 size = 2, color = "black", alpha = 1) +
+          labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
+          theme_minimal()
+      } else {
+        nonhighlight_data <- scatterData_local %>% filter(GeneSymbol != current_gene)
+        highlight_data    <- scatterData_local %>% filter(GeneSymbol == current_gene)
         
-        # 如果沒有選取基因，直接全部以 normal 繪製
-        if (is.null(current_gene) || current_gene == "") {
-            scatterData_local <- scatterData_local %>% mutate(highlight = "normal")
-            p <- ggplot(scatterData_local, aes(x = log2(mean1), y = log2(mean2))) +
-            geom_point_interactive(aes(tooltip = GeneSymbol, data_id = GeneSymbol),
-                                    size = 2, color = "black", alpha = 1) +
-            labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
-            theme_minimal()
-        } else {
-            # 有選取基因時，分成兩層：非選取與選取
-            nonhighlight_data <- scatterData_local %>% filter(GeneSymbol != current_gene)
-            highlight_data    <- scatterData_local %>% filter(GeneSymbol == current_gene)
-            
-            p <- ggplot() +
-            geom_point_interactive(data = nonhighlight_data,
-                                    aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
-                                    size = 2, color = "grey", alpha = 0.2) +
-            geom_point_interactive(data = highlight_data,
-                                    aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
-                                    size = 2, color = "red", alpha = 1) +
-            labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
-            theme_minimal()
-        }
-        
-        girafe(ggobj = p,
-                options = list(
-                opts_zoom(max = 5),
-                opts_selection(type = "single", only_shiny = FALSE)
-                ))
+        p <- ggplot() +
+          geom_point_interactive(data = nonhighlight_data,
+                                 aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
+                                 size = 2, color = "grey", alpha = 0.2) +
+          geom_point_interactive(data = highlight_data,
+                                 aes(x = log2(mean1), y = log2(mean2), tooltip = GeneSymbol, data_id = GeneSymbol),
+                                 size = 2, color = "red", alpha = 1) +
+          labs(x = "Control (log2 Mean Expression)", y = "Case (log2 Mean Expression)") +
+          theme_minimal()
+      }
+      
+      girafe(ggobj = p,
+             options = list(
+               opts_zoom(max = 5),
+               opts_selection(type = "single", only_shiny = FALSE)
+             ))
     })
-
     
     output$geneViolinPlot <- renderPlot({
-      selected_gene <- persistent_gene()
-      if (is.null(selected_gene) || selected_gene == "") {
+      current_gene <- persistent_gene()
+      if (is.null(current_gene) || current_gene == "") {
         plot.new()
-        title("Please click a gene from the Volcano or Scatter Plot")
+        title("Please click a gene from the Volcano, Scatter Plot, or Table")
       } else {
-        data_selected <- exprData %>% filter(GeneSymbol == selected_gene)
+        data_selected <- exprData %>% filter(GeneSymbol == current_gene)
         ggplot(data_selected, aes(x = group, y = expression, fill = group)) +
           geom_violin(trim = FALSE, color = NA) +
           geom_jitter(width = 0.2, size = 3, alpha = 0.7) +
-          labs(title = paste("Expression of", selected_gene),
+          labs(title = paste("Expression of", current_gene),
                x = "Group", y = "Expression Level") +
           theme_minimal() +
           theme(legend.position = "none",

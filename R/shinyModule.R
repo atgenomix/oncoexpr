@@ -414,3 +414,55 @@ dbBrowserServer <- function(id, sc) {
     ))
   })
 }
+
+#' @title DE geneSelector UI
+#' @description click gene from DEG table for plot
+#' @param id module id for UI and Server
+#' @return click gene to render on the volcano plot
+#' @export
+
+mod_geneSelector_ui <- function(id) {
+  ns <- NS(id)
+  tagList(
+    h4("Gene Selector"),
+    DTOutput(ns("deg_table"))
+  )
+}
+
+#' @title DE geneSelector server
+#' @description click gene from DEG table for plot
+#' @param id module id for UI and Server
+#' @param deg_table original DEG table
+#' @param geneList DEG list
+#' @return click gene to render on the volcano plot
+#' @export
+#' 
+mod_geneSelector_server <- function(id, deg_table, geneList) {
+  moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+    
+    filtered_deg <- reactive({
+      req(deg_table, geneList)
+      deg_table[deg_table$GeneSymbol %in% geneList, ]
+    })
+    output$deg_table <- renderDT({
+      req(filtered_deg())
+      datatable(
+        filtered_deg(),
+        selection = "single",
+        options = list(pageLength = 10, scrollX = TRUE)
+      )
+    })
+    
+    selected_gene <- reactive({
+      sel <- input$deg_table_rows_selected
+      if (length(sel) > 0) {
+        filtered_deg()[sel, "GeneSymbol"]
+      } else {
+        NULL
+      }
+    })
+    
+    return(selected_gene)
+  })
+}
