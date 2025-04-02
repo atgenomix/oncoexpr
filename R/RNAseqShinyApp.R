@@ -214,10 +214,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       grouplist = NULL,
       normcount_data = NULL,
       exacttest_data = NULL,
-      coldata = NULL,
-      normcount_tbls = NULL, 
-      exacttest_tbls = NULL, 
-      coldata_tbls = NULL
+      coldata = NULL
     )
     volcano_res <- reactiveVal(NULL)
     settingMAE <- reactiveVal(NULL)
@@ -279,23 +276,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(summary_table)
       results$table_list <- tbl_list_query_prefix_time
 
-      results$normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-      results$exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-      results$coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+      coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
 
       print("====normcount_tbls====")
-      print(results$normcount_tbls)
+      print(normcount_tbls)
       print("====exacttest_tbls====")
-      print(results$exacttest_tbls)
+      print(exacttest_tbls)
       print("====coldata_tbls====")
-      print(results$coldata_tbls)
-    })
-
-    observe({
-      req(results$normcount_tbls, results$exacttest_tbls, results$coldata_tbls)
-      normcount_tbls <- results$normcount_tbls
-      exacttest_tbls <- results$exacttest_tbls
-      coldata_tbls <- results$coldata_tbls
+      print(coldata_tbls)
+      req(normcount_tbls, exacttest_tbls, coldata_tbls)
       normcount_promise <- future_promise(
         {
           start_time <- Sys.time()
@@ -391,7 +382,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
 
       print(Sys.getpid())
-    })
+    }, ignoreInit = TRUE)
+
+
 
     observe({
       req(wide_data())
