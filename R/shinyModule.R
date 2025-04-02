@@ -499,9 +499,10 @@ pcaModuleServer <- function(id, normCount, colData) {
     pcs <- colnames(pcaData)[colnames(pcaData) != "Sample"]
     
     # Update selectInput choices with available principal components
-    updateSelectInput(session, "pcX", choices = pcs, selected = pcs[1])
-    updateSelectInput(session, "pcY", choices = pcs, selected = pcs[2])
-    
+    observe({
+      updateSelectInput(session, "pcX", choices = pcs, selected = pcs[1])
+      updateSelectInput(session, "pcY", choices = pcs, selected = pcs[2])
+    })
     # Render the PCA plot using the precomputed PCA result
     output$pcaPlot <- renderPlot({
       req(input$pcX, input$pcY)
