@@ -466,8 +466,11 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
     return(selected_gene)
   })
 }
-
-
+#' @title PCA plot UI
+#' @description PCA
+#' @param id module id for UI and Server
+#' @return PCA plot UI
+#' @export
 
 pcaModuleUI <- function(id) {
   ns <- NS(id)
@@ -484,7 +487,14 @@ pcaModuleUI <- function(id) {
   )
 }
 
-# 3. PCA module server
+#' @title PCA plot Server
+#' @description PCA
+#' @param id module id for UI and Server
+#' @param normCount gene expression matrix
+#' @param colData sample information
+#' @return PCA plot Server
+#' @export
+
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
     # Compute PCA once and store the result
