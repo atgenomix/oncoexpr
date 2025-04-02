@@ -104,6 +104,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         )
       ),
       tabPanel(
+        title = "PCA",
+        mainPanel(
+          pcaModuleUI("pca1")
+        )
+      ),
+      tabPanel(
         title = "Differential Expression Analysis",
         layout_sidebar(
           full_screen = TRUE,
@@ -194,13 +200,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             )
           )
         )
-      ),
-      tabPanel(
-        title = "PCA",
-        mainPanel(
-          pcaModuleUI("pca1")
-        )
       )
+      
     )
   )
 
