@@ -466,3 +466,47 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
     return(selected_gene)
   })
 }
+
+
+
+pcaModuleUI <- function(id) {
+  ns <- NS(id)
+  tabPanel("PCA",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(ns("pcX"), "Select X-axis:", choices = NULL),
+        selectInput(ns("pcY"), "Select Y-axis:", choices = NULL)
+      ),
+      mainPanel(
+        plotOutput(ns("pcaPlot"))
+      )
+    )
+  )
+}
+
+# 3. PCA module server
+pcaModuleServer <- function(id, normCount, colData) {
+  moduleServer(id, function(input, output, session) {
+    # Compute PCA once and store the result
+    
+    rownames(normCount) <- normCount$"GeneSymbol"
+    normCount <- normCount[,-1]
+    print(str(normCount))
+    colnames(normCount) <- sub("\\.", "-", colnames(normCount))
+    pcaResult <- prcomp(t(normCount), scale. = TRUE)
+    pcaData <- as.data.frame(pcaResult$x)
+    pcaData$Sample <- rownames(pcaData)
+    pcs <- colnames(pcaData)[colnames(pcaData) != "Sample"]
+    
+    # Update selectInput choices with available principal components
+    observe({
+      updateSelectInput(session, "pcX", choices = pcs, selected = pcs[1])
+      updateSelectInput(session, "pcY", choices = pcs, selected = pcs[2])
+    })
+    # Render the PCA plot using the precomputed PCA result
+    output$pcaPlot <- renderPlot({
+      req(input$pcX, input$pcY)
+      createPCAPlot(pcaResult, colData, input$pcX, input$pcY)
+    })
+  })
+}

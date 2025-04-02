@@ -248,3 +248,29 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
   
   return(p)
 }
+
+
+
+createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
+  # Convert PCA results to data frame
+  pcaData <- as.data.frame(pcaResult$x)
+  pcaData$Sample <- rownames(pcaData)
+  
+  # Standardize sample names by replacing dots with dashes
+  pcaData$Sample <- gsub("\\.", "-", pcaData$Sample)
+  
+  # Merge PCA results with colData based on sample IDs
+  mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
+  missing <- mergedData[is.na(mergedData$subCode), "Sample"]
+  if(length(missing) > 0) {
+    message("Missing group annotation for samples: ", paste(missing, collapse = ", "))
+  }
+  # Create the PCA plot with ggplot2, mapping color to the group (subCode)
+  ggplot(mergedData, aes_string(x = pcX, y = pcY, label = "Sample", color = "subCode")) +
+    geom_point(size = 3) +
+    geom_text(vjust = -0.5) +
+    labs(title = paste("PCA Plot:", pcX, "vs", pcY),
+         x = pcX, y = pcY, color = "Group") +
+    theme_minimal()
+}
+
