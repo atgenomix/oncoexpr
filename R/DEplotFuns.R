@@ -248,3 +248,21 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
   
   return(p)
 }
+
+
+
+createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
+  pcaData <- as.data.frame(pcaResult$x)
+  pcaData$Sample <- rownames(pcaData)
+  
+  # Merge PCA results with colData based on sample IDs
+  mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
+  
+  # Create the PCA plot with ggplot2, mapping color to the group (subcode)
+  ggplot(mergedData, aes_string(x = pcX, y = pcY, label = "Sample", color = "subCode")) +
+    geom_point(size = 3) +
+    geom_text(vjust = -0.5) +
+    labs(title = paste("PCA Plot:", pcX, "vs", pcY),
+         x = pcX, y = pcY, color = "Group") +
+    theme_minimal()
+}

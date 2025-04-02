@@ -194,6 +194,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             )
           )
         )
+      ),
+      tabPanel(
+        title = "PCA",
+        mainPanel(
+          pcaModuleUI("pca1")
+        )
       )
     )
   )
@@ -446,14 +452,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
     observe({
-        req(wide_data())
-        output$wide_table_dt <- DT::renderDataTable({
-          print("send wide data to UI")
-          DT::datatable(
-            wide_data(),
-            options = list(pageLength = 20, autoWidth = TRUE)
-          )
-        })
+      req(wide_data())
+      output$wide_table_dt <- DT::renderDataTable({
+        print("send wide data to UI")
+        DT::datatable(
+          wide_data(),
+          options = list(pageLength = 20, autoWidth = TRUE)
+        )
+      })
     })
 
     observe({
@@ -531,8 +537,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       colData <- maeColData()
 
       exprData <- transfExprFormat(normCount, colData)
-      
-      
+
+
       DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
@@ -586,7 +592,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("update geneListheatmap and geneLisEnrichment")
       print(length(new_gene_list))
     })
-    
+
 
 
     # observeEvent(geneListReactive(), {
@@ -671,25 +677,25 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     #   }
     # })
 
-    result_G1_CC   <- reactiveVal(NULL)
-    result_G1_BP   <- reactiveVal(NULL)
-    result_G1_MF   <- reactiveVal(NULL)
+    result_G1_CC <- reactiveVal(NULL)
+    result_G1_BP <- reactiveVal(NULL)
+    result_G1_MF <- reactiveVal(NULL)
     result_G1_KEGG <- reactiveVal(NULL)
-    result_G2_CC   <- reactiveVal(NULL)
-    result_G2_BP   <- reactiveVal(NULL)
-    result_G2_MF   <- reactiveVal(NULL)
+    result_G2_CC <- reactiveVal(NULL)
+    result_G2_BP <- reactiveVal(NULL)
+    result_G2_MF <- reactiveVal(NULL)
     result_G2_KEGG <- reactiveVal(NULL)
 
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
-      
+
       result_G1_CC(NULL)
       result_G1_BP(NULL)
       result_G1_MF(NULL)
       result_G2_CC(NULL)
       result_G2_BP(NULL)
       result_G2_MF(NULL)
-      
+
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
@@ -711,7 +717,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             )
             end_time <- Sys.time()
             list(
-              r = result, c = col, m = mode, 
+              r = result, c = col, m = mode,
               start_time = start_time,
               end_time = end_time,
               elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
@@ -722,7 +728,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               cat(var, " started at:", as.character(.$start_time), "\n")
               cat(var, " ended at:", as.character(.$end_time), "\n")
               cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
-              
+
 
               if (var == "G1_CC") result_G1_CC(.$r)
               if (var == "G1_BP") result_G1_BP(.$r)
@@ -739,10 +745,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(geneListReactive(), {
       req(topGeneList(), downGeneList(), settingMAE())
-      
+
       result_G1_KEGG(NULL)
       result_G2_KEGG(NULL)
-      
+
       mae <- settingMAE()
       sample_info <- colData(mae[["RNAseq"]])
       groups_list <- c("G1", "G2")
@@ -762,18 +768,18 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           )
           end_time <- Sys.time()
           list(
-            r = result, c = col, 
+            r = result, c = col,
             start_time = start_time,
             end_time = end_time,
             elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
           )
         }) %...>% {
           if (!is.null(.)) {
-            var <- paste0(.$c, "_", "KEGG")  # 例如 "G1_KEGG"
+            var <- paste0(.$c, "_", "KEGG") # 例如 "G1_KEGG"
             cat(var, " started at:", as.character(.$start_time), "\n")
             cat(var, " ended at:", as.character(.$end_time), "\n")
             cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
-            
+
             if (var == "G1_KEGG") result_G1_KEGG(.$r)
             if (var == "G2_KEGG") result_G2_KEGG(.$r)
           }
@@ -832,6 +838,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           grid::grid.text("No data available.")
         })
       }
+    })
+
+    observe({
+      req(DEG_table(), wide_data(), maeColData())
+      pcaModuleServer("pca1", wide_data(), maeColData())
     })
   }
 
