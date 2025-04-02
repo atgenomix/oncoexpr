@@ -382,19 +382,20 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
 
       print(Sys.getpid())
-    }, ignoreInit = TRUE)
+    })
 
 
 
-    observe({
+    
+      
+    output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
-      output$wide_table_dt <- DT::renderDataTable({
-        print("send wide data to UI")
-        DT::datatable(
-          wide_data(),
-          options = list(pageLength = 20, autoWidth = TRUE)
-        )
-      })
+
+      print("send wide data to UI")
+      DT::datatable(
+        wide_data(),
+        options = list(pageLength = 20, autoWidth = TRUE)
+      )
     })
 
     observe({
@@ -693,6 +694,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observe({
       req(DEG_table(), wide_data(), maeColData())
+      print(head(maeColData()))
+      print(head(wide_data()))
       pcaModuleServer("pca1", wide_data(), maeColData())
     })
   }
