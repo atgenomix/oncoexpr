@@ -251,6 +251,16 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
 
 
 
+
+#' @title PCAplot
+#' @description PCA plot for RNAseq expression
+#' @param pcaResult pca table
+#' @param colData gene symbol
+#' @param pcX x axis PC dimension
+#' @param pcY y axis PC dimension
+#' @return PCA plot
+#' @export
+#' 
 createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
   # Convert PCA results to data frame
   pcaData <- as.data.frame(pcaResult$x)
