@@ -30,6 +30,7 @@
 #' @import promises
 #' @import future
 #' @import purrr
+#' @import shinycssloaders
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
