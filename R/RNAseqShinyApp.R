@@ -180,7 +180,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("KEGG", withSpinner(plotOutput("G1_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G1_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G1_CC")))
+                      tabPanel("CC", withSpinner(plotOutput("G1_CC"))),
+                      tabPanel("GSEA(KEGG)", gseaFCModuleUI("gsea_up"))
                     )
                   )
                 ),
@@ -192,7 +193,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("KEGG", withSpinner(plotOutput("G2_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G2_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G2_CC")))
+                      tabPanel("CC", withSpinner(plotOutput("G2_CC"))),
+                      tabPanel("GSEA(KEGG)", gseaFCModuleUI("gsea_down"))
                     )
                   )
                 )
@@ -692,6 +694,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
+    observeEvent(geneListReactive(), {
+      DEG_table <- DEG_table()
+      seaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up")
+      gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down")
+    })
     observe({
       req(DEG_table(), wide_data(), maeColData())
       print(head(maeColData()))
