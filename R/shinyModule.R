@@ -527,7 +527,7 @@ gseaFCModuleUI <- function(id) {
   tagList(
     numericInput(ns("pvalCutoff"), "P-value Cutoff:",
                  value = 0.05, min = 0, max = 1, step = 0.001),
-    actionButton(ns("runGSEA"), "Run GSEA"),
+    #actionButton(ns("runGSEA"), "Run GSEA"),
     DTOutput(ns("gseaTable")),
     plotOutput(ns("gseaPlot"))
   )
@@ -539,8 +539,8 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
     
-    observeEvent(input$runGSEA, {
-      req(DEG_table())
+   #observeEvent(input$runGSEA, {
+      #req(DEG_table())
       local_pvalCutoff <- isolate(input$pvalCutoff)
       local_deg <- isolate(DEG_table())
       
@@ -607,7 +607,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           cat("GSEA_FC (downregulated) finished. Elapsed:", .$elapsed, "seconds\n")
         }
       }
-    })
+    #})
     
     output$gseaTable <- renderDT({
       req(result_GSEA_FC())
