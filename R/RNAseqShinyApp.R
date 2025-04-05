@@ -485,13 +485,23 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
     observe({
-      req(results$exacttest_data, results$normcount_data, results$coldata)
-      DEG_table(results$exacttest_data)
-      wide_data(results$normcount_data)
-      maeColData(results$coldata)
-      message("assign reactiveVal: DEG_table, wide_data, maeColData")
-      params <- reactive({
-        list(
+      withProgress(message = "Updating Results...", value = 0, {
+        t0 <- Sys.time()
+        incProgress(0.2, detail = "Assigning reactive values")
+        
+        req(results$exacttest_data, results$normcount_data, results$coldata)
+        DEG_table(results$exacttest_data)
+        wide_data(results$normcount_data)
+        maeColData(results$coldata)
+        message(sprintf("[Assign Reactive] Updated at %s", Sys.time()))
+        
+        incProgress(0.4, detail = "Processing additional parameters")
+        # 使用本地變數以避免重複計算
+        normCount <- wide_data()
+        volcanoData <- DEG_table()
+        colData <- maeColData()
+        exprData <- transfExprFormat(normCount, colData)
+        params <- list(
           lfc_cut    = input$lfc_cut,
           pval_cut   = input$pval_cut,
           pointSize  = input$pointSize,
@@ -500,48 +510,44 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           topN       = input$topN,
           use_adjP   = input$use_adjP
         )
+        
+        # 過濾 DEG_table 取得上調與下調的基因
+        DEG_data <- volcanoData
+        topGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC > input$lfc_cut, "GeneSymbol"]
+        downGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC < -input$lfc_cut, "GeneSymbol"]
+        geneListVec <- c(topGenes, downGenes)
+        
+        incProgress(0.7, detail = "Updating interactive plots")
+        selected_gene <- if (!is.null(geneListReactive)) {
+          mod_geneSelector_server("gene_selector", volcanoData, geneListVec)
+        } else {
+          NULL
+        }
+        interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
+        
+        t_end <- Sys.time()
+        incProgress(1, detail = "Results updated")
+        message(sprintf("[Update Reactive] Completed at %s (Duration: %.2f sec)", t_end, as.numeric(difftime(t_end, t0, units = "secs"))))
       })
-
-
-      normCount <- wide_data()
-      volcanoData <- DEG_table()
-      colData <- maeColData()
-
-      exprData <- transfExprFormat(normCount, colData)
-
-
-      DEG_table_data <- DEG_table()
-      topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
-      downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
-
-      geneListVec <- c(topGenes, downGenes)
-      if (!is.null(geneListReactive)) {
-        selected_gene <- mod_geneSelector_server("gene_selector", volcanoData, geneListVec)
-      } else {
-        (selected_gene <- NULL)
-      }
-      interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
     })
 
     topGeneList <- reactiveVal(NULL)
     downGeneList <- reactiveVal(NULL)
 
-
     geneListReactive <- eventReactive(input$run_DEG, {
+      t0 <- Sys.time()
       req(DEG_table(), maeColData(), wide_data())
-
-      DEG_table_data <- DEG_table()
-      topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
-      downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
-
+      DEG_data <- DEG_table()
+      topGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC > input$lfc_cut, "GeneSymbol"]
+      downGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC < -input$lfc_cut, "GeneSymbol"]
+      
       topGeneList(topGenes)
       downGeneList(downGenes)
-      print("=====Case DEG List=====")
-      print(length(topGeneList()))
-      print("=====Control DEG List=====")
-      print(length(downGeneList()))
-
+      message(sprintf("[geneListReactive] Top gene count: %s; Down gene count: %s at %s", 
+                      length(topGenes), length(downGenes), Sys.time()))
       gene_list <- paste(c(topGenes, downGenes), collapse = ",")
+      t1 <- Sys.time()
+      message(sprintf("[geneListReactive] Completed at %s (Duration: %.2f sec)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
       gene_list
     })
 
