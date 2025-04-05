@@ -557,7 +557,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         req(geneListReactive(), settingMAE())
         mae_obj <- settingMAE()
         
-        # 解析並修剪基因列表
         geneListVec <- trimws(unlist(strsplit(geneListReactive(), ",")))
         incProgress(0.5, detail = "Creating heatmap")
         ht <- make_heatmap_mae(mae_obj, geneListVec)
