@@ -422,59 +422,53 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       })
     })
       
-    output$wide_table_dt <- DT::renderDataTable({
-      req(wide_data())
-      t0 <- Sys.time()
-      message(sprintf("[wide_table_dt] Start at %s", t0))
-      dt <- DT::datatable(
-        wide_data(),
-        options = list(pageLength = 20, autoWidth = TRUE)
-      )
-      t1 <- Sys.time()
-      message(sprintf("[wide_table_dt] End at %s (Duration: %.2f sec)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
-      dt
-    })
-
     observe({
-      req(DEG_table(), wide_data(), maeColData())
-
-      assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
-      if ("GeneSymbol" %in% colnames(wide_data())) {
-        rownames(assay_data) <- wide_data()[, "GeneSymbol"]
-      }
-
-      deg_data <- DEG_table()
-      if ("GeneSymbol" %in% colnames(deg_data)) {
-        rownames(deg_data) <- deg_data$GeneSymbol
-      }
-
-      output$download_DEG <- downloadHandler(
-        filename = function() {
-          paste("DEG_table_", Sys.Date(), ".csv", sep = "")
-        },
-        content = function(file) {
-          write.csv(DEG_table(), file, row.names = FALSE)
+      withProgress(message = "Processing Experiment Data...", value = 0, {
+        t0 <- Sys.time()
+        incProgress(0.1, detail = "Loading reactive values")
+        
+        req(DEG_table(), wide_data(), maeColData())
+        wide_df <- wide_data()
+        deg_df  <- DEG_table()
+        sample_info <- maeColData()
+        
+        incProgress(0.2, detail = "Processing assay_data")
+        t1 <- Sys.time()
+        message(sprintf("[Assay Data] wide_data loaded at %s (Duration: %.2f sec)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
+        
+        # 將 wide_data 除去 "GeneSymbol" 欄位後轉成矩陣，並以 GeneSymbol 設定 rownames
+        assay_data <- as.matrix(wide_df[, setdiff(colnames(wide_df), "GeneSymbol"), drop = FALSE])
+        if ("GeneSymbol" %in% colnames(wide_df)) {
+          rownames(assay_data) <- wide_df$GeneSymbol
         }
-      )
-      common_genes <- intersect(rownames(assay_data), rownames(deg_data))
-      assay_data <- assay_data[common_genes, , drop = FALSE]
-      deg_data_sub <- deg_data[common_genes, , drop = FALSE]
-      sample_info_table <- maeColData()
-      rownames(sample_info_table) <- colnames(assay_data)
-
-      se_expression_matrix <- SummarizedExperiment(
-        assays = list(normCount = assay_data),
-        colData = sample_info_table,
-        rowData = S4Vectors::DataFrame(deg_data_sub)
-      )
-
-      mae <- MultiAssayExperiment(
-        experiments = list(
-          RNAseq = se_expression_matrix
-        ),
-        colData = sample_info_table
-      )
-      settingMAE(mae)
+        
+        incProgress(0.3, detail = "Processing DEG data")
+        if ("GeneSymbol" %in% colnames(deg_df)) {
+          rownames(deg_df) <- deg_df$GeneSymbol
+        }
+        common_genes <- intersect(rownames(assay_data), rownames(deg_df))
+        assay_data <- assay_data[common_genes, , drop = FALSE]
+        deg_data_sub <- deg_df[common_genes, , drop = FALSE]
+        
+        incProgress(0.5, detail = "Processing sample info")
+        rownames(sample_info) <- colnames(assay_data)
+        
+        # 建立 SummarizedExperiment 與 MultiAssayExperiment 物件
+        se_expression_matrix <- SummarizedExperiment(
+          assays = list(normCount = assay_data),
+          colData = sample_info,
+          rowData = S4Vectors::DataFrame(deg_data_sub)
+        )
+        mae <- MultiAssayExperiment(
+          experiments = list(RNAseq = se_expression_matrix),
+          colData = sample_info
+        )
+        settingMAE(mae)
+        
+        t_end <- Sys.time()
+        incProgress(1, detail = "Experiment Data Processed")
+        message(sprintf("[Experiment Data] Completed at %s (Total Duration: %.2f sec)", t_end, as.numeric(difftime(t_end, t0, units = "secs"))))
+      })
     })
 
     output$DEG_table <- renderDT(
