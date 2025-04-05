@@ -443,8 +443,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             DEG_table(),
             options = list(pageLength = 20, autoWidth = TRUE)
           )
-        },
-        server = FALSE
+        }
       )
 
     observe({
