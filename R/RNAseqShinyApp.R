@@ -208,7 +208,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   )
 
   server <- function(input, output, session) {
-    sc <- reactiveVal(NULL)
 
     results <- reactiveValues(
       db_info = NULL,
@@ -225,28 +224,29 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
 
-    observe({
-      sc(sparklyr::spark_connect(master = master, method = method, version = version))
-    })
+
+    sc <- sparklyr::spark_connect(master = master, method = method, version = version)
+
 
     session$onSessionEnded(function() {
-      if (!is.null(sc())) {
-        sparklyr::spark_disconnect(sc())
+      if (!is.null(sc)) {
+        sparklyr::spark_disconnect(sc)
         message("Spark connection disconnected.")
       }
     })
+
     results$db_info <- reactive({
-      req(sc())
+      req(sc)
       print("dbbrowser")
-      dbBrowserServer("dbBrowser1", sc())
+      dbBrowserServer("dbBrowser1", sc)
     })
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
 
-      DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-      tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+      DBI::dbExecute(sc, paste0("USE ", selected_db_name))
+      tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
       print("====tbls====")
       print(tbls)
