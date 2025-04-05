@@ -295,11 +295,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+          normcount_tbl <- tbl(sc_conn, normcount_tbls[1])
+          normcount_tbl <- normcount_tbl %>%
+                            dplyr::rename(GeneSymbol = genes) %>%
+                            dplyr::select(-`_c0`) %>%
+                            dplyr::mutate(across(where(is.numeric), ~ round(., 4)))
+          normcount <- collect(normcount_tbl)
+          #query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+          #normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
 
-          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
-          normcount <- normcount[, colnames(normcount) != "_c0"]
+          #colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
+          #normcount <- normcount[, colnames(normcount) != "_c0"]
           end_time <- Sys.time()
 
           message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
