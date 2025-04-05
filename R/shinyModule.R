@@ -600,6 +600,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
                        OrgDb = "org.Hs.eg.db",
                        drop = FALSE)
           deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
+          deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
           geneList <- deg_subset$logFC
           names(geneList) <- deg_subset$ENTREZID
           geneList <- sort((-1) * geneList, decreasing = TRUE)
