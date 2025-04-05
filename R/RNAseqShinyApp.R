@@ -552,21 +552,29 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
     observeEvent(geneListReactive(), {
-      req(geneListReactive(), settingMAE())
-      mae <- settingMAE()
-
-      geneListVec <- unlist(strsplit(geneListReactive(), ","))
-      geneListVec <- trimws(geneListVec)
-      ht <- make_heatmap_mae(mae, geneListVec)
-
-      if (!is.null(ht)) {
-        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-      } else {
-        output$ht_heatmap <- renderPlot({
-          grid::grid.newpage()
-          grid::grid.text("No data available.")
-        })
-      }
+      withProgress(message = "Generating Heatmap...", value = 0, {
+        t0 <- Sys.time()
+        req(geneListReactive(), settingMAE())
+        mae_obj <- settingMAE()
+        
+        # 解析並修剪基因列表
+        geneListVec <- trimws(unlist(strsplit(geneListReactive(), ",")))
+        incProgress(0.5, detail = "Creating heatmap")
+        ht <- make_heatmap_mae(mae_obj, geneListVec)
+        
+        if (!is.null(ht)) {
+          makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+        } else {
+          output$ht_heatmap <- renderPlot({
+            grid::grid.newpage()
+            grid::grid.text("No data available.")
+          })
+        }
+        
+        t1 <- Sys.time()
+        incProgress(1, detail = "Heatmap generated")
+        message(sprintf("[Heatmap] Completed at %s (Duration: %.2f sec)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
+      })
     })
 
     # observeEvent(geneListReactive(), {
