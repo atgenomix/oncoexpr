@@ -181,7 +181,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G1_BP"))),
                       tabPanel("CC", withSpinner(plotOutput("G1_CC"))),
-                      tabPanel("GSEA(KEGG)", gseaFCModuleUI("gsea_up"))
+                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_up")))
                     )
                   )
                 ),
@@ -194,7 +194,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G2_BP"))),
                       tabPanel("CC", withSpinner(plotOutput("G2_CC"))),
-                      tabPanel("GSEA(KEGG)", gseaFCModuleUI("gsea_down"))
+                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_down")))
                     )
                   )
                 )
