@@ -35,11 +35,14 @@ Imports:
     shinydashboard,
     ggiraph,
     pysparklyr,
-    org.Hs.eg.db,
+    org.Hs.eg.db (>= 3.19.1),
     promises,
     future,
     purrr,
-    shinycssloaders
+    shinycssloaders,
+    clusterProfiler (>= 4.12.6),
+    fgsea (>= 1.30.0),
+    enrichplot (>= 1.24.4)
 Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/MultiAssayExperiment,
@@ -49,4 +52,3 @@ Remotes:
     bioc::3.20/Biobase,
     bioc::3.20/InteractiveComplexHeatmap,
     bioc::3.20/limma
-
