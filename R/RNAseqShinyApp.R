@@ -436,7 +436,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         t1 <- Sys.time()
         message(sprintf("[Assay Data] wide_data loaded at %s (Duration: %.2f sec)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
         
-        # 將 wide_data 除去 "GeneSymbol" 欄位後轉成矩陣，並以 GeneSymbol 設定 rownames
         assay_data <- as.matrix(wide_df[, setdiff(colnames(wide_df), "GeneSymbol"), drop = FALSE])
         if ("GeneSymbol" %in% colnames(wide_df)) {
           rownames(assay_data) <- wide_df$GeneSymbol
@@ -453,7 +452,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         incProgress(0.5, detail = "Processing sample info")
         rownames(sample_info) <- colnames(assay_data)
         
-        # 建立 SummarizedExperiment 與 MultiAssayExperiment 物件
         se_expression_matrix <- SummarizedExperiment(
           assays = list(normCount = assay_data),
           colData = sample_info,
