@@ -237,29 +237,27 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     results$db_info <- reactive({
       req(sc)
-      print("dbbrowser")
+      message(sprintf("[%s] Entering dbBrowser", Sys.time()))
       dbBrowserServer("dbBrowser1", sc)
     })
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
-
+      message(sprintf("[%s] Selected DB: %s", Sys.time(), selected_db_name))
       DBI::dbExecute(sc, paste0("USE ", selected_db_name))
       tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
-      print("====tbls====")
-      print(tbls)
+      message(sprintf("[%s] Retrieved tables: %s", Sys.time(), paste(tbls, collapse = ", ")))
 
       prefix <- c("^normcounts|^exacttest|^coldata")
 
       tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
-      print("====tbl_list_query_prefix====")
-      print(tbl_list_query_prefix)
-      tbls_with_prefix <- tbl_list_query_prefix$tableName
+      message(sprintf("[%s] Filtered tables: %s", Sys.time(), paste(tbl_list_query_prefix$tableName, collapse = ", ")))
 
+      tbls_with_prefix <- tbl_list_query_prefix$tableName
       tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
-      print("====tbls_with_time_filter====")
+      message(sprintf("[%s] Time-filtered tables:", Sys.time()))
       print(tbls_with_time_filter)
 
       if (sum(tbls_with_time_filter$is_latest) == 0) {
