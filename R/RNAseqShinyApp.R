@@ -472,7 +472,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       exprData <- transfExprFormat(normCount, colData)
 
 
-      DEG_table_data <- isolate(DEG_table())
+      DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
 
