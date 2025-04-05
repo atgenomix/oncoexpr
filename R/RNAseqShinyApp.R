@@ -318,11 +318,29 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-
-          colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
-          exacttest <- exacttest[, colnames(exacttest) != "_c0"]
+          exacttest_tbl <- tbl(sc_conn, exacttest_tbls[1]) %>%
+          dplyr::rename(GeneSymbol = genes) %>%
+          dplyr::select(-`_c0`) %>%
+          dplyr::mutate(
+            logFC = round(logFC, 4),
+            logCPM = round(logCPM, 4)
+          ) %>%
+          sparklyr::spark_apply(function(df) {
+            if ("pvalue" %in% colnames(df)) {
+              df$pvalue <- sapply(df$pvalue, function(x) {
+                if (is.na(x)) return(NA_character_)
+                s <- sprintf("%.4e", x)
+                parts <- strsplit(s, "e", fixed = TRUE)[[1]]
+                mantissa <- as.numeric(parts[1])
+                exponent <- as.numeric(parts[2])
+                new_mantissa <- mantissa * 0.1
+                new_exponent <- exponent + 1
+                sprintf("%.4f", new_mantissa) %>% paste0("e", new_exponent)
+              })
+            }
+            df
+          })
+          exacttest <- collect(exacttest_tbl)
           end_time <- Sys.time()
           message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
 
@@ -376,9 +394,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         print(head(results$coldata))
       })
 
-      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
-        if (is.numeric(x)) round(x, 4) else x
-      }))
       results$exacttest_data[, "logFC"] <- if (is.numeric(results$exacttest_data[, "logFC"])) round(results$exacttest_data[, "logFC"], 4) else results$exacttest_data[, "logFC"]
       results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
 
