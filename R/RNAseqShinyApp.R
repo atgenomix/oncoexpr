@@ -60,7 +60,7 @@ NULL
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  plan(multisession, workers = 3)
+  plan(multisession, workers = 4)
   # plan(sequential)
   print(future::plan())
   ui <- fluidPage(
@@ -180,7 +180,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("KEGG", withSpinner(plotOutput("G1_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G1_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G1_CC")))
+                      tabPanel("CC", withSpinner(plotOutput("G1_CC"))),
+                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_up")))
                     )
                   )
                 ),
@@ -192,7 +193,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("KEGG", withSpinner(plotOutput("G2_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G2_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G2_CC")))
+                      tabPanel("CC", withSpinner(plotOutput("G2_CC"))),
+                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_down")))
                     )
                   )
                 )
@@ -291,7 +293,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         {
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying normcounts table", start_time))
-
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
@@ -384,7 +385,85 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(Sys.getpid())
     })
 
+    # observeEvent(results$db_info$selected_db(), {
+    #   req(results$db_info$selected_db())
+    #   selected_db_name <- results$db_info$selected_db()
 
+    #   DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+    #   tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+    #   tbls <- tbl_list_query$tableName
+    #   print("====tbls====")
+    #   print(tbls)
+
+    #   prefix <- c("^normcounts|^exacttest|^coldata")
+
+    #   tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls),]
+    #   print("====tbl_list_query_prefix====")
+    #   print(tbl_list_query_prefix)
+    #   tbls_with_prefix <- tbl_list_query_prefix$tableName
+    #   print("====tbls_with_prefix====")
+    #   print(tbls_with_prefix)
+
+    #   tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+    #   print("====tbls_with_time_filter====")
+    #   print(tbls_with_time_filter)
+
+    #   if(sum(tbls_with_time_filter$is_latest)==0){
+    #     print("no latest table")
+    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==FALSE,]
+    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+    #   } else {
+    #     print("latest table")
+    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==TRUE,]
+    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+    #   }
+      
+    #   tbls_with_prefix_time <- summary_table$"file"
+    #   print("====tbls_with_prefix_time====")
+    #   print(tbls_with_prefix_time)
+    #   print("====summary_table====")
+    #   print(summary_table)
+    #   print("====tbl_list_query_prefix_time====")  
+    #   print(tbl_list_query_prefix_time)
+    #   results$table_list <- tbl_list_query_prefix_time
+
+    #   normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   print("====normcount_tbls====")
+    #   print(normcount_tbls)
+    #   print("====exacttest_tbls====")
+    #   print(exacttest_tbls)
+    #   print("====coldata_tbls====")
+    #   print(coldata_tbls)
+
+    #   if (length(normcount_tbls) > 0) {
+    #     query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+    #     results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+    #   }
+
+    #   if (length(exacttest_tbls) > 0) {
+    #     query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+    #     results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+    #   }
+
+    #   if (length(coldata_tbls) > 0) {
+    #     query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+    #     results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+    #   } else {
+    #     colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
+    #     results$coldata <- colData
+    #   }
+    #   colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+    #   colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+    #   results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+    #   results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+    # })
+
+    # output$normcount_table <- DT::renderDataTable({
+    #   req(results$normcount_data)
+    #   DT::datatable(results$normcount_data)
+    # })
 
     
       
@@ -528,6 +607,52 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("update geneListheatmap and geneLisEnrichment")
       print(length(new_gene_list))
     })
+    observeEvent(geneListReactive(), {
+      req(geneListReactive(), settingMAE())
+      mae <- settingMAE()
+
+      geneListVec <- unlist(strsplit(geneListReactive(), ","))
+      geneListVec <- trimws(geneListVec)
+      ht <- make_heatmap_mae(mae, geneListVec)
+
+      if (!is.null(ht)) {
+        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+      } else {
+        output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+        })
+      }
+    })
+
+    # observeEvent(geneListReactive(), {
+    #   req(geneListReactive(), settingMAE())
+    #   mae <- settingMAE()
+      
+    #   geneListVec <- unlist(strsplit(geneListReactive(), ","))
+    #   geneListVec <- trimws(geneListVec)
+      
+    #   future_promise({
+    #     
+    #     make_heatmap_mae(mae, geneListVec)
+    #   }) %...>% (function(ht) {
+    #     
+    #     if (!is.null(ht)) {
+    #       makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+    #     } else {
+    #       output$ht_heatmap <- renderPlot({
+    #         grid::grid.newpage()
+    #         grid::grid.text("No data available.")
+    #       })
+    #     }
+    #   }) %...!% (function(e) {
+    #   
+    #     output$ht_heatmap <- renderPlot({
+    #       grid::grid.newpage()
+    #       grid::grid.text(paste("An error occurred:", e$message))
+    #     })
+    #   })
+    # })
 
     result_G1_CC <- reactiveVal(NULL)
     result_G1_BP <- reactiveVal(NULL)
@@ -674,24 +799,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
 
+
     observeEvent(geneListReactive(), {
-      req(geneListReactive(), settingMAE())
-      mae <- settingMAE()
-
-      geneListVec <- unlist(strsplit(geneListReactive(), ","))
-      geneListVec <- trimws(geneListVec)
-      ht <- make_heatmap_mae(mae, geneListVec)
-
-      if (!is.null(ht)) {
-        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-      } else {
-        output$ht_heatmap <- renderPlot({
-          grid::grid.newpage()
-          grid::grid.text("No data available.")
-        })
-      }
+      req(DEG_table())
+      gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up")
+      gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down")
     })
-
     observe({
       req(DEG_table(), wide_data(), maeColData())
       print(head(maeColData()))
@@ -701,5 +814,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   }
 
   for_run <- shinyApp(ui = ui, server = server)
-  runApp(for_run)
+  runapp <- runApp(for_run)
+  
+  return(runapp)
 }
