@@ -469,7 +469,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       
     output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
-
       print("send wide data to UI")
       DT::datatable(
         wide_data(),
@@ -519,9 +518,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       settingMAE(mae)
     })
 
-    observe({
+    output$DEG_table <- renderDT(
       req(results$coldata, results$normcount_data, results$exacttest_data)
-      output$DEG_table <- renderDT(
         {
           datatable(
             DEG_table(),
@@ -530,7 +528,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         },
         server = FALSE
       )
-    })
 
     observe({
       req(DEG_table(), maeColData(), wide_data())
