@@ -529,6 +529,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         server = FALSE
       )
 
+    observe({
+      req(DEG_table(), maeColData(), wide_data())
       params <- reactive({
         list(
           lfc_cut    = input$lfc_cut,
@@ -539,7 +541,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           topN       = input$topN,
           use_adjP   = input$use_adjP
         )
-
+      })
 
 
       normCount <- wide_data()
