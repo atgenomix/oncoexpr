@@ -381,19 +381,38 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           })
         }
 
-
-      promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
+       withProgress(message = "Processing data...", value = 0, {
+        overall_start <- Sys.time()
+        incProgress(0.1, detail = "Starting normcount query")
+        normcount_data <- value(normcount_promise)
+        incProgress(0.3, detail = sprintf("Completed normcount query at %s", Sys.time()))
+        
+        incProgress(0.1, detail = "Starting exacttest query")
+        exacttest_data <- value(exacttest_promise)
+        incProgress(0.3, detail = sprintf("Completed exacttest query at %s", Sys.time()))
+        
+        incProgress(0.1, detail = "Starting coldata query")
+        coldata <- value(coldata_promise)
+        incProgress(0.1, detail = sprintf("Completed coldata query at %s", Sys.time()))
+        
+        overall_end <- Sys.time()
+        message(sprintf("[Overall] All queries completed (Total Duration: %.2f seconds)",
+                        as.numeric(difftime(overall_end, overall_start, units = "secs"))))
+        
+        # 更新 reactive values 給 UI 使用
         results$normcount_data <- normcount_data
         results$exacttest_data <- exacttest_data
         results$coldata <- coldata
-        print("===normcount_data===")
+
+        message("=== normcount_data ===")
         print(head(results$normcount_data))
-        print("===exacttest_data===")
+        message("=== exacttest_data ===")
         print(head(results$exacttest_data))
-        print("===coldata===")
+        message("=== coldata ===")
         print(head(results$coldata))
       })
-      
+
+
     })
       
     output$wide_table_dt <- DT::renderDataTable({
