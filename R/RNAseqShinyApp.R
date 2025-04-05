@@ -235,11 +235,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         message("Spark connection disconnected.")
       }
     })
-
-    observe({
+    results$db_info <- reactive({
       req(sc())
       print("dbbrowser")
-      results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      dbBrowserServer("dbBrowser1", sc())
     })
 
     observeEvent(results$db_info$selected_db(), {
