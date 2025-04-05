@@ -554,9 +554,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
     
-   #observeEvent(input$runGSEA, {
-      #req(DEG_table())
-      #local_pvalCutoff <- isolate(input$pvalCutoff)
+
       local_pvalCutoff <- 0.05
       local_deg <- isolate(DEG_table())
       
@@ -623,7 +621,6 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           cat("GSEA_FC (downregulated) finished. Elapsed:", .$elapsed, "seconds\n")
         }
       }
-    #})
     
     output$gseaTable <- renderDT({
       req(result_GSEA_FC())
@@ -642,4 +639,84 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
     
     return(list(result = result_GSEA_FC))
   })
+}
+
+
+
+
+
+function (id, DEG_table, direction = c("up", "down")) {
+    direction <- match.arg(direction)
+    moduleServer(id, function(input, output, session) {
+        result_GSEA_FC <- reactiveVal(NULL)
+        local_pvalCutoff <- 0.05
+        local_deg <- isolate(DEG_table())
+        if (direction == "up") {
+            future_promise({
+                start_time <- Sys.time()
+                deg_subset <- local_deg[local_deg$PValue < local_pvalCutoff & 
+                  local_deg$logFC > 0, ]
+                conv <- bitr(deg_subset$GeneSymbol, fromType = "SYMBOL", 
+                  toType = "ENTREZID", OrgDb = "org.Hs.eg.db", 
+                  drop = FALSE)
+                deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", 
+                  by.y = "SYMBOL")
+                geneList <- deg_subset$logFC
+                names(geneList) <- deg_subset$ENTREZID
+                geneList <- sort(geneList, decreasing = TRUE)
+                gsea_res <- gseKEGG(geneList = geneList, organism = "hsa", 
+                  nPerm = 1000, minGSSize = 10, maxGSSize = 500, 
+                  pvalueCutoff = local_pvalCutoff, verbose = FALSE)
+                end_time <- Sys.time()
+                list(r = gsea_res, start_time = start_time, end_time = end_time, 
+                  elapsed = as.numeric(difftime(end_time, start_time, 
+                    units = "secs")))
+            }) %...>% {
+                result_GSEA_FC(.$r)
+                cat("GSEA_FC (upregulated) finished. Elapsed:", 
+                  .$elapsed, "seconds\n")
+            }
+        }
+        else {
+            future_promise({
+                start_time <- Sys.time()
+                deg_subset <- local_deg[local_deg$PValue < local_pvalCutoff & 
+                  local_deg$logFC < 0, ]
+                conv <- bitr(deg_subset$GeneSymbol, fromType = "SYMBOL", 
+                  toType = "ENTREZID", OrgDb = "org.Hs.eg.db", 
+                  drop = FALSE)
+                deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", 
+                  by.y = "SYMBOL")
+                geneList <- deg_subset$logFC
+                names(geneList) <- deg_subset$ENTREZID
+                geneList <- sort((-1) * geneList, decreasing = TRUE)
+                gsea_res <- gseKEGG(geneList = geneList, organism = "hsa", 
+                  nPerm = 1000, minGSSize = 10, maxGSSize = 500, 
+                  pvalueCutoff = local_pvalCutoff, verbose = FALSE)
+                end_time <- Sys.time()
+                list(r = gsea_res, start_time = start_time, end_time = end_time, 
+                  elapsed = as.numeric(difftime(end_time, start_time, 
+                    units = "secs")))
+            }) %...>% {
+                result_GSEA_FC(.$r)
+                cat("GSEA_FC (downregulated) finished. Elapsed:", 
+                  .$elapsed, "seconds\n")
+            }
+        }
+        output$gseaTable <- renderDT({
+            req(result_GSEA_FC())
+            as.data.frame(result_GSEA_FC())
+        })
+        output$gseaPlot <- renderPlot({
+            req(result_GSEA_FC())
+            if (nrow(result_GSEA_FC()@result) > 0) {
+                dotplot(result_GSEA_FC(), showCategory = 10)
+            }
+            else {
+                plot.new()
+                text(0.5, 0.5, "No significant pathway found.")
+            }
+        })
+        return(list(result = result_GSEA_FC))
+    })
 }
