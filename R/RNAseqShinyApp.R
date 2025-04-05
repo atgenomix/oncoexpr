@@ -496,7 +496,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         message(sprintf("[Assign Reactive] Updated at %s", Sys.time()))
         
         incProgress(0.4, detail = "Processing additional parameters")
-        # 使用本地變數以避免重複計算
+
         normCount <- wide_data()
         volcanoData <- DEG_table()
         colData <- maeColData()
@@ -511,7 +511,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           use_adjP   = input$use_adjP
         )
         
-        # 過濾 DEG_table 取得上調與下調的基因
         DEG_data <- volcanoData
         topGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC > input$lfc_cut, "GeneSymbol"]
         downGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC < -input$lfc_cut, "GeneSymbol"]
