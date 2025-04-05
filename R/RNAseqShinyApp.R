@@ -261,11 +261,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(tbls_with_time_filter)
 
       if (sum(tbls_with_time_filter$is_latest) == 0) {
-        print("no latest table")
+        message(sprintf("[%s] No latest table found.", Sys.time()))
         tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
         summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
       } else {
-        print("latest table")
+        message(sprintf("[%s] Latest table found.", Sys.time()))
         tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
         summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
       }
