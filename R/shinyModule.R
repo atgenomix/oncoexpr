@@ -522,6 +522,12 @@ pcaModuleServer <- function(id, normCount, colData) {
 }
 
 
+#' @title gseaeFCModuleUI
+#' @description GSEA module
+#' @param id module id for UI and Server
+#' @return GSEA module UI
+#' @export
+
 gseaFCModuleUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -533,6 +539,15 @@ gseaFCModuleUI <- function(id) {
   )
 }
 
+
+#' @title gseaeFCModuleServer
+#' @description GSEA module
+#' @param id  module id for UI and Server
+#' @param DEG_table DEG table
+#' @param direction direction of GSEA (up or down)
+#' @return GSEA module Server
+#' @export
+#' 
 gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
   direction <- match.arg(direction)
   
