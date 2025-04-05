@@ -1,6 +1,6 @@
 Package: oncoexpr
 Title: Tools for Oncological Gene Expression Analysis
-Version: 1.1.7.9000
+Version: 1.1.9.9000
 Authors@R: 
     person("charles", "chuang", 
            email = "charles.chuang@atgenomix.com", 
