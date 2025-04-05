@@ -590,14 +590,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       gene_list
     })
 
-
-    observe({
-      new_gene_list <- geneListReactive()
-      updateTextInput(session, "geneListheatmap", value = new_gene_list)
-      updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
-      print("update geneListheatmap and geneLisEnrichment")
-      print(length(new_gene_list))
-    })
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
       mae <- settingMAE()
