@@ -60,7 +60,7 @@ NULL
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  plan(multisession, workers = 6)
+  plan(multisession, workers = 4)
   # plan(sequential)
   print(future::plan())
   ui <- fluidPage(
@@ -314,7 +314,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       exacttest_promise <- future_promise(
         {
           start_time <- Sys.time()
-          message(sprintf("[%s] Start querying exacttest table", start_time)
+          message(sprintf("[%s] Start querying exacttest table", start_time))
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))

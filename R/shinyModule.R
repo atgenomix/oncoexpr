@@ -525,8 +525,8 @@ pcaModuleServer <- function(id, normCount, colData) {
 gseaFCModuleUI <- function(id) {
   ns <- NS(id)
   tagList(
-    numericInput(ns("pvalCutoff"), "P-value Cutoff:",
-                 value = 0.05, min = 0, max = 1, step = 0.001),
+    #numericInput(ns("pvalCutoff"), "P-value Cutoff:",
+    #             value = 0.05, min = 0, max = 1, step = 0.001),
     #actionButton(ns("runGSEA"), "Run GSEA"),
     DTOutput(ns("gseaTable")),
     plotOutput(ns("gseaPlot"))
@@ -541,7 +541,8 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
     
    #observeEvent(input$runGSEA, {
       #req(DEG_table())
-      local_pvalCutoff <- isolate(input$pvalCutoff)
+      #local_pvalCutoff <- isolate(input$pvalCutoff)
+      local_pvalCutoff <- 0.05
       local_deg <- isolate(DEG_table())
       
       if (direction == "up") {
