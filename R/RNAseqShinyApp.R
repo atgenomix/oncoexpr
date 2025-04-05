@@ -530,7 +530,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       )
 
     observe({
-      req(DEG_table(), maeColData(), wide_data())
+      req(results$exacttest_data, results$normcount_data, results$coldata)
+      DEG_table(results$exacttest_data)
+      wide_data(results$normcount_data)
+      maeColData(results$coldata)
+      message("assign reactiveVal: DEG_table, wide_data, maeColData")
       params <- reactive({
         list(
           lfc_cut    = input$lfc_cut,
@@ -562,16 +566,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         (selected_gene <- NULL)
       }
       interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
-    })
-
-
-
-    observe({
-      req(results$exacttest_data, results$normcount_data, results$coldata)
-      DEG_table(results$exacttest_data)
-      wide_data(results$normcount_data)
-      maeColData(results$coldata)
-      message("assign reactiveVal: DEG_table, wide_data, maeColData")
     })
 
     topGeneList <- reactiveVal(NULL)
