@@ -424,11 +424,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       
     output$wide_table_dt <- DT::renderDataTable({
       req(wide_data())
-      print("send wide data to UI")
-      DT::datatable(
+      t0 <- Sys.time()
+      message(sprintf("[wide_table_dt] Start at %s", t0))
+      dt <- DT::datatable(
         wide_data(),
         options = list(pageLength = 20, autoWidth = TRUE)
       )
+      t1 <- Sys.time()
+      message(sprintf("[wide_table_dt] End at %s (Duration: %.2f sec)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
+      dt
     })
 
     observe({
