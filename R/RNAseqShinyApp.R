@@ -270,8 +270,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
       }
 
-      tbls_with_prefix_time <- summary_table$"file"
-      print("====summary_table====")
+      tbls_with_prefix_time <- summary_table[["file"]]
+      message(sprintf("[%s] Summary table:", Sys.time()))
       print(summary_table)
       results$table_list <- tbl_list_query_prefix_time
 
