@@ -387,12 +387,94 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(Sys.getpid())
     })
 
-    output$DEG_table <- DT::renderDataTable({
-      t0 <- Sys.time()
-      req(results$coldata, results$normcount_data, results$exacttest_data)
-      message(sprintf("[DEG_table] Start at %s", t0))
-      dt <- DT::datatable(
-        DEG_table(),
+    # observeEvent(results$db_info$selected_db(), {
+    #   req(results$db_info$selected_db())
+    #   selected_db_name <- results$db_info$selected_db()
+
+    #   DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
+    #   tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+    #   tbls <- tbl_list_query$tableName
+    #   print("====tbls====")
+    #   print(tbls)
+
+    #   prefix <- c("^normcounts|^exacttest|^coldata")
+
+    #   tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls),]
+    #   print("====tbl_list_query_prefix====")
+    #   print(tbl_list_query_prefix)
+    #   tbls_with_prefix <- tbl_list_query_prefix$tableName
+    #   print("====tbls_with_prefix====")
+    #   print(tbls_with_prefix)
+
+    #   tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+    #   print("====tbls_with_time_filter====")
+    #   print(tbls_with_time_filter)
+
+    #   if(sum(tbls_with_time_filter$is_latest)==0){
+    #     print("no latest table")
+    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==FALSE,]
+    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
+    #   } else {
+    #     print("latest table")
+    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==TRUE,]
+    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
+    #   }
+      
+    #   tbls_with_prefix_time <- summary_table$"file"
+    #   print("====tbls_with_prefix_time====")
+    #   print(tbls_with_prefix_time)
+    #   print("====summary_table====")
+    #   print(summary_table)
+    #   print("====tbl_list_query_prefix_time====")  
+    #   print(tbl_list_query_prefix_time)
+    #   results$table_list <- tbl_list_query_prefix_time
+
+    #   normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+    #   print("====normcount_tbls====")
+    #   print(normcount_tbls)
+    #   print("====exacttest_tbls====")
+    #   print(exacttest_tbls)
+    #   print("====coldata_tbls====")
+    #   print(coldata_tbls)
+
+    #   if (length(normcount_tbls) > 0) {
+    #     query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+    #     results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+    #   }
+
+    #   if (length(exacttest_tbls) > 0) {
+    #     query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+    #     results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+    #   }
+
+    #   if (length(coldata_tbls) > 0) {
+    #     query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+    #     results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+    #   } else {
+    #     colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
+    #     results$coldata <- colData
+    #   }
+    #   colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
+    #   colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
+    #   results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
+    #   results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
+    # })
+
+    # output$normcount_table <- DT::renderDataTable({
+    #   req(results$normcount_data)
+    #   DT::datatable(results$normcount_data)
+    # })
+
+    
+      
+    output$wide_table_dt <- DT::renderDataTable({
+      req(wide_data())
+
+      print("send wide data to UI")
+      DT::datatable(
+        wide_data(),
         options = list(pageLength = 20, autoWidth = TRUE)
       )
       t1 <- Sys.time()
@@ -401,17 +483,74 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
     observe({
-      withProgress(message = "Updating Results...", value = 0, {
-        t0 <- Sys.time()
-        incProgress(0.2, detail = "Assigning reactive values")
-        
-        req(results$exacttest_data, results$normcount_data, results$coldata)
-        DEG_table(results$exacttest_data)
-        wide_data(results$normcount_data)
-        maeColData(results$coldata)
-        message(sprintf("[Assign Reactive] Updated at %s", Sys.time()))
-        
-        incProgress(0.4, detail = "Processing additional parameters")
+      req(DEG_table(), wide_data(), maeColData())
+
+      assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
+      if ("GeneSymbol" %in% colnames(wide_data())) {
+        rownames(assay_data) <- wide_data()[, "GeneSymbol"]
+      }
+
+      deg_data <- DEG_table()
+      if ("GeneSymbol" %in% colnames(deg_data)) {
+        rownames(deg_data) <- deg_data$GeneSymbol
+      }
+
+      output$download_DEG <- downloadHandler(
+        filename = function() {
+          paste("DEG_table_", Sys.Date(), ".csv", sep = "")
+        },
+        content = function(file) {
+          write.csv(DEG_table(), file, row.names = FALSE)
+        }
+      )
+      common_genes <- intersect(rownames(assay_data), rownames(deg_data))
+      assay_data <- assay_data[common_genes, , drop = FALSE]
+      deg_data_sub <- deg_data[common_genes, , drop = FALSE]
+      sample_info_table <- maeColData()
+      rownames(sample_info_table) <- colnames(assay_data)
+
+      se_expression_matrix <- SummarizedExperiment(
+        assays = list(normCount = assay_data),
+        colData = sample_info_table,
+        rowData = S4Vectors::DataFrame(deg_data_sub)
+      )
+
+      mae <- MultiAssayExperiment(
+        experiments = list(
+          RNAseq = se_expression_matrix
+        ),
+        colData = sample_info_table
+      )
+      settingMAE(mae)
+    })
+
+    observe({
+      req(results$coldata, results$normcount_data, results$exacttest_data)
+      output$DEG_table <- renderDT(
+        {
+          datatable(
+            DEG_table(),
+            options = list(pageLength = 20, autoWidth = TRUE)
+          )
+        },
+        server = FALSE
+      )
+    })
+
+    observe({
+      req(DEG_table(), maeColData(), wide_data())
+      params <- reactive({
+        list(
+          lfc_cut    = input$lfc_cut,
+          pval_cut   = input$pval_cut,
+          pointSize  = input$pointSize,
+          ptAlpha    = input$ptAlpha,
+          labelSize  = input$labelSize,
+          topN       = input$topN,
+          use_adjP   = input$use_adjP
+        )
+      })
+
 
         normCount <- wide_data()
         volcanoData <- DEG_table()
