@@ -298,18 +298,22 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           on.exit(sparklyr::spark_disconnect(sc_conn))
           
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          normcount_tbl <- dplyr::tbl(sc_conn, normcount_tbls[1]) %>%
-            dplyr::rename(GeneSymbol = genes) %>%
-            dplyr::select(-`_c0`) %>%
-            dplyr::mutate(across(where(is.numeric), ~ round(., 4)))
-          
-          normcount <- collect(normcount_tbl)
+          # normcount_tbl <- dplyr::tbl(sc_conn, normcount_tbls[1]) %>%
+          #   dplyr::rename(GeneSymbol = genes) %>%
+          #   dplyr::select(-`_c0`) %>%
+          #   dplyr::mutate(across(where(is.numeric), ~ round(., 4)))
+          # normcount <- collect(normcount_tbl)
+          df <- dplyr::tbl(sc_conn, normcount_tbls[1])
+          df <- dplyr::rename(df, GeneSymbol = genes)
+          df <- dplyr::select(df, -`_c0`)
+          df <- dplyr::mutate(df, dplyr::across(dplyr::where(is.numeric), ~ round(.x,4)))
+          res <- collect(df)
           t1 <- Sys.time()
           message(sprintf("[normcount] End at %s (Duration: %.2f seconds)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
           normcount
         },
         globals = list(master = master, method = method, version = version,
-                      normcount_tbls = normcount_tbls, selected_db_name = selected_db_name, `%>%` = magrittr::`%>%`),
+                      normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
         seed = TRUE
       )
       
@@ -318,41 +322,61 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           t0 <- Sys.time()
           message(sprintf("[exacttest] Start at %s", t0))
           
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-          on.exit(sparklyr::spark_disconnect(sc_conn))
+          # 建立新的 Spark 連線
+          sc_conn <- sparklyr::spark_connect(
+            master = master,
+            method = method,
+            version = version
+          )
+          on.exit(sparklyr::spark_disconnect(sc_conn), add = TRUE)
+          
+          # 切換資料庫
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          exacttest_tbl <- dplyr::tbl(sc_conn, exacttest_tbls[1]) %>%
-            dplyr::rename(GeneSymbol = genes) %>%
-            dplyr::select(-`_c0`) %>%
-            dplyr::mutate(
-              logFC = round(logFC, 4),
-              logCPM = round(logCPM, 4)
-            ) %>%
-            sparklyr::spark_apply(function(df) {
-              if ("pvalue" %in% colnames(df)) {
-                df$pvalue <- sapply(df$pvalue, function(x) {
+          
+          # 讀取表格並做前處理
+          df <- sparklyr::tbl(sc_conn, exacttest_tbls[1])
+          df <- dplyr::rename(df, GeneSymbol = genes)
+          df <- dplyr::select(df, -`_c0`)
+          df <- dplyr::mutate(
+            df,
+            logFC   = round(logFC, 4),
+            logCPM  = round(logCPM, 4)
+          )
+          
+          # 在 Spark executor 上對 pvalue 欄位做格式化
+          df <- sparklyr::spark_apply(
+            df,
+            function(d) {
+              if ("pvalue" %in% colnames(d)) {
+                d$pvalue <- sapply(d$pvalue, function(x) {
                   if (is.na(x)) return(NA_character_)
                   s <- sprintf("%.4e", x)
                   parts <- strsplit(s, "e", fixed = TRUE)[[1]]
-                  mantissa <- as.numeric(parts[1])
-                  exponent <- as.numeric(parts[2])
+                  mantissa   <- as.numeric(parts[1])
+                  exponent   <- as.numeric(parts[2])
                   new_mantissa <- mantissa * 0.1
-                  new_exponent <- exponent + 1
+                  new_exponent  <- exponent + 1
                   paste0(sprintf("%.4f", new_mantissa), "e", new_exponent)
                 })
               }
-              df
-            })
+              d
+            }
+          )
           
-          exacttest <- collect(exacttest_tbl)
+          # 把結果收回 R
+          result <- sparklyr::collect(df)
+          
           t1 <- Sys.time()
-          message(sprintf("[exacttest] End at %s (Duration: %.2f seconds)", t1, as.numeric(difftime(t1, t0, units = "secs"))))
-          exacttest
+          message(sprintf(
+            "[exacttest] End at %s (Duration: %.2f seconds)",
+            t1, as.numeric(difftime(t1, t0, units = "secs"))
+          ))
+          
+          result
         },
-        globals = list(master = master, method = method, version = version,
-                      exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name, `%>%` = magrittr::`%>%`),
         seed = TRUE
       )
+
       
       coldata_promise <- if (length(coldata_tbls) > 0) {
         future_promise(
