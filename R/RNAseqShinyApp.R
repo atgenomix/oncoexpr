@@ -245,51 +245,67 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
       
       withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
-        start_tbl <- Sys.time()
+        # ---- 0. Start ----
+        t0 <- Sys.time()
+        message(sprintf("[Stage1] Start at %s", t0))
+        
+        # ---- 1. Query all tbls ----
         DBI::dbExecute(sc, paste0("USE ", selected_db_name))
         tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
         tbls <- tbl_list_query$tableName
-        message(sprintf("[Tables] Retrieved at %s: %s", Sys.time(), paste(tbls, collapse = ", ")))
+        t1 <- Sys.time()
+        message(sprintf("[Stage1] Fetched %d tables at %s (%.2f sec)", 
+                        length(tbls), t1, as.numeric(difftime(t1, t0, "secs"))))
+        setProgress(value = 0.2, detail = sprintf("Fetched %d tables", length(tbls)))
         
-        incProgress(0.2, detail = paste0("Got ", length(tbls), " tables"))
+        # ---- 2. Prefix filtering ----
         prefix <- c("^normcounts|^exacttest|^coldata")
-        incProgress(0.2, detail = paste0("Got ", length(prefix), " tables"))
-        tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
-        print("====tbl_list_query_prefix====")
-        print(tbl_list_query_prefix)
+        tbl_list_query_prefix <- tbl_list_query[grepl(paste(prefix, collapse="|"), tbls), ]
+        t2 <- Sys.time()
+        message(sprintf("[Stage1] Prefix filter → %d tables at %s (%.2f sec)", 
+                        nrow(tbl_list_query_prefix), t2, as.numeric(difftime(t2, t1, "secs"))))
+        setProgress(value = 0.4, detail = sprintf("Prefix filter: %d tables", nrow(tbl_list_query_prefix)))
+        
+        # ---- 3. time selection ----
         tbls_with_prefix <- tbl_list_query_prefix$tableName
         tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
-        print("====tbls_with_time_filter====")
-        print(tbls_with_time_filter)
-
-        if (sum(tbls_with_time_filter$is_latest) == 0) {
-          print("no latest table")
-          tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
-          summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
+        t3 <- Sys.time()
+        message(sprintf("[Stage1] Time filter applied at %s (%.2f sec)", 
+                        t3, as.numeric(difftime(t3, t2, "secs"))))
+        setProgress(value = 0.6, detail = "Applied time filter")
+        
+        # ---- 4. latest version ----
+        if (any(tbls_with_time_filter$is_latest)) {
+          sel_idx <- tbls_with_time_filter$is_latest
+          message(sprintf("[Stage1] Latest tables found at %s", Sys.time()))
         } else {
-          print("latest table")
-          tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
-          summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
+          sel_idx <- !tbls_with_time_filter$is_latest
+          message(sprintf("[Stage1] No latest table, using all at %s", Sys.time()))
         }
-
-        tbls_with_prefix_time <- summary_table$"file"
-        print("====summary_table====")
-        print(summary_table)
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[sel_idx, ]
+        summary_table <- tbls_with_time_filter[sel_idx, ]
+        t4 <- Sys.time()
+        message(sprintf("[Stage1] Selected %d tables at %s (%.2f sec)", 
+                        nrow(tbl_list_query_prefix_time), t4, as.numeric(difftime(t4, t3, "secs"))))
+        setProgress(value = 0.8, detail = sprintf("Selected %d tables", nrow(tbl_list_query_prefix_time)))
+        
+        # ---- 5. normcounts / exacttest / coldata ----
+        tbls_final <- summary_table$file
+        normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_final, ignore.case=TRUE), "tableName"]
+        exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_final, ignore.case=TRUE), "tableName"]
+        coldata_tbls   <- tbl_list_query_prefix_time[grepl("^coldata",   tbls_final, ignore.case=TRUE), "tableName"]
+        t5 <- Sys.time()
+        message(sprintf("[Stage1] Categorized tables at %s (%.2f sec)", 
+                        t5, as.numeric(difftime(t5, t4, "secs"))))
+        setProgress(value = 1, detail = "Stage 1 complete")
+        
+        # ---- 最後：output to reactiveValues ----
         results$table_list <- tbl_list_query_prefix_time
-
-        normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-        exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-        coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-
+        # （後面可繼續啟動下一階段的非同步計算…）
       })
 
+
  
-      print("====normcount_tbls====")
-      print(normcount_tbls)
-      print("====exacttest_tbls====")
-      print(exacttest_tbls)
-      print("====coldata_tbls====")
-      print(coldata_tbls)
       req(normcount_tbls, exacttest_tbls, coldata_tbls)
       normcount_promise <- future_promise(
         {
