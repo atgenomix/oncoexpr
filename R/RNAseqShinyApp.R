@@ -224,7 +224,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     maeColData <- reactiveVal(NULL)
 
 
-    sc <- sparkly::spark_connect(master = master, method = method, version = version)
+    sc <- sparklyr::spark_connect(master = master, method = method, version = version)
 
     session$onSessionEnded(function() {
       if (!is.null(sc)) {
