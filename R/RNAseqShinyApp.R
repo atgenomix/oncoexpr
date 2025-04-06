@@ -233,7 +233,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
-    results$db_info <- reactive({
+    db_info <- reactive({
       req(sc)
       start_db <- Sys.time()
       message(sprintf("[db_info] Start: %s", start_db))
@@ -243,9 +243,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       info
     })
 
-    observeEvent(results$db_info$selected_db(), {
-      req(results$db_info$selected_db())
-      selected_db_name <- results$db_info$selected_db()
+    observeEvent(db_info()$selected_db(), {
+      req(db_info()$selected_db())
+      selected_db_name <- db_info()$selected_db()
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
       
       start_tbl <- Sys.time()
@@ -499,15 +499,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         volcanoData <- DEG_table()
         colData <- maeColData()
         exprData <- transfExprFormat(normCount, colData)
-        params <- list(
-          lfc_cut    = input$lfc_cut,
-          pval_cut   = input$pval_cut,
-          pointSize  = input$pointSize,
-          ptAlpha    = input$ptAlpha,
-          labelSize  = input$labelSize,
-          topN       = input$topN,
-          use_adjP   = input$use_adjP
-        )
+        params <- reactive({
+          list(
+            lfc_cut   = input$lfc_cut,
+            pval_cut  = input$pval_cut,
+            pointSize = input$pointSize,
+            ptAlpha   = input$ptAlpha,
+            labelSize = input$labelSize,
+            topN      = input$topN,
+            use_adjP  = input$use_adjP
+          )
+        })
         
         DEG_data <- volcanoData
         topGenes <- DEG_data[DEG_data$PValue < input$pval_cut & DEG_data$logFC > input$lfc_cut, "GeneSymbol"]
@@ -515,12 +517,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         geneListVec <- c(topGenes, downGenes)
         
         incProgress(0.7, detail = "Updating interactive plots")
-        selected_gene <- if (!is.null(geneListReactive)) {
+        selected_gene <- if (!is.null(geneListReactive())) {
           mod_geneSelector_server("gene_selector", volcanoData, geneListVec)
         } else {
           NULL
         }
-        interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
+        interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params(), selectedGene = selected_gene)
         
         t_end <- Sys.time()
         incProgress(1, detail = "Results updated")
