@@ -208,8 +208,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   )
 
   server <- function(input, output, session) {
-    sc <- reactiveVal(NULL)
-
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
@@ -225,29 +223,28 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
 
-    observe({
-      sc(sparklyr::spark_connect(master = master, method = method, version = version))
-    })
+
+    sc <- sparkly::spark_connect(master = master, method = method, version = version)
 
     session$onSessionEnded(function() {
-      if (!is.null(sc())) {
-        sparklyr::spark_disconnect(sc())
+      if (!is.null(sc)) {
+        sparklyr::spark_disconnect(sc)
         message("Spark connection disconnected.")
       }
     })
 
     observe({
-      req(sc())
+      req(sc)
       print("dbbrowser")
-      results$db_info <- dbBrowserServer("dbBrowser1", sc())
+      results$db_info <- dbBrowserServer("dbBrowser1", sc)
     })
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
-
-      DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-      tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+      
+      DBI::dbExecute(sc, paste0("USE ", selected_db_name))
+      tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
       tbls <- tbl_list_query$tableName
       print("====tbls====")
       print(tbls)
@@ -389,8 +386,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     #   req(results$db_info$selected_db())
     #   selected_db_name <- results$db_info$selected_db()
 
-    #   DBI::dbExecute(sc(), paste0("USE ", selected_db_name))
-    #   tbl_list_query <- DBI::dbGetQuery(sc(), paste0("SHOW TABLES IN ", selected_db_name))
+    #   DBI::dbExecute(sc, paste0("USE ", selected_db_name))
+    #   tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
     #   tbls <- tbl_list_query$tableName
     #   print("====tbls====")
     #   print(tbls)
@@ -439,17 +436,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     #   if (length(normcount_tbls) > 0) {
     #     query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-    #     results$normcount_data <- DBI::dbGetQuery(sc(), query_normcount)
+    #     results$normcount_data <- DBI::dbGetQuery(sc, query_normcount)
     #   }
 
     #   if (length(exacttest_tbls) > 0) {
     #     query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-    #     results$exacttest_data <- DBI::dbGetQuery(sc(), query_exacttest)
+    #     results$exacttest_data <- DBI::dbGetQuery(sc, query_exacttest)
     #   }
 
     #   if (length(coldata_tbls) > 0) {
     #     query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-    #     results$coldata <- DBI::dbGetQuery(sc(), query_coldata)
+    #     results$coldata <- DBI::dbGetQuery(sc, query_coldata)
     #   } else {
     #     colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
     #     results$coldata <- colData
