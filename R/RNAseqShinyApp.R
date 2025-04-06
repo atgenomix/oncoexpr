@@ -307,100 +307,173 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
  
       req(normcount_tbls, exacttest_tbls, coldata_tbls)
-      normcount_promise <- future_promise(
-        {
+      # ---------------------------------------------
+      # Stage 2: Launch data queries asynchronously
+      # ---------------------------------------------
+      with_progress({
+        # 2.1 Normcount query
+        p <- progressor(steps = 3)
+        t0_norm_launch <- Sys.time()
+        message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
+        normcount_promise <- future_promise({
+          # Record start time
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying normcounts table", start_time))
+          
+          # Connect, switch DB, and fetch
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
           query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
           normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
-
+          
+          # Rename and drop unwanted column
           colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
           normcount <- normcount[, colnames(normcount) != "_c0"]
+          
+          # Record end time and log duration
           end_time <- Sys.time()
-
-          message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
-
+          message(sprintf("[%s] Completed normcounts query (Duration: %.2f seconds)",
+                          end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+          #setProgress(value = 1/3, detail = "Normcount query launched")
+          p(detail = "Normcount 完成")
           normcount
         },
-        globals = list(master = master, method = method, version = version, normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
-        seed = TRUE
-      )
-
-      exacttest_promise <- future_promise(
-        {
+        globals = list(master = master, method = method, version = version,
+                      normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
+        seed = TRUE)
+        
+        
+        # 2.2 Exacttest query
+        t0_exact_launch <- Sys.time()
+        message(sprintf("[Stage2-exacttest] Launch at %s", t0_exact_launch))
+        exacttest_promise <- future_promise({
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying exacttest table", start_time))
+          
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
           query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
           exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-
+          
           colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
           exacttest <- exacttest[, colnames(exacttest) != "_c0"]
+          
           end_time <- Sys.time()
-          message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
-
+          message(sprintf("[%s] Completed exacttest query (Duration: %.2f seconds)",
+                          end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+          #setProgress(value = 2/3, detail = "Exacttest query launched")
+          p(detail = "ExactTest 完成")
           exacttest
         },
-        globals = list(master = master, method = method, version = version, exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name),
-        seed = TRUE
-      )
-
-      coldata_promise <-
-        if (length(coldata_tbls) > 0) {
-          future_promise(
-            {
-              start_time <- Sys.time()
-              message(sprintf("[%s] Start querying coldata table", start_time))
-              sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-              on.exit(sparklyr::spark_disconnect(sc_conn))
-              DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-              query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-              coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
-
-              end_time <- Sys.time()
-              message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)", end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
-
-              coldata
-            },
-            globals = list(master = master, method = method, version = version, coldata_tbls = coldata_tbls, selected_db_name = selected_db_name),
-            seed = TRUE
-          )
+        globals = list(master = master, method = method, version = version,
+                      exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name),
+        seed = TRUE)
+        
+        
+        # 2.3 Coldata query or generate fallback
+        t0_coldata_launch <- Sys.time()
+        message(sprintf("[Stage2-coldata] Launch at %s", t0_coldata_launch))
+        coldata_promise <- if (length(coldata_tbls) > 0) {
+          future_promise({
+            start_time <- Sys.time()
+            message(sprintf("[%s] Start querying coldata table", start_time))
+            
+            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            on.exit(sparklyr::spark_disconnect(sc_conn))
+            DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+            
+            end_time <- Sys.time()
+            message(sprintf("[%s] Completed coldata query (Duration: %.2f seconds)",
+                            end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+            #setProgress(value = 1, detail = "Coldata query launched")
+            p(detail = "colData 完成")
+            coldata
+          },
+          globals = list(master = master, method = method, version = version,
+                        coldata_tbls = coldata_tbls, selected_db_name = selected_db_name),
+          seed = TRUE)
         } else {
+          # Fallback: generate coldata from normcount
           normcount_promise %...>% (function(normcount) {
-            future_promise(
-              {
-                generate_colData_random(normcount, genecol = "GeneSymbol")
-              },
-              seed = TRUE
-            )
+            future_promise({
+              start_time <- Sys.time()
+              message(sprintf("[%s] Generating random coldata", start_time))
+              coldata <- generate_colData_random(normcount, genecol = "GeneSymbol")
+              end_time <- Sys.time()
+              message(sprintf("[%s] Completed coldata generation (Duration: %.2f seconds)",
+                              end_time, as.numeric(difftime(end_time, start_time, units = "secs"))))
+              coldata
+            }, seed = TRUE)
           })
         }
 
-
-      promise_all(normcount_data = normcount_promise, exacttest_data = exacttest_promise, coldata = coldata_promise) %...>% with({
-        results$normcount_data <- normcount_data
-        results$exacttest_data <- exacttest_data
-        results$coldata <- coldata
-        print("===normcount_data===")
-        print(head(results$normcount_data))
-        print("===exacttest_data===")
-        print(head(results$exacttest_data))
-        print("===coldata===")
-        print(head(results$coldata))
       })
 
-      results$normcount_data <- as.data.frame(lapply(results$normcount_data, function(x) {
-        if (is.numeric(x)) round(x, 4) else x
-      }))
-      results$exacttest_data[, "logFC"] <- if (is.numeric(results$exacttest_data[, "logFC"])) round(results$exacttest_data[, "logFC"], 4) else results$exacttest_data[, "logFC"]
-      results$exacttest_data[, "logCPM"] <- if (is.numeric(results$exacttest_data[, "logCPM"])) round(results$exacttest_data[, "logCPM"], 4) else results$exacttest_data[, "logCPM"]
+      # -------------------------------------------------
+      # Stage 3: Collect and post-process query results
+      # -------------------------------------------------
+      withProgress(message = "Stage 3: Collecting and processing data", value = 0, {
+        t0_collect <- Sys.time()
+        message(sprintf("[Stage3] Collection start at %s", t0_collect))
+        
+        promise_all(
+          normcount_data = normcount_promise,
+          exacttest_data = exacttest_promise,
+          coldata        = coldata_promise
+        ) %...>% with({
+          # Log collection completion and duration
+          t1_collect <- Sys.time()
+          message(sprintf("[Stage3] Collection completed at %s (Duration: %.2f seconds)",
+                          t1_collect, as.numeric(difftime(t1_collect, t0_collect, units = "secs"))))
+          
+          # Assign to reactiveValues
+          results$normcount_data  <- normcount_data
+          results$exacttest_data  <- exacttest_data
+          results$coldata         <- coldata
+          
+          # Display heads for quick check
+          message("=== normcount_data ===")
+          print(head(results$normcount_data))
+          message("=== exacttest_data ===")
+          print(head(results$exacttest_data))
+          message("=== coldata ===")
+          print(head(results$coldata))
+          
+          # Advance progress bar
+          setProgress(value = 1, detail = "Data collected")
+        })
+      })
 
-      print(Sys.getpid())
+      # -------------------------------------------------
+      # Stage 4: Post-processing and rounding numeric data
+      # -------------------------------------------------
+      withProgress(message = "Stage 4: Rounding numeric data", value = 0, {
+        t0_round <- Sys.time()
+        message(sprintf("[Stage4] Rounding start at %s", t0_round))
+        
+        # Round numeric columns in normcount_data
+        results$normcount_data <- as.data.frame(lapply(
+          results$normcount_data,
+          function(x) if (is.numeric(x)) round(x, 4) else x
+        ))
+        
+        # Round logFC and logCPM in exacttest_data
+        results$exacttest_data$logFC  <- if (is.numeric(results$exacttest_data$logFC)) round(results$exacttest_data$logFC, 4) else results$exacttest_data$logFC
+        results$exacttest_data$logCPM <- if (is.numeric(results$exacttest_data$logCPM)) round(results$exacttest_data$logCPM, 4) else results$exacttest_data$logCPM
+        
+        t1_round <- Sys.time()
+        message(sprintf("[Stage4] Rounding completed at %s (Duration: %.2f seconds)",
+                        t1_round, as.numeric(difftime(t1_round, t0_round, units = "secs"))))
+        
+        setProgress(value = 1, detail = "Rounding complete")
+      })
+
+      # Log final process ID for reference
+      message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
     })
 
     # observeEvent(results$db_info$selected_db(), {
