@@ -584,7 +584,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         t_end <- Sys.time()
         incProgress(1, detail = "Results updated")
         message(sprintf("[Update Reactive] Completed at %s (Duration: %.2f sec)", t_end, as.numeric(difftime(t_end, t0, units = "secs"))))
-      })
+
     })
 
     topGeneList <- reactiveVal(NULL)
