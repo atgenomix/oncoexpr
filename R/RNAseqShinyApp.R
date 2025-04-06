@@ -242,43 +242,45 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
+      message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
       
-      DBI::dbExecute(sc, paste0("USE ", selected_db_name))
-      tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
-      tbls <- tbl_list_query$tableName
-      print("====tbls====")
-      print(tbls)
+      withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
+        DBI::dbExecute(sc, paste0("USE ", selected_db_name))
+        tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
+        tbls <- tbl_list_query$tableName
+        incProgress(0.2, detail = paste0("Got ", length(tbls), " tables"))
+        prefix <- c("^normcounts|^exacttest|^coldata")
+        incProgress(0.2, detail = paste0("Got ", length(prefix), " tables"))
+        tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
+        print("====tbl_list_query_prefix====")
+        print(tbl_list_query_prefix)
+        tbls_with_prefix <- tbl_list_query_prefix$tableName
+        tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+        print("====tbls_with_time_filter====")
+        print(tbls_with_time_filter)
 
-      prefix <- c("^normcounts|^exacttest|^coldata")
+        if (sum(tbls_with_time_filter$is_latest) == 0) {
+          print("no latest table")
+          tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
+          summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
+        } else {
+          print("latest table")
+          tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
+          summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
+        }
 
-      tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls), ]
-      print("====tbl_list_query_prefix====")
-      print(tbl_list_query_prefix)
-      tbls_with_prefix <- tbl_list_query_prefix$tableName
+        tbls_with_prefix_time <- summary_table$"file"
+        print("====summary_table====")
+        print(summary_table)
+        results$table_list <- tbl_list_query_prefix_time
 
-      tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
-      print("====tbls_with_time_filter====")
-      print(tbls_with_time_filter)
+        normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+        exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
+        coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
 
-      if (sum(tbls_with_time_filter$is_latest) == 0) {
-        print("no latest table")
-        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == FALSE, ]
-        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == FALSE, ]
-      } else {
-        print("latest table")
-        tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest == TRUE, ]
-        summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest == TRUE, ]
-      }
+      })
 
-      tbls_with_prefix_time <- summary_table$"file"
-      print("====summary_table====")
-      print(summary_table)
-      results$table_list <- tbl_list_query_prefix_time
-
-      normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-      exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-      coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-
+ 
       print("====normcount_tbls====")
       print(normcount_tbls)
       print("====exacttest_tbls====")
