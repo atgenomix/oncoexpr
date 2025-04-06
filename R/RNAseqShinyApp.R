@@ -245,9 +245,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
       
       withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
+        start_tbl <- Sys.time()
         DBI::dbExecute(sc, paste0("USE ", selected_db_name))
         tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
         tbls <- tbl_list_query$tableName
+        message(sprintf("[Tables] Retrieved at %s: %s", Sys.time(), paste(tbls, collapse = ", ")))
+        
         incProgress(0.2, detail = paste0("Got ", length(tbls), " tables"))
         prefix <- c("^normcounts|^exacttest|^coldata")
         incProgress(0.2, detail = paste0("Got ", length(prefix), " tables"))
