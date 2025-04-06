@@ -298,7 +298,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           on.exit(sparklyr::spark_disconnect(sc_conn))
           
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          normcount_tbl <- tbl(sc_conn, normcount_tbls[1]) %>%
+          normcount_tbl <- dplyr::tbl(sc_conn, normcount_tbls[1]) %>%
             dplyr::rename(GeneSymbol = genes) %>%
             dplyr::select(-`_c0`) %>%
             dplyr::mutate(across(where(is.numeric), ~ round(., 4)))
@@ -309,7 +309,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           normcount
         },
         globals = list(master = master, method = method, version = version,
-                      normcount_tbls = normcount_tbls, selected_db_name = selected_db_name),
+                      normcount_tbls = normcount_tbls, selected_db_name = selected_db_name, `%>%` = magrittr::`%>%`),
         seed = TRUE
       )
       
@@ -320,9 +320,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
-          
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          exacttest_tbl <- tbl(sc_conn, exacttest_tbls[1]) %>%
+          exacttest_tbl <- dplyr::tbl(sc_conn, exacttest_tbls[1]) %>%
             dplyr::rename(GeneSymbol = genes) %>%
             dplyr::select(-`_c0`) %>%
             dplyr::mutate(
@@ -351,7 +350,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           exacttest
         },
         globals = list(master = master, method = method, version = version,
-                      exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name),
+                      exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name, `%>%` = magrittr::`%>%`),
         seed = TRUE
       )
       
@@ -388,38 +387,55 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
       }
       
-      withProgress(message = "Processing data...", value = 0, {
-        overall_start <- Sys.time()
-        incProgress(0.1, detail = sprintf("Starting normcount query at %s", overall_start))
-        normcount_data <- value(normcount_promise)
-        t_norm <- Sys.time()
-        incProgress(0.3, detail = sprintf("Normcount done (Duration: %.2f sec)", as.numeric(difftime(t_norm, overall_start, units = "secs"))))
-        
-        incProgress(0.1, detail = sprintf("Starting exacttest query at %s", Sys.time()))
-        exacttest_data <- value(exacttest_promise)
-        t_exact <- Sys.time()
-        incProgress(0.3, detail = sprintf("Exacttest done (Duration: %.2f sec)", as.numeric(difftime(t_exact, t_norm, units = "secs"))))
-        
-        incProgress(0.1, detail = sprintf("Starting coldata query at %s", Sys.time()))
-        coldata <- value(coldata_promise)
-        t_col <- Sys.time()
-        incProgress(0.1, detail = sprintf("Coldata done (Duration: %.2f sec)", as.numeric(difftime(t_col, t_exact, units = "secs"))))
-        
-        overall_end <- Sys.time()
-        message(sprintf("[Overall] All queries completed (Total Duration: %.2f seconds)",
-                        as.numeric(difftime(overall_end, overall_start, units = "secs"))))
-        
-        results$normcount_data <- normcount_data
-        results$exacttest_data <- exacttest_data
-        results$coldata <- coldata
-        
-        message("=== normcount_data ===")
-        print(head(results$normcount_data))
-        message("=== exacttest_data ===")
-        print(head(results$exacttest_data))
-        message("=== coldata ===")
-        print(head(results$coldata))
+      withProgress(message="Processing data...", value=0, {
+        incProgress(0.1)
+        promise_all(
+          norm = normcount_promise,
+          exact = exacttest_promise,
+          col  = coldata_promise
+        ) %...>% (function(res) {
+          incProgress(1)
+          results$normcount_data  <- res$norm
+          results$exacttest_data  <- res$exact
+          results$coldata         <- res$col
+        }) %...!% (function(err){
+          showNotification(paste("資料處理失敗：", err$message), type="error")
+        })
       })
+
+
+    #   withProgress(message = "Processing data...", value = 0, {
+    #     overall_start <- Sys.time()
+    #     incProgress(0.1, detail = sprintf("Starting normcount query at %s", overall_start))
+    #     normcount_data <- value(normcount_promise)
+    #     t_norm <- Sys.time()
+    #     incProgress(0.3, detail = sprintf("Normcount done (Duration: %.2f sec)", as.numeric(difftime(t_norm, overall_start, units = "secs"))))
+        
+    #     incProgress(0.1, detail = sprintf("Starting exacttest query at %s", Sys.time()))
+    #     exacttest_data <- value(exacttest_promise)
+    #     t_exact <- Sys.time()
+    #     incProgress(0.3, detail = sprintf("Exacttest done (Duration: %.2f sec)", as.numeric(difftime(t_exact, t_norm, units = "secs"))))
+        
+    #     incProgress(0.1, detail = sprintf("Starting coldata query at %s", Sys.time()))
+    #     coldata <- value(coldata_promise)
+    #     t_col <- Sys.time()
+    #     incProgress(0.1, detail = sprintf("Coldata done (Duration: %.2f sec)", as.numeric(difftime(t_col, t_exact, units = "secs"))))
+        
+    #     overall_end <- Sys.time()
+    #     message(sprintf("[Overall] All queries completed (Total Duration: %.2f seconds)",
+    #                     as.numeric(difftime(overall_end, overall_start, units = "secs"))))
+        
+    #     results$normcount_data <- normcount_data
+    #     results$exacttest_data <- exacttest_data
+    #     results$coldata <- coldata
+        
+    #     message("=== normcount_data ===")
+    #     print(head(results$normcount_data))
+    #     message("=== exacttest_data ===")
+    #     print(head(results$exacttest_data))
+    #     message("=== coldata ===")
+    #     print(head(results$coldata))
+    #   })
     })
       
     observe({
