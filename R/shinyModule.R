@@ -517,6 +517,7 @@ pcaModuleServer <- function(id, normCount, colData) {
     output$pcaPlot <- renderPlot({
       req(input$pcX, input$pcY)
       createPCAPlot(pcaResult, colData, input$pcX, input$pcY)
+      outputOptions(output, "pcaPlot", suspendWhenHidden = FALSE)
     })
   })
 }
