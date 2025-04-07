@@ -408,9 +408,11 @@ dbBrowserServer <- function(id, sc) {
         selected = db_list[1]
       )
 
-      #DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-      #query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-      #exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+      #DBI::dbExecute(sc, paste0("USE ", db_list[1]))
+      show_init_tbls <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", db_list[1]))
+      init_tbls <- show_init_tbls$tableName
+      init_tbl <- DBI::dbGetQuery(sc, paste0("SELECT * FROM ", init_tbls[1]))
+
     })
 
     selected_db    <- reactive({ input$selected_db })
