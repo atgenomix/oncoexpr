@@ -632,7 +632,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
       req(result_GSEA_FC())
       as.data.frame(result_GSEA_FC())
     })
-    
+    outputOptions(output, "gseaTable", suspendWhenHidden = FALSE)
     output$gseaPlot <- renderPlot({
       req(result_GSEA_FC())
       if (nrow(result_GSEA_FC()@result) > 0) {
@@ -642,6 +642,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
         text(0.5, 0.5, "No significant pathway found.")
       }
     })
+    outputOptions(output, "gseaPlot", suspendWhenHidden = FALSE)
     
     return(list(result = result_GSEA_FC))
   })

@@ -238,8 +238,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(sc)
       print("dbbrowser initialized")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
-      #selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
-      selected_db_name <- results$db_info$selected_db()
+      selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+      #selected_db_name <- results$db_info$selected_db()
       future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
@@ -808,15 +808,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       gene_list
     })
 
-
-    observe({
-      new_gene_list <- geneListReactive()
-      updateTextInput(session, "geneListheatmap", value = new_gene_list)
-      updateTextInput(session, "geneLisEnrichment", value = new_gene_list)
-      print("update geneListheatmap and geneLisEnrichment")
-      print(length(new_gene_list))
-    })
-
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
       mae <- settingMAE()
@@ -827,7 +818,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       if (!is.null(ht)) {
         makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-        outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
+
       } else {
         output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
@@ -980,6 +971,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       validate(need(result_G1_CC(), "Please update the DEG list, then wait while it loads..."))
       result_G1_CC()
     })
+    
     output$G1_BP <- renderPlot({
       validate(need(result_G1_BP(), "Please update the DEG list, then wait while it loads..."))
       result_G1_BP()
@@ -1009,6 +1001,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       result_G2_KEGG()
     })
 
+    outputOptions(output, "G1_CC", suspendWhenHidden = FALSE)
+    outputOptions(output, "G1_BP", suspendWhenHidden = FALSE)
+    outputOptions(output, "G1_MF", suspendWhenHidden = FALSE)
+    outputOptions(output, "G2_CC", suspendWhenHidden = FALSE)
+    outputOptions(output, "G2_BP", suspendWhenHidden = FALSE)
+    outputOptions(output, "G2_MF", suspendWhenHidden = FALSE)
+    outputOptions(output, "G1_KEGG", suspendWhenHidden = FALSE)
+    outputOptions(output, "G2_KEGG", suspendWhenHidden = FALSE)
+    
     observe({
       req(result_G1_CC(), result_G1_BP(), result_G1_MF(), result_G2_CC(), result_G2_BP(), result_G2_MF(), result_G1_KEGG(), result_G2_KEGG())
             shinyjs::enable("run_DEG")
