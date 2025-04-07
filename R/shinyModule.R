@@ -400,22 +400,32 @@ dbBrowserServer <- function(id, sc) {
       c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
       print(c)
       db_list <- dbGetQuery(sc, sprintf("SHOW DATABASES %s", c))
-      
+      print(db_list)
       updateSelectInput(
         session,
         "selected_db",
         choices = db_list,
         selected = db_list[1]
       )
-
-      #DBI::dbExecute(sc, paste0("USE ", db_list[1]))
-      show_init_tbls <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", db_list[1]))
-      init_tbls <- show_init_tbls$tableName
-      init_tbl <- DBI::dbGetQuery(sc, paste0("SELECT * FROM ", init_tbls[1]))
-
     })
-
-    selected_db    <- reactive({ input$selected_db })
+    selected_db <- reactive({ input$selected_db })
+    req(selected_db)
+    print(selected_db)
+    #selected_db_name <- selected_db[1]
+    selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+    print(selected_db_name)
+    show_init_tbls <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
+    print(2)
+    print(show_init_tbls)
+    init_tbls <- show_init_tbls$tableName
+    print(3)
+    print(init_tbls)
+    print(4)
+    DBI::dbExecute(sc, paste0("USE ", selected_db_name ))
+    print(5)
+    print(init_tbls[3])
+    init_tbl <- DBI::dbGetQuery(sc, paste0("SELECT * FROM ", init_tbls[3]))
+    message("executors initialization done")
     return(list(
       selected_db    = selected_db
     ))

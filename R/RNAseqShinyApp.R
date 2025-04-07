@@ -235,10 +235,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
-    observe({
+    observeEvent(sc , {
       req(sc)
       print("dbbrowser")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
+
     })
     progressMod <- progressPopupServer("popupProgress")
 
