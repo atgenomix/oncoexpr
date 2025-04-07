@@ -238,7 +238,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("dbbrowser")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
     })
-
+    progressMod <- progressPopupServer("popupProgress")
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       selected_db_name <- results$db_info$selected_db()
@@ -312,7 +312,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       # ---------------------------------------------
       # 2.1 Normcount query
 
-      progressMod <- progressPopupServer("popupProgress")
+
 
       t0_norm_launch <- Sys.time()
       message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
