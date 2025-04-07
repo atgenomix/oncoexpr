@@ -42,7 +42,9 @@ Imports:
     shinycssloaders (>= 1.1.0),
     clusterProfiler (>= 4.12.6),
     fgsea (>= 1.30.0),
-    enrichplot (>= 1.24.4)
+    enrichplot (>= 1.24.4),
+    shinyjs (>= 2.1.0),
+    progressr (>= 0.15.1)
 Remotes:
     bioc::3.20/edgeR,
     bioc::3.20/MultiAssayExperiment,
