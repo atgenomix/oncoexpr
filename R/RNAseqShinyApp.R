@@ -312,6 +312,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$exacttest_data <- NULL
       results$normcount_data <- NULL
       results$coldata <- NULL
+      output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+      })
 
       selected_db_name <- results$db_info$selected_db()
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
@@ -785,7 +789,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     geneListReactive <- eventReactive(input$run_DEG, {
       req(DEG_table(), maeColData(), wide_data())
       shinyjs::disable("run_DEG")
-      
+      output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text("No data available.")
+        })
       DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
@@ -813,7 +820,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
       mae <- settingMAE()
-      ht <- NULL
+
       geneListVec <- unlist(strsplit(geneListReactive(), ","))
       geneListVec <- trimws(geneListVec)
       ht <- make_heatmap_mae(mae, geneListVec)
