@@ -239,9 +239,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("dbbrowser initialized")
       shinyjs::disable("dbBrowser1")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
-      selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+      #selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
       showNotification("Waiting for initialization", type="message", duration = 10)
-      #selected_db_name <- results$db_info$selected_db()
+      selected_db_name <- results$db_info$selected_db()
       a_ <- future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
