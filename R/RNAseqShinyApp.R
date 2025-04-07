@@ -237,10 +237,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(sc, {
       req(sc)
       print("dbbrowser initialized")
+      shinyjs::disable("dbBrowser1")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
       selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+      showNotification("Waiting for initialization", type="message", duration = 10)
       #selected_db_name <- results$db_info$selected_db()
-      future_promise(
+      a_ <- future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
@@ -258,7 +260,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         seed = TRUE
       )
 
-      future_promise(
+      b_ <- future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
@@ -279,7 +281,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       )
 
 
-      future_promise(
+      c_ <- future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
@@ -295,9 +297,23 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         ),
         seed = TRUE
       )
+       all_p <- promises::promise_all(
+          norm = a_,
+          ex   = b_,
+          col  = c_
+        )
+        
+        all_p %...>% (function(res_list) {
+          shinyjs::enable("dbBrowser1")
+          showNotification("Initialization complete. Check list!", type="message", duration = 10)
+        
+          
+        }) %...!% (function(e) {
+          shinyjs::enable("dbBrowser1")
+          showNotification(paste("Error:", e$message), type="error")})
+
     })
-
-
+    
     progressMod <- progressPopupServer("popupProgress")
 
     observeEvent(results$db_info$selected_db(), {

@@ -381,7 +381,7 @@ dbBrowserUI <- function(id) {
     selectInput(
       inputId = ns("selected_db"),
       label   = "",
-      choices = character(0)
+      choices = c("Please Waiting..." = "")
     ),
   )
 }
@@ -659,36 +659,39 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
 progressPopupUI <- function(id) {
   ns <- NS(id)
   
-  # absolutePanel / fixedPanel both can be used to create a floating panel the key is to set the position
   absolutePanel(
     id = ns("popupPanel"),
-    bottom = "20px", right = "20px",
-    width = "300px",
+    # 使用 position: fixed 放在正中央
     style = "
-    position: fixed !important;   /* 關鍵：固定在視窗，而非父容器 */
-    bottom: 20px; right: 20px;
-    z-index: 9999;
-    background-color: #FFFFFF;
-    border: 1px solid #CCC;
-    padding: 10px;
-    display: none; /* 隱藏 */
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      position: fixed !important;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      
+      z-index: 9999;
+      background-color: #FFFFFF;
+      border: 1px solid #CCC;
+      padding: 10px;
+      display: none; /* 一開始隱藏 */
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
     ",
+    width = "300px",
     
-    # title and message
+    # 標題與描述
     tags$strong("Async tasks are processing in the background..."),
     br(), br(),
     
-    # progress bar outer layer
+    # 進度條外框 (Bootstrap3: 加上 progress-striped active 表示條紋 & 動畫)
     tags$div(
       id = ns("progressBarOuter"),
-      class = "progress",
+      class = "progress progress-striped active",
       style = "height: 25px;",
-      # progress bar inner layer
+      
+      # 進度條內層
       tags$div(
         id = ns("progressBarInner"),
         class = "progress-bar",
-        style = "width: 0%;",
+        style = "width: 0%; color: black;",  # 一開始預設 color: black
         "0%"
       )
     )
@@ -696,65 +699,60 @@ progressPopupUI <- function(id) {
 }
 
 
+
 #' @title progressPopupServer
 #' @description progress popup Server
 #' @param id module id for UI and Server
 #' @return progress popup Server
 #' @export
-#' 
-# (2) Server module: progressPopupServer listens to promises and updates the progress bar dynamically
 progressPopupServer <- function(id) {
   moduleServer(id, function(input, output, session) {
-    
-    # reactiveVal: trace number of tasks and completed tasks
     tasksTotal <- reactiveVal(0)
     tasksDone  <- reactiveVal(0)
     
-    # call for outside to add a new promise to listen a new task
     addPromise <- function(prom, label = NULL) {
-      # 1) add a new task
       tasksTotal(tasksTotal() + 1)
-      
-      # 2) +1 to tasksDone when the task is done
       prom %...>% (function(res) {
         tasksDone(tasksDone() + 1)
-        if (!is.null(label)) {
-          message(sprintf("[Promise Done] %s", label))
-        }
         res
       }) %...!% (function(e) {
         tasksDone(tasksDone() + 1)
-        if (!is.null(label)) {
-          message(sprintf("[Promise Error] %s - %s", label, e$message))
-        }
-        # error is also a task, so +1
-        e
+        stop(e)  # 保留錯誤給後續
       })
     }
     
-    # apperant or hide the popup panel 
     observe({
       total <- tasksTotal()
       done  <- tasksDone()
       
-      # if no task, hide the panel
       if (total == 0) {
         runjs(sprintf("$('#%s').hide();", session$ns("popupPanel")))
         return()
       }
       
-      # if there are tasks, show the panel
       runjs(sprintf("$('#%s').show();", session$ns("popupPanel")))
       
-      # renew the progress bar
       pct <- if (total > 0) round(done / total * 100) else 0
+      if (total > 0 && done == 0) {
+        pct <- 5
+      }
       inner_id <- session$ns("progressBarInner")
       runjs(sprintf("
         $('#%s').css('width', '%d%%');
         $('#%s').text('%d%%');
-      ", inner_id, pct, inner_id, pct))
+        if (%d === 0) {
+          $('#%s').css('color', 'black');
+        } else {
+          $('#%s').css('color', 'white');
+        }
+      ",
+      inner_id, pct,
+      inner_id, pct,
+      pct,
+      inner_id,
+      inner_id
+      ))
       
-      # if all tasks are done, hide the panel after 1 second
       if (done >= total) {
         shinyjs::delay(1000, {
           runjs(sprintf("$('#%s').hide();", session$ns("popupPanel")))
@@ -764,9 +762,7 @@ progressPopupServer <- function(id) {
       }
     })
     
-    # return a list of functions
-    list(
-      addPromise = addPromise
-    )
+    list(addPromise = addPromise)
   })
 }
+
