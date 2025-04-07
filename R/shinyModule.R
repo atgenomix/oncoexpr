@@ -642,3 +642,124 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
     return(list(result = result_GSEA_FC))
   })
 }
+
+
+
+#' @title progressPopupUI
+#' @description progress popup UI
+#' @param id  module id for UI and Server
+#' @return progress popup UI
+#' @export
+
+progressPopupUI <- function(id) {
+  ns <- NS(id)
+  
+  # absolutePanel / fixedPanel both can be used to create a floating panel the key is to set the position
+  absolutePanel(
+    id = ns("popupPanel"),
+    bottom = "20px", right = "20px",
+    width = "300px",
+    style = "
+      z-index: 9999;
+      background-color: #FFFFFF;
+      border: 1px solid #CCC;
+      padding: 10px;
+      display: none;        /* 一開始隱藏 */
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    ",
+    
+    # title and message
+    tags$strong("Async tasks are processing in the background..."),
+    br(), br(),
+    
+    # progress bar outer layer
+    tags$div(
+      id = ns("progressBarOuter"),
+      class = "progress",
+      style = "height: 25px;",
+      # progress bar inner layer
+      tags$div(
+        id = ns("progressBarInner"),
+        class = "progress-bar",
+        style = "width: 0%;",
+        "0%"
+      )
+    )
+  )
+}
+
+
+#' @title progressPopupServer
+#' @description progress popup Server
+#' @param id module id for UI and Server
+#' @return progress popup Server
+#' @export
+#' 
+# (2) Server module: progressPopupServer listens to promises and updates the progress bar dynamically
+progressPopupServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    
+    # reactiveVal: trace number of tasks and completed tasks
+    tasksTotal <- reactiveVal(0)
+    tasksDone  <- reactiveVal(0)
+    
+    # call for outside to add a new promise to listen a new task
+    addPromise <- function(prom, label = NULL) {
+      # 1) add a new task
+      tasksTotal(tasksTotal() + 1)
+      
+      # 2) +1 to tasksDone when the task is done
+      prom %...>% (function(res) {
+        tasksDone(tasksDone() + 1)
+        if (!is.null(label)) {
+          message(sprintf("[Promise Done] %s", label))
+        }
+        res
+      }) %...!% (function(e) {
+        tasksDone(tasksDone() + 1)
+        if (!is.null(label)) {
+          message(sprintf("[Promise Error] %s - %s", label, e$message))
+        }
+        # error is also a task, so +1
+        e
+      })
+    }
+    
+    # apperant or hide the popup panel 
+    observe({
+      total <- tasksTotal()
+      done  <- tasksDone()
+      
+      # if no task, hide the panel
+      if (total == 0) {
+        runjs(sprintf("$('#%s').hide();", session$ns("popupPanel")))
+        return()
+      }
+      
+      # if there are tasks, show the panel
+      runjs(sprintf("$('#%s').show();", session$ns("popupPanel")))
+      
+      # renew the progress bar
+      pct <- if (total > 0) round(done / total * 100) else 0
+      inner_id <- session$ns("progressBarInner")
+      runjs(sprintf("
+        $('#%s').css('width', '%d%%');
+        $('#%s').text('%d%%');
+      ", inner_id, pct, inner_id, pct))
+      
+      # if all tasks are done, hide the panel after 1 second
+      if (done >= total) {
+        shinyjs::delay(1000, {
+          runjs(sprintf("$('#%s').hide();", session$ns("popupPanel")))
+          tasksTotal(0)
+          tasksDone(0)
+        })
+      }
+    })
+    
+    # return a list of functions
+    list(
+      addPromise = addPromise
+    )
+  })
+}
