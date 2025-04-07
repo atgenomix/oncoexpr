@@ -827,6 +827,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       if (!is.null(ht)) {
         makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+        outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
       } else {
         output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
@@ -1008,13 +1009,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       result_G2_KEGG()
     })
 
-
+    observe({
+      req(result_G1_CC(), result_G1_BP(), result_G1_MF(), result_G2_CC(), result_G2_BP(), result_G2_MF(), result_G1_KEGG(), result_G2_KEGG())
+            shinyjs::enable("run_DEG")
+    })
 
     observeEvent(geneListReactive(), {
       req(DEG_table())
       gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up")
       gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down")
-      shinyjs::enable("run_DEG")
+
     })
     observe({
       req(DEG_table(), wide_data(), maeColData())
