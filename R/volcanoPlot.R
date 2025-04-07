@@ -165,12 +165,12 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params, selectedGe
       girafe(ggobj = p,
              options = list(
                opts_zoom(max = 5),
-               opts_selection(type = "single", only_shiny = FALSE),
+               opts_selection(type = "single", only_shiny = FALSE)
                
              ))
       
     })
-  outputOptions(output, "volcanoPlot", suspendWhenHidden = FALSE)
+    outputOptions(output, "volcanoPlot", suspendWhenHidden = FALSE)
     
     output$scatterPlot <- renderGirafe({
       scatterData_local <- exprData %>%
@@ -210,7 +210,8 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params, selectedGe
                opts_selection(type = "single", only_shiny = FALSE)
              ))
     })
-    
+    outputOptions(output, "scatterPlot", suspendWhenHidden = FALSE)
+
     output$geneViolinPlot <- renderPlot({
       current_gene <- persistent_gene()
       if (is.null(current_gene) || current_gene == "") {
