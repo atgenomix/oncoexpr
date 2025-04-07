@@ -68,18 +68,18 @@ interactivePlotsUI <- function(id) {
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
                    h4("Volcano Plot"),
                    
-                   girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px")
+                   withSpinner(girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px"))
                )
         ),
         # Right: Scatter Plot (top) and Violin Plot (bottom)
         column(width = 4,
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
                    h4("Scatter Plot"),
-                   girafeOutput(ns("scatterPlot"), width = "100%", height = "300px")
+                   withSpinner(girafeOutput(ns("scatterPlot"), width = "100%", height = "300px"))
                ),
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px;",
                    h4("Violin Plot"),
-                   plotOutput(ns("geneViolinPlot"), width = "100%", height = "300px")
+                   withSpinner(plotOutput(ns("geneViolinPlot"), width = "100%", height = "300px"))
                )
         )
       )
