@@ -85,6 +85,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           ),
           mainPanel(
             fluidRow(
+              useShinyjs(),
               column(
                 width = 12,
                 tabsetPanel(
@@ -98,7 +99,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                     withSpinner((DT::dataTableOutput("DEG_table", width = "100%")))
                   )
                 )
-              )
+              ),
+            progressPopupUI("popupProgress")
             )
           )
         )
@@ -239,8 +241,20 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
     })
     progressMod <- progressPopupServer("popupProgress")
+
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
+      output$wide_table_dt <- DT::renderDataTable({
+          data.frame()
+      })
+      output$DEG_table <- DT::renderDataTable({
+          data.frame()
+      })
+      
+      results$exacttest_data <- NULL
+      results$normcount_data <- NULL 
+      results$coldata <- NULL
+
       selected_db_name <- results$db_info$selected_db()
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
       
@@ -471,6 +485,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         setProgress(value = 1, detail = "Rounding complete")
       })
 
+
+      wide_data(NULL)
+      DEG_table(NULL)
+      output$wide_table_dt <- DT::renderDataTable({
+        req(wide_data())
+        print("send wide data to UI")
+        DT::datatable(
+          wide_data(),
+          options = list(pageLength = 20, autoWidth = TRUE)
+        )
+      })
       # Log final process ID for reference
       message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
     })
@@ -556,15 +581,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     # })
 
     
-    output$wide_table_dt <- DT::renderDataTable({
-      req(wide_data())
 
-      print("send wide data to UI")
-      DT::datatable(
-        wide_data(),
-        options = list(pageLength = 20, autoWidth = TRUE)
-      )
-    })
 
     observe({
       req(DEG_table(), wide_data(), maeColData())
@@ -672,7 +689,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     geneListReactive <- eventReactive(input$run_DEG, {
       req(DEG_table(), maeColData(), wide_data())
-
+      shinyjs::disable("run_DEG")
       DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
@@ -893,6 +910,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(DEG_table())
       gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up")
       gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down")
+      shinyjs::enable("run_DEG")
     })
     observe({
       req(DEG_table(), wide_data(), maeColData())

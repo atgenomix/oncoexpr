@@ -400,12 +400,17 @@ dbBrowserServer <- function(id, sc) {
       c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
       print(c)
       db_list <- dbGetQuery(sc, sprintf("SHOW DATABASES %s", c))
+      
       updateSelectInput(
         session,
         "selected_db",
         choices = db_list,
         selected = db_list[1]
       )
+
+      #DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+      #query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+      #exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
     })
 
     selected_db    <- reactive({ input$selected_db })
@@ -660,12 +665,14 @@ progressPopupUI <- function(id) {
     bottom = "20px", right = "20px",
     width = "300px",
     style = "
-      z-index: 9999;
-      background-color: #FFFFFF;
-      border: 1px solid #CCC;
-      padding: 10px;
-      display: none;        /* 一開始隱藏 */
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    position: fixed !important;   /* 關鍵：固定在視窗，而非父容器 */
+    bottom: 20px; right: 20px;
+    z-index: 9999;
+    background-color: #FFFFFF;
+    border: 1px solid #CCC;
+    padding: 10px;
+    display: none; /* 隱藏 */
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
     ",
     
     # title and message
