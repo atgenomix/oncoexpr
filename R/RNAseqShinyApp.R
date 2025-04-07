@@ -238,8 +238,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(sc)
       print("dbbrowser initialized")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
-      selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
-      #selected_db_name <- results$db_info$selected_db()
+      #selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+      selected_db_name <- results$db_info$selected_db()
       future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
