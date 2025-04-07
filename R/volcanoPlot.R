@@ -68,7 +68,7 @@ interactivePlotsUI <- function(id) {
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
                    h4("Volcano Plot"),
                    
-                   withSpinner(girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px"))
+                   girafeOutput(ns("volcanoPlot"), width = "100%", height = "600px")
                )
         ),
         # Right: Scatter Plot (top) and Violin Plot (bottom)
