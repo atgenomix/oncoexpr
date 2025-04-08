@@ -40,9 +40,6 @@ Imports:
     future (>= 1.34.0),
     purrr (>= 1.0.2),
     shinycssloaders (>= 1.1.0),
-    clusterProfiler (>= 4.12.6),
-    fgsea (>= 1.30.0),
-    enrichplot (>= 1.24.4),
     shinyjs (>= 2.1.0),
     progressr (>= 0.15.1)
 Remotes:
