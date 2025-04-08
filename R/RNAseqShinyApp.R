@@ -242,9 +242,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
       #selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
       showNotification("Waiting for initialization", type="message", duration = 10)
-      selected_db_name <- results$db_info$selected_db()
-      #selected_db_name <- "0408_B202406002_TvsNT"
       
+
+
+    }, ignoreInit = FALSE)
+    
+    observeEvent(results$db_info$selected_db(), {
+      print("init")
+      selected_db_name <- results$db_info$selected_db()
+      print("select db")
+      print(selected_db_name)
+      #selected_db_name <- "0408_B202406002_TvsNT"
       a_ <- future_promise(
         {
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
@@ -313,10 +321,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           
         }) %...!% (function(e) {
           shinyjs::enable("dbBrowser1")
-          showNotification(paste("Error:", e$message), type="error")})
+          #showNotification(paste("Error:", e$message), type="error")
+          })
 
     })
-    
     progressMod <- progressPopupServer("popupProgress")
 
     observeEvent(results$db_info$selected_db(), {
