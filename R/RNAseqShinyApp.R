@@ -837,53 +837,53 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       gene_list
     })
 
-    observeEvent(geneListReactive(), {
-      req(geneListReactive(), settingMAE())
-      mae <- settingMAE()
-
-      geneListVec <- unlist(strsplit(geneListReactive(), ","))
-      geneListVec <- trimws(geneListVec)
-      ht <- make_heatmap_mae(mae, geneListVec)
-
-      if (!is.null(ht)) {
-        makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-
-      } else {
-        output$ht_heatmap <- renderPlot({
-          grid::grid.newpage()
-          grid::grid.text("No data available.")
-        })
-      }
-    })
-
     # observeEvent(geneListReactive(), {
     #   req(geneListReactive(), settingMAE())
     #   mae <- settingMAE()
 
     #   geneListVec <- unlist(strsplit(geneListReactive(), ","))
     #   geneListVec <- trimws(geneListVec)
+    #   ht <- make_heatmap_mae(mae, geneListVec)
 
-    #   future_promise({
-    #
-    #     make_heatmap_mae(mae, geneListVec)
-    #   }) %...>% (function(ht) {
-    #
-    #     if (!is.null(ht)) {
-    #       makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-    #     } else {
-    #       output$ht_heatmap <- renderPlot({
-    #         grid::grid.newpage()
-    #         grid::grid.text("No data available.")
-    #       })
-    #     }
-    #   }) %...!% (function(e) {
-    #
+    #   if (!is.null(ht)) {
+    #     makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+
+    #   } else {
     #     output$ht_heatmap <- renderPlot({
     #       grid::grid.newpage()
-    #       grid::grid.text(paste("An error occurred:", e$message))
+    #       grid::grid.text("No data available.")
     #     })
-    #   })
+    #   }
     # })
+
+    observeEvent(geneListReactive(), {
+      req(geneListReactive(), settingMAE())
+      mae <- settingMAE()
+
+      geneListVec <- unlist(strsplit(geneListReactive(), ","))
+      geneListVec <- trimws(geneListVec)
+
+      future_promise({
+    
+        make_heatmap_mae(mae, geneListVec)
+      }) %...>% (function(ht) {
+    
+        if (!is.null(ht)) {
+          makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+        } else {
+          output$ht_heatmap <- renderPlot({
+            grid::grid.newpage()
+            grid::grid.text("No data available.")
+          })
+        }
+      }) %...!% (function(e) {
+    
+        output$ht_heatmap <- renderPlot({
+          grid::grid.newpage()
+          grid::grid.text(paste("An error occurred:", e$message))
+        })
+      })
+    })
 
     result_G1_CC <- reactiveVal(NULL)
     result_G1_BP <- reactiveVal(NULL)
