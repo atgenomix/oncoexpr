@@ -161,14 +161,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                     width = 6,
                     box(
                       title = "Differential heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                      withSpinner(originalHeatmapOutput("ht", height = 1000, containment = TRUE))
+                      originalHeatmapOutput("ht", height = 1000, containment = TRUE)
                     )
                   ),
                   column(
                     width = 6,
                     box(
                       title = "Sub-heatmap", width = NULL, solidHeader = TRUE, status = "primary",
-                      withSpinner(subHeatmapOutput("ht", title = NULL, containment = TRUE))
+                      subHeatmapOutput("ht", title = NULL, containment = TRUE)
                     )
                   )
                 )
@@ -810,6 +810,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           grid::grid.newpage()
           grid::grid.text("No data available.")
         })
+
       DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
