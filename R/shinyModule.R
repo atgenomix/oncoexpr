@@ -661,7 +661,6 @@ progressPopupUI <- function(id) {
   
   absolutePanel(
     id = ns("popupPanel"),
-    # 使用 position: fixed 放在正中央
     style = "
       position: fixed !important;
       top: 50%;
@@ -677,21 +676,18 @@ progressPopupUI <- function(id) {
     ",
     width = "300px",
     
-    # 標題與描述
     tags$strong("Just a moment while we load the datasets."),
     br(), br(),
     
-    # 進度條外框 (Bootstrap3: 加上 progress-striped active 表示條紋 & 動畫)
     tags$div(
       id = ns("progressBarOuter"),
       class = "progress progress-striped active",
       style = "height: 25px;",
       
-      # 進度條內層
       tags$div(
         id = ns("progressBarInner"),
         class = "progress-bar",
-        style = "width: 0%; color: black;",  # 一開始預設 color: black
+        style = "width: 0%; color: black;",
         "0%"
       )
     )
