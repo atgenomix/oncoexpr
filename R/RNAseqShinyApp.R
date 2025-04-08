@@ -31,7 +31,7 @@
 #' @import future
 #' @import purrr
 #' @import shinycssloaders
-#' @import useShinyjs
+#' @import shinyjs
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
