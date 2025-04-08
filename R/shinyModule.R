@@ -678,7 +678,7 @@ progressPopupUI <- function(id) {
     width = "300px",
     
     # 標題與描述
-    tags$strong("Async tasks are processing in the background..."),
+    tags$strong("Just a moment while we load the datasets."),
     br(), br(),
     
     # 進度條外框 (Bootstrap3: 加上 progress-striped active 表示條紋 & 動畫)
