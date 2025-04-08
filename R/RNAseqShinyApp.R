@@ -240,7 +240,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print("dbbrowser initialized")
       shinyjs::disable("dbBrowser1")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
-      #selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
       showNotification("Waiting for initialization", type="message", duration = 10)
       
 
@@ -249,9 +248,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     
     observeEvent(results$db_info$selected_db(), {
       print("init")
+      selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+
       #selected_db_name <- results$db_info$selected_db()
       print("select db")
-      selected_db_name <- "0408_b202406002_tvsnt_org_hhtwxpybru3ligh"
+      #selected_db_name <- "0408_b202406002_tvsnt_org_hhtwxpybru3ligh"
       print(selected_db_name)
       a_ <- future_promise(
         {
