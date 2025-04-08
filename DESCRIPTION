@@ -42,12 +42,12 @@ Imports:
     shinycssloaders (>= 1.1.0),
     shinyjs (>= 2.1.0),
     progressr (>= 0.15.1)
-Remotes:
-    bioc::3.20/edgeR,
-    bioc::3.20/MultiAssayExperiment,
-    bioc::3.20/SummarizedExperiment,
-    bioc::3.20/enrichplot,
-    bioc::3.20/clusterProfiler,
-    bioc::3.20/Biobase,
-    bioc::3.20/InteractiveComplexHeatmap,
-    bioc::3.20/limma
+Suggests:
+    edgeR,
+    MultiAssayExperiment,
+    SummarizedExperiment,
+    enrichplot,
+    clusterProfiler,
+    Biobase,
+    InteractiveComplexHeatmap,
+    limma
