@@ -765,7 +765,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       )
     })
 
+    topGeneList <- reactiveVal(NULL)
+    downGeneList <- reactiveVal(NULL)
+
     observe({
+      #有資料就自動帶入，生成DEG list，無視run deg btn與否。
       req(DEG_table(), maeColData(), wide_data())
       params <- reactive({
         list(
@@ -790,6 +794,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
       downGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC < -input$lfc_cut, "GeneSymbol"]
+      topGeneList(topGenes)
+      downGeneList(downGenes)
 
       geneListVec <- c(topGenes, downGenes)
       if (!is.null(geneListReactive)) {
@@ -810,12 +816,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       message("assign reactiveVal: DEG_table, wide_data, maeColData")
     })
 
-    topGeneList <- reactiveVal(NULL)
-    downGeneList <- reactiveVal(NULL)
+
 
 
     geneListReactive <- eventReactive(input$run_DEG, {
-      req(DEG_table(), maeColData(), wide_data())
+      req(DEG_table(), maeColData(), wide_data(), topGeneList(), downGeneList())
       shinyjs::disable("run_DEG")
       output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
