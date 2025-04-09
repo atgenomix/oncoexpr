@@ -805,7 +805,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
       interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
     })
-
+    
 
 
     observe({
@@ -818,10 +818,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
 
-
     geneListReactive <- eventReactive(input$run_DEG, {
-      req(DEG_table(), maeColData(), wide_data(), topGeneList(), downGeneList())
-      shinyjs::disable("run_DEG")
+      req(DEG_table(), maeColData(), wide_data())
+      
       output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
           grid::grid.text("No data available.")
@@ -840,6 +839,11 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       gene_list <- paste(c(topGenes, downGenes), collapse = ",")
       gene_list
+    })
+
+    observeEvent(input$run_DEG, {
+      req(topGeneList(), downGeneList())
+      shinyjs::disable("run_DEG")
     })
 
     # observeEvent(geneListReactive(), {
@@ -881,12 +885,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             grid::grid.text("No data available.")
           })
         }
+        outputOptions(output, "ht", suspendWhenHidden = FALSE)
+
       }) %...!% (function(e) {
     
         output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
           grid::grid.text(paste("An error occurred:", e$message))
         })
+        outputOptions(output, "ht", suspendWhenHidden = FALSE)
       })
     })
 
@@ -894,6 +901,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     result_G1_BP <- reactiveVal(NULL)
     result_G1_MF <- reactiveVal(NULL)
     result_G1_KEGG <- reactiveVal(NULL)
+
     result_G2_CC <- reactiveVal(NULL)
     result_G2_BP <- reactiveVal(NULL)
     result_G2_MF <- reactiveVal(NULL)
