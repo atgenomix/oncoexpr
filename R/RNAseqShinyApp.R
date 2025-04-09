@@ -818,8 +818,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
 
-    geneListReactive <- reactive({
-      req(DEG_table(), maeColData(), wide_data(), input$run_DEG >= 0)
+    geneListReactive <- eventReactive(input$run_DEG, {
+      req(DEG_table(), maeColData(), wide_data())
       
       output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
