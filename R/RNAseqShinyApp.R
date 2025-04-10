@@ -242,7 +242,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
       showNotification("Waiting for initialization", type="message", duration = 10)
 
-            print("init")
+      print("init")
       selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
 
       #selected_db_name <- results$db_info$selected_db()
@@ -331,6 +331,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
+      shinyjs::disable("dbBrowser1")
       output$wide_table_dt <- DT::renderDataTable({
         data.frame()
       })
@@ -1056,6 +1057,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observe({
       req(result_G1_CC(), result_G1_BP(), result_G1_MF(), result_G2_CC(), result_G2_BP(), result_G2_MF(), result_G1_KEGG(), result_G2_KEGG())
             shinyjs::enable("run_DEG")
+            
     })
 
     observeEvent(geneListReactive(), {
