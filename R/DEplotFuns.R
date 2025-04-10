@@ -299,3 +299,84 @@ createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
     ) +
     theme_minimal()
 }
+
+#' @title PCAplot with arrow and cluster
+#' @description PCA plot for RNAseq expression
+#' @param pcaResult pca table
+#' @param colData gene symbol
+#' @param pcX x axis PC dimension
+#' @param pcY y axis PC dimension
+#' @return PCA plot
+#' @export
+
+createPCAPlot_withArrows <- function(pcaResult, colData, pcX, pcY) {
+  pcaData <- as.data.frame(pcaResult$x)
+  pcaData$Sample <- rownames(pcaData)
+  mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
+
+  centroids <- mergedData %>%
+    group_by(subCode) %>%
+    summarise(
+      cx = mean(.data[[pcX]]),
+      cy = mean(.data[[pcY]]),
+      .groups = "drop"
+    )
+
+  mergedData <- mergedData %>%
+    left_join(centroids, by = "subCode") %>%
+    mutate(
+      distToCenter = sqrt((.data[[pcX]] - cx)^2 + (.data[[pcY]] - cy)^2),
+      dx = .data[[pcX]] - cx,
+      dy = .data[[pcY]] - cy,
+      arrowRatio = 0.9,
+      xend = cx + dx * arrowRatio,
+      yend = cy + dy * arrowRatio
+    )
+
+  circleData <- mergedData %>%
+    group_by(subCode) %>%
+    summarise(
+      radius = max(distToCenter),
+      cx = first(cx), cy = first(cy),
+      .groups = "drop"
+    )
+
+  var_percent <- round(100 * pcaResult$sdev^2 / sum(pcaResult$sdev^2), 1)
+  names(var_percent) <- colnames(pcaResult$x)
+  xlab <- paste0(pcX, " (", var_percent[pcX], "%)")
+  ylab <- paste0(pcY, " (", var_percent[pcY], "%)")
+
+  ggplot(mergedData, aes(x = !!sym(pcX), y = !!sym(pcY), color = subCode)) +
+    # Group background circles
+    geom_circle(data = circleData,
+                aes(x0 = cx, y0 = cy, r = radius, fill = subCode),
+                inherit.aes = FALSE,
+                color = NA, alpha = 0.15) +
+
+    # Sample → center arrows
+    geom_segment(
+      aes(x = cx, y = cy, xend = xend, yend = yend),
+      linetype = "dashed",
+      arrow = arrow(length = unit(0.3, "cm"), type = "closed"),
+      size = 1.2
+    ) +
+
+    # Sample points with border
+    geom_point(shape = 21, size = 4, stroke = 1, fill = "white") +
+
+    # Labels (smart position)
+    ggrepel::geom_text_repel(aes(label = Sample),
+                             size = 3.5,
+                             max.overlaps = 50,
+                             box.padding = 0.3) +
+
+    # Group center
+    geom_point(data = centroids,
+               aes(x = cx, y = cy),
+               inherit.aes = FALSE,
+               shape = 4, size = 6, stroke = 2, color = "black") +
+
+    labs(title = "PCA: Group Structure with Arrows",
+         x = xlab, y = ylab, color = "Group", fill = "Group") +
+    theme_minimal(base_size = 14)
+}
