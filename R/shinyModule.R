@@ -498,31 +498,23 @@ pcaModuleUI <- function(id) {
 
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
-    # Compute PCA once and store the result
-    
     pcaResult <- reactive({
       df <- normCount
-      rownames(df) <- df$"GeneSymbol"
-      df <- df[,-1]
-      colnames(df) <- sub("\\.", "-", colnames(df))
+      rownames(df) <- df$GeneSymbol
+      df <- df[, -1]
       prcomp(t(df), scale. = TRUE)
     })
-    pcs <- reactive({
-      colnames(as.data.frame(pcaResult()$x))
-    })
 
-    # Update selectInput choices with available principal components
-    observeEvent(pcs(), {
-      updateSelectInput(session, "pcX", choices = pcs(), selected = pcs()[1])
-      updateSelectInput(session, "pcY", choices = pcs(), selected = pcs()[2])
+    observeEvent(pcaResult(), {
+      pcs <- colnames(pcaResult()$x)
+      updateSelectInput(session, "pcX", choices = pcs, selected = pcs[1])
+      updateSelectInput(session, "pcY", choices = pcs, selected = pcs[2])
     }, once = TRUE)
-    # Render the PCA plot using the precomputed PCA result
+
     output$pcaPlot <- renderPlot({
       req(input$pcX, input$pcY)
-      createPCAPlot(pcaResult(), colData, input$pcX, input$pcY)
-     
+      createPCAPlot_withArrows(pcaResult(), colData, input$pcX, input$pcY)
     })
-    outputOptions(output, "pcaPlot", suspendWhenHidden = FALSE)
   })
 }
 
