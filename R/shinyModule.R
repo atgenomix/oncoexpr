@@ -475,17 +475,16 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
 
 pcaModuleUI <- function(id) {
   ns <- NS(id)
-  tabPanel("PCA",
-    sidebarLayout(
-      sidebarPanel(
-        selectInput(ns("pcX"), "Select X-axis:", choices = NULL),
-        selectInput(ns("pcY"), "Select Y-axis:", choices = NULL)
-      ),
-      mainPanel(
-        plotOutput(ns("pcaPlot"))
-      )
-    )
-  )
+  tabPanel("PCA Arrows",
+           sidebarLayout(
+             sidebarPanel(
+               selectInput(ns("pcX"), "X-axis PC", choices = NULL),
+               selectInput(ns("pcY"), "Y-axis PC", choices = NULL)
+             ),
+             mainPanel(
+               plotOutput(ns("pcaPlot"))
+             )
+           ))
 }
 
 #' @title PCA plot Server
