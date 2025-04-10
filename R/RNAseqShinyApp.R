@@ -331,7 +331,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
-      shinyjs::disable("dbBrowser1")
+
       output$wide_table_dt <- DT::renderDataTable({
         data.frame()
       })
@@ -822,7 +822,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     geneListReactive <- eventReactive(input$run_DEG, {
       req(DEG_table(), maeColData(), wide_data())
-      
+      shinyjs::disable("dbBrowser1")
       output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
           grid::grid.text("No data available.")
@@ -1057,6 +1057,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observe({
       req(result_G1_CC(), result_G1_BP(), result_G1_MF(), result_G2_CC(), result_G2_BP(), result_G2_MF(), result_G1_KEGG(), result_G2_KEGG())
             shinyjs::enable("run_DEG")
+            shinyjs::enable("dbBrowser1")
             
     })
 
