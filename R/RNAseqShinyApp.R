@@ -311,7 +311,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         )
         
         all_p %...>% (function(res_list) {
-          shinyjs::enable("dbBrowser1")
+          shinyjs::enable("dbBrowser1-selected_db")
           showNotification("Initialization complete. Check list!", type="message", duration = 10)
         
           
@@ -715,7 +715,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observe({
       req(DEG_table(), wide_data(), maeColData())
-      shinyjs::enable("dbBrowser1")
+      shinyjs::enable("dbBrowser1-selected_db")
       assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
       if ("GeneSymbol" %in% colnames(wide_data())) {
         rownames(assay_data) <- wide_data()[, "GeneSymbol"]
@@ -1058,7 +1058,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observe({
       req(result_G1_CC(), result_G1_BP(), result_G1_MF(), result_G2_CC(), result_G2_BP(), result_G2_MF(), result_G1_KEGG(), result_G2_KEGG())
             shinyjs::enable("run_DEG")
-            shinyjs::enable("dbBrowser1")
+            shinyjs::enable("dbBrowser1-selected_db")
             
     })
 
