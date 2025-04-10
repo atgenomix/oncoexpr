@@ -879,21 +879,21 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     
         if (!is.null(ht)) {
           makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
+          outputOptions(output, "ht", suspendWhenHidden = FALSE)
         } else {
           output$ht_heatmap <- renderPlot({
             grid::grid.newpage()
             grid::grid.text("No data available.")
           })
         }
-        outputOptions(output, "ht", suspendWhenHidden = FALSE)
-
+      outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
       }) %...!% (function(e) {
     
         output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
           grid::grid.text(paste("An error occurred:", e$message))
         })
-        outputOptions(output, "ht", suspendWhenHidden = FALSE)
+      outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
       })
     })
 
