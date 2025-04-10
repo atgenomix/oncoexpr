@@ -331,7 +331,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
-
+      shinyjs::disable("dbBrowser1")
       output$wide_table_dt <- DT::renderDataTable({
         data.frame()
       })
@@ -423,6 +423,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
 
       req(normcount_tbls, exacttest_tbls, coldata_tbls)
+      
       # ---------------------------------------------
       # Stage 2: Launch data queries asynchronously
       # ---------------------------------------------
@@ -714,7 +715,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observe({
       req(DEG_table(), wide_data(), maeColData())
-
+      shinyjs::enable("dbBrowser1")
       assay_data <- as.matrix(wide_data()[, -which(colnames(wide_data()) == "GeneSymbol")])
       if ("GeneSymbol" %in% colnames(wide_data())) {
         rownames(assay_data) <- wide_data()[, "GeneSymbol"]
