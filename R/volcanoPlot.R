@@ -75,11 +75,11 @@ interactivePlotsUI <- function(id) {
         column(width = 4,
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px; margin-bottom: 10px;",
                    h4("Scatter Plot"),
-                   girafeOutput(ns("scatterPlot"), width = "100%", height = "300px")
+                   withSpinner(girafeOutput(ns("scatterPlot"), width = "100%", height = "300px"))
                ),
                div(style = "background-color: white; border: 2px solid #66CCCC; padding: 10px;",
                    h4("Violin Plot"),
-                   plotOutput(ns("geneViolinPlot"), width = "100%", height = "300px")
+                   withSpinner(plotOutput(ns("geneViolinPlot"), width = "100%", height = "300px"))
                )
         )
       )
@@ -166,8 +166,11 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params, selectedGe
              options = list(
                opts_zoom(max = 5),
                opts_selection(type = "single", only_shiny = FALSE)
+               
              ))
+      
     })
+    outputOptions(output, "volcanoPlot", suspendWhenHidden = FALSE)
     
     output$scatterPlot <- renderGirafe({
       scatterData_local <- exprData %>%
@@ -207,7 +210,8 @@ interactivePlotsServer <- function(id, volcanoData, exprData, params, selectedGe
                opts_selection(type = "single", only_shiny = FALSE)
              ))
     })
-    
+    outputOptions(output, "scatterPlot", suspendWhenHidden = FALSE)
+
     output$geneViolinPlot <- renderPlot({
       current_gene <- persistent_gene()
       if (is.null(current_gene) || current_gene == "") {
