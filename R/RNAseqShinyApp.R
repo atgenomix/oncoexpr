@@ -238,7 +238,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     observeEvent(sc, {
       req(sc)
       print("dbbrowser initialized")
-      shinyjs::disable("dbBrowser1")
+      shinyjs::disable("dbBrowser1-selected_db")
       results$db_info <- dbBrowserServer("dbBrowser1", sc)
       showNotification("Waiting for initialization", type="message", duration = 10)
 
@@ -316,7 +316,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         
           
         }) %...!% (function(e) {
-          shinyjs::enable("dbBrowser1")
+          shinyjs::enable("dbBrowser1-selected_db")
           #showNotification(paste("Error:", e$message), type="error")
           })
       
@@ -331,7 +331,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
-      shinyjs::disable("dbBrowser1")
+      shinyjs::disable("dbBrowser1-selected_db")
       output$wide_table_dt <- DT::renderDataTable({
         data.frame()
       })
@@ -823,7 +823,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     geneListReactive <- eventReactive(input$run_DEG, {
       req(DEG_table(), maeColData(), wide_data())
-      shinyjs::disable("dbBrowser1")
+      shinyjs::disable("dbBrowser1-selected_db")
       output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
           grid::grid.text("No data available.")
