@@ -475,16 +475,16 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
 
 pcaModuleUI <- function(id) {
   ns <- NS(id)
-  tabPanel("PCA Arrows",
+  tabPanel("PCA",
            sidebarLayout(
              sidebarPanel(
-               selectInput(ns("pcX"), "X-axis PC", choices = NULL),
-               selectInput(ns("pcY"), "Y-axis PC", choices = NULL)
+               checkboxInput(ns("toggleClustering"), "Enable Clustering", value = FALSE)
              ),
              mainPanel(
                plotOutput(ns("pcaPlot"))
              )
-           ))
+           )
+  )
 }
 
 #' @title PCA plot Server
@@ -497,35 +497,21 @@ pcaModuleUI <- function(id) {
 
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
-    # Compute PCA once and store the result
+    # 先將 normCount 的第一欄 GeneSymbol 設為 rownames，並移除此欄
+    rownames(normCount) <- normCount$"GeneSymbol"
+    normCount <- normCount[, -1]
+    # 若欄位中含有點號，轉換成破折號 (符合 colData 的樣本命名)
+    colnames(normCount) <- sub("\\.", "-", colnames(normCount))
     
-    pcaResult <- reactive({
-      df <- normCount
-      rownames(df) <- df$"GeneSymbol"
-      df <- df[,-1]
-      colnames(df) <- sub("\\.", "-", colnames(df))
-      prcomp(t(df), scale. = TRUE)
-    })
-    pcs <- reactive({
-      colnames(as.data.frame(pcaResult()$x))
-    })
-
-    # Update selectInput choices with available principal components
-    observeEvent(pcs(), {
-      updateSelectInput(session, "pcX", choices = pcs(), selected = pcs()[1])
-      updateSelectInput(session, "pcY", choices = pcs(), selected = pcs()[2])
-    }, once = TRUE)
-    # Render the PCA plot using the precomputed PCA result
+    # 計算 PCA (轉置後: samples x genes)
+    pcaResult <- prcomp(t(normCount), scale. = TRUE)
+    # Render PCA 圖
     output$pcaPlot <- renderPlot({
-      req(input$pcX, input$pcY)
-      #createPCAPlot(pcaResult(), colData, input$pcX, input$pcY)
-      createPCAPlot_withArrows(pcaResult(), colData, input$pcX, input$pcY)
-     
+      createPCAPlot(pcaResult, colData, enableClustering = input$toggleClustering)
     })
     outputOptions(output, "pcaPlot", suspendWhenHidden = FALSE)
   })
 }
-
 
 #' @title gseaeFCModuleUI
 #' @description GSEA module
