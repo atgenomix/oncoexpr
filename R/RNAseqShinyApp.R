@@ -258,8 +258,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
           query_normcount <- paste0("SELECT * FROM ", init_tbls[3])
           normcount_init <- DBI::dbGetQuery(sc_conn, query_normcount)
-
-          # normcount
         },
         globals = list(
           master = master, method = method, version = version, selected_db_name = selected_db_name
@@ -279,7 +277,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
           end_time <- Sys.time()
 
-          # exacttest
         },
         globals = list(
           master = master, method = method, version = version, selected_db_name = selected_db_name
@@ -297,7 +294,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
           query_coldata <- paste0("SELECT * FROM ", init_tbls[1])
           coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
-          # coldata
         },
         globals = list(
           master = master, method = method, version = version, selected_db_name = selected_db_name
@@ -324,9 +320,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     }, ignoreInit = FALSE)
     
-#    observeEvent(results$db_info$selected_db(), {
-#
-#    })
     progressMod <- progressPopupServer("popupProgress")
 
     observeEvent(results$db_info$selected_db(), {
@@ -351,11 +344,10 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
 
       withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
-        # ---- 0. Start ----
+
         t0 <- Sys.time()
         message(sprintf("[Stage1] Start at %s", t0))
 
-        # ---- 1. Query all tbls ----
         DBI::dbExecute(sc, paste0("USE ", selected_db_name))
         tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
         tbls <- tbl_list_query$tableName
@@ -366,7 +358,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         ))
         setProgress(value = 0.2, detail = sprintf("Fetched %d tables", length(tbls)))
 
-        # ---- 2. Prefix filtering ----
         prefix <- c("^normcounts|^exacttest|^coldata")
         tbl_list_query_prefix <- tbl_list_query[grepl(paste(prefix, collapse = "|"), tbls), ]
         t2 <- Sys.time()
@@ -376,7 +367,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         ))
         setProgress(value = 0.4, detail = sprintf("Prefix filter: %d tables", nrow(tbl_list_query_prefix)))
 
-        # ---- 3. time selection ----
         tbls_with_prefix <- tbl_list_query_prefix$tableName
         tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
         t3 <- Sys.time()
@@ -386,7 +376,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         ))
         setProgress(value = 0.6, detail = "Applied time filter")
 
-        # ---- 4. latest version ----
         if (any(tbls_with_time_filter$is_latest)) {
           sel_idx <- tbls_with_time_filter$is_latest
           message(sprintf("[Stage1] Latest tables found at %s", Sys.time()))
@@ -403,7 +392,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         ))
         setProgress(value = 0.8, detail = sprintf("Selected %d tables", nrow(tbl_list_query_prefix_time)))
 
-        # ---- 5. normcounts / exacttest / coldata ----
         tbls_final <- summary_table$file
         normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_final, ignore.case = TRUE), "tableName"]
         exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_final, ignore.case = TRUE), "tableName"]
@@ -413,44 +401,32 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           "[Stage1] Categorized tables at %s (%.2f sec)",
           t5, as.numeric(difftime(t5, t4, "secs"))
         ))
-        setProgress(value = 1, detail = "Stage 1 complete")
 
-        # ---- 最後：output to reactiveValues ----
+        setProgress(value = 1, detail = "Stage 1 complete")
         results$table_list <- tbl_list_query_prefix_time
-        # （後面可繼續啟動下一階段的非同步計算…）
+
       })
 
 
 
       req(normcount_tbls, exacttest_tbls, coldata_tbls)
       
-      # ---------------------------------------------
-      # Stage 2: Launch data queries asynchronously
-      # ---------------------------------------------
-      # 2.1 Normcount query
-
-
-
       t0_norm_launch <- Sys.time()
       message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
       normcount_promise <- future_promise(
         {
-          # Record start time
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying normcounts table", start_time))
 
-          # Connect, switch DB, and fetch
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
           query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
           normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
 
-          # Rename and drop unwanted column
           colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
           normcount <- normcount[, colnames(normcount) != "_c0"]
 
-          # Record end time and log duration
           end_time <- Sys.time()
           message(sprintf(
             "[%s] Completed normcounts query (Duration: %.2f seconds)",
@@ -466,8 +442,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         seed = TRUE
       )
 
-
-      # 2.2 Exacttest query
       t0_exact_launch <- Sys.time()
       message(sprintf("[Stage2-exacttest] Launch at %s", t0_exact_launch))
       exacttest_promise <- future_promise(
@@ -499,8 +473,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         seed = TRUE
       )
 
-
-      # 2.3 Coldata query or generate fallback
       t0_coldata_launch <- Sys.time()
       message(sprintf("[Stage2-coldata] Launch at %s", t0_coldata_launch))
       coldata_promise <- if (length(coldata_tbls) > 0) {
@@ -530,7 +502,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           seed = TRUE
         )
       } else {
-        # Fallback: generate coldata from normcount
+
         normcount_promise %...>% (function(normcount) {
           future_promise(
             {
@@ -552,9 +524,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       progressMod$addPromise(coldata_promise, label = "coldata")
       progressMod$addPromise(exacttest_promise, label = "exacttest")
 
-      # -------------------------------------------------
-      # Stage 3: Collect and post-process query results
-      # -------------------------------------------------
+
       withProgress(message = "Stage 3: Collecting and processing data", value = 0, {
         t0_collect <- Sys.time()
         message(sprintf("[Stage3] Collection start at %s", t0_collect))
@@ -564,19 +534,16 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           exacttest_data = exacttest_promise,
           coldata        = coldata_promise
         ) %...>% with({
-          # Log collection completion and duration
           t1_collect <- Sys.time()
           message(sprintf(
             "[Stage3] Collection completed at %s (Duration: %.2f seconds)",
             t1_collect, as.numeric(difftime(t1_collect, t0_collect, units = "secs"))
           ))
 
-          # Assign to reactiveValues
           results$normcount_data <- normcount_data
           results$exacttest_data <- exacttest_data
           results$coldata <- coldata
 
-          # Display heads for quick check
           message("=== normcount_data ===")
           print(head(results$normcount_data))
           message("=== exacttest_data ===")
@@ -584,25 +551,19 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           message("=== coldata ===")
           print(head(results$coldata))
 
-          # Advance progress bar
           setProgress(value = 1, detail = "Data collected")
         })
       })
 
-      # -------------------------------------------------
-      # Stage 4: Post-processing and rounding numeric data
-      # -------------------------------------------------
       withProgress(message = "Stage 4: Rounding numeric data", value = 0, {
         t0_round <- Sys.time()
         message(sprintf("[Stage4] Rounding start at %s", t0_round))
 
-        # Round numeric columns in normcount_data
         results$normcount_data <- as.data.frame(lapply(
           results$normcount_data,
           function(x) if (is.numeric(x)) round(x, 4) else x
         ))
 
-        # Round logFC and logCPM in exacttest_data
         results$exacttest_data$logFC <- if (is.numeric(results$exacttest_data$logFC)) round(results$exacttest_data$logFC, 4) else results$exacttest_data$logFC
         results$exacttest_data$logCPM <- if (is.numeric(results$exacttest_data$logCPM)) round(results$exacttest_data$logCPM, 4) else results$exacttest_data$logCPM
 
@@ -626,92 +587,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           options = list(pageLength = 20, autoWidth = TRUE)
         )
       })
-      # Log final process ID for reference
+
       message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
     })
-
-    # observeEvent(results$db_info$selected_db(), {
-    #   req(results$db_info$selected_db())
-    #   selected_db_name <- results$db_info$selected_db()
-
-    #   DBI::dbExecute(sc, paste0("USE ", selected_db_name))
-    #   tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
-    #   tbls <- tbl_list_query$tableName
-    #   print("====tbls====")
-    #   print(tbls)
-
-    #   prefix <- c("^normcounts|^exacttest|^coldata")
-
-    #   tbl_list_query_prefix <- tbl_list_query[grepl(prefix, tbls),]
-    #   print("====tbl_list_query_prefix====")
-    #   print(tbl_list_query_prefix)
-    #   tbls_with_prefix <- tbl_list_query_prefix$tableName
-    #   print("====tbls_with_prefix====")
-    #   print(tbls_with_prefix)
-
-    #   tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
-    #   print("====tbls_with_time_filter====")
-    #   print(tbls_with_time_filter)
-
-    #   if(sum(tbls_with_time_filter$is_latest)==0){
-    #     print("no latest table")
-    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==FALSE,]
-    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==FALSE, ]
-    #   } else {
-    #     print("latest table")
-    #     tbl_list_query_prefix_time <- tbl_list_query_prefix[tbls_with_time_filter$is_latest==TRUE,]
-    #     summary_table <- tbls_with_time_filter[tbls_with_time_filter$is_latest==TRUE,]
-    #   }
-
-    #   tbls_with_prefix_time <- summary_table$"file"
-    #   print("====tbls_with_prefix_time====")
-    #   print(tbls_with_prefix_time)
-    #   print("====summary_table====")
-    #   print(summary_table)
-    #   print("====tbl_list_query_prefix_time====")
-    #   print(tbl_list_query_prefix_time)
-    #   results$table_list <- tbl_list_query_prefix_time
-
-    #   normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-    #   exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-    #   coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_with_prefix_time, ignore.case = TRUE), "tableName"]
-    #   print("====normcount_tbls====")
-    #   print(normcount_tbls)
-    #   print("====exacttest_tbls====")
-    #   print(exacttest_tbls)
-    #   print("====coldata_tbls====")
-    #   print(coldata_tbls)
-
-    #   if (length(normcount_tbls) > 0) {
-    #     query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-    #     results$normcount_data <- DBI::dbGetQuery(sc, query_normcount)
-    #   }
-
-    #   if (length(exacttest_tbls) > 0) {
-    #     query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-    #     results$exacttest_data <- DBI::dbGetQuery(sc, query_exacttest)
-    #   }
-
-    #   if (length(coldata_tbls) > 0) {
-    #     query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-    #     results$coldata <- DBI::dbGetQuery(sc, query_coldata)
-    #   } else {
-    #     colData <- generate_colData_random(results$normcount_data, genecol = "GeneSymbol")
-    #     results$coldata <- colData
-    #   }
-    #   colnames(results$exacttest_data)[colnames(results$exacttest_data) == "genes"] <- "GeneSymbol"
-    #   colnames(results$normcount_data)[colnames(results$normcount_data) == "genes"] <- "GeneSymbol"
-    #   results$normcount_data <- results$normcount_data[,colnames(results$normcount_data)!="_c0"]
-    #   results$exacttest_data <- results$exacttest_data[,colnames(results$exacttest_data)!="_c0"]
-    # })
-
-    # output$normcount_table <- DT::renderDataTable({
-    #   req(results$normcount_data)
-    #   DT::datatable(results$normcount_data)
-    # })
-
-
-
 
     observe({
       req(DEG_table(), wide_data(), maeColData())
@@ -772,7 +650,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     downGeneList <- reactiveVal(NULL)
 
     observe({
-      #有資料就自動帶入，生成DEG list，無視run deg btn與否。
       req(DEG_table(), maeColData(), wide_data())
       params <- reactive({
         list(
@@ -848,25 +725,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(topGeneList(), downGeneList())
       shinyjs::disable("run_DEG")
     })
-
-    # observeEvent(geneListReactive(), {
-    #   req(geneListReactive(), settingMAE())
-    #   mae <- settingMAE()
-
-    #   geneListVec <- unlist(strsplit(geneListReactive(), ","))
-    #   geneListVec <- trimws(geneListVec)
-    #   ht <- make_heatmap_mae(mae, geneListVec)
-
-    #   if (!is.null(ht)) {
-    #     makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
-
-    #   } else {
-    #     output$ht_heatmap <- renderPlot({
-    #       grid::grid.newpage()
-    #       grid::grid.text("No data available.")
-    #     })
-    #   }
-    # })
 
     observeEvent(geneListReactive(), {
       req(geneListReactive(), settingMAE())
