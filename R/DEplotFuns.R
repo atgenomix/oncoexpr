@@ -299,3 +299,73 @@ createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
     ) +
     theme_minimal()
 }
+
+#' @title PCAplot with distance and cluster labeling
+#' @description PCA plot for RNAseq expression
+#' @param pcaResult pca table
+#' @param colData gene symbol
+#' @param enableClustering set clustering or not
+#' @param centers centers number (default = 2)
+#' @return PCA plot
+#' @export
+createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers = 2) {
+  # 取得 PCA 之後的各樣本分數，並加入樣本名稱
+  pcaData <- as.data.frame(pcaResult$x)
+  pcaData$Sample <- rownames(pcaData)
+  
+  # 計算 PC1 與 PC2 的解釋變異比例
+  explained <- summary(pcaResult)$importance["Proportion of Variance", ]
+  xlab <- paste0("PC1 (", round(explained["PC1"] * 100, 1), "%)")
+  ylab <- paste0("PC2 (", round(explained["PC2"] * 100, 1), "%)")
+  # 先計算所有數據點的範圍，以便兩種模式使用相同的座標系統
+  x_range <- range(pcaData$PC1)
+  y_range <- range(pcaData$PC2)
+  # 添加一些邊距空間，確保標籤有足夠顯示空間
+  x_padding <- 0.15 * diff(x_range)
+  y_padding <- 0.15 * diff(y_range)
+  x_lim <- c(x_range[1] - x_padding, x_range[2] + x_padding)
+  y_lim <- c(y_range[1] - y_padding, y_range[2] + y_padding)
+
+  if (enableClustering) {
+    # 使用 PC1 與 PC2 做分群
+    clusterData <- pcaData[, c("PC1", "PC2")]
+    set.seed(123)
+    km.res <- kmeans(clusterData, centers = centers, nstart = 25)
+    
+    plot <- fviz_cluster(km.res,
+                        data = clusterData,
+                        stand = FALSE,
+                        ellipse.type = "norm",    # 常態分佈橢圓
+                        star.plot = TRUE,         # 畫出從中心到點的連線
+                        repel = TRUE,             # 避免標籤重疊
+                        geom = "point",           # 使用點標示
+                        show.clust.cent = TRUE,
+                        labelsize = 4,
+                        ggtheme = theme_minimal()
+    )
+    
+    # 確保fviz_cluster的圖使用相同的坐標軸範圍
+    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "PCA Plot (Original Groups)",
+          x = xlab,
+          y = ylab,
+          color = "Group")
+    
+  } else {
+    # 將 PCA 結果與 colData 合併，以原始分組上色
+    mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
+    
+    plot <- ggplot(mergedData, aes(x = PC1, y = PC2, label = Sample, color = subCode)) +
+      # 使用相同的坐標軸範圍
+      coord_cartesian(xlim = x_lim, ylim = y_lim) +
+      geom_point(size = 3) +
+      # 使用ggrepel代替直接的geom_text，避免標籤重疊
+      ggrepel::geom_text_repel(size = 4, max.overlaps = 200) +
+      labs(title = "PCA Plot (Original Groups)",
+          x = xlab,
+          y = ylab,
+          color = "Group") +
+      theme_minimal()
+  }
+  
+  return(plot)
+}
