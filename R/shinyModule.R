@@ -497,15 +497,10 @@ pcaModuleUI <- function(id) {
 
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
-    # 先將 normCount 的第一欄 GeneSymbol 設為 rownames，並移除此欄
     rownames(normCount) <- normCount$"GeneSymbol"
     normCount <- normCount[, -1]
-    # 若欄位中含有點號，轉換成破折號 (符合 colData 的樣本命名)
-    colnames(normCount) <- sub("\\.", "-", colnames(normCount))
-    
-    # 計算 PCA (轉置後: samples x genes)
+    #colnames(normCount) <- gsub("\\.", "-", colnames(normCount))
     pcaResult <- prcomp(t(normCount), scale. = TRUE)
-    # Render PCA 圖
     output$pcaPlot <- renderPlot({
       createPCAPlot(pcaResult, colData, enableClustering = input$toggleClustering)
     })
