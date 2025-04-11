@@ -4,12 +4,18 @@
 \alias{createPCAPlot}
 \title{PCAplot}
 \usage{
-createPCAPlot(pcaResult, colData, pcX, pcY)
+createPCAPlot(pcaResult, colData, enableClustering = FALSE, centers = 2)
+
+createPCAPlot(pcaResult, colData, enableClustering = FALSE, centers = 2)
 }
 \arguments{
 \item{pcaResult}{pca table}
 
 \item{colData}{gene symbol}
+
+\item{enableClustering}{set clustering or not}
+
+\item{centers}{centers number (default = 2)}
 
 \item{pcX}{x axis PC dimension}
 
@@ -17,7 +23,11 @@ createPCAPlot(pcaResult, colData, pcX, pcY)
 }
 \value{
 PCA plot
+
+PCA plot
 }
 \description{
+PCA plot for RNAseq expression
+
 PCA plot for RNAseq expression
 }

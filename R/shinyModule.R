@@ -475,16 +475,15 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
 
 pcaModuleUI <- function(id) {
   ns <- NS(id)
-  tabPanel("PCA",
-    sidebarLayout(
-      sidebarPanel(
-        selectInput(ns("pcX"), "Select X-axis:", choices = NULL),
-        selectInput(ns("pcY"), "Select Y-axis:", choices = NULL)
-      ),
-      mainPanel(
-        plotOutput(ns("pcaPlot"))
-      )
-    )
+  tabPanel("Principal Component Analysis",
+           sidebarLayout(
+             sidebarPanel(
+               checkboxInput(ns("toggleClustering"), "Enable Clustering", value = FALSE)
+             ),
+             mainPanel(
+               plotOutput(ns("pcaPlot"))
+             )
+           )
   )
 }
 
@@ -498,34 +497,16 @@ pcaModuleUI <- function(id) {
 
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
-    # Compute PCA once and store the result
-    
-    pcaResult <- reactive({
-      df <- normCount
-      rownames(df) <- df$"GeneSymbol"
-      df <- df[,-1]
-      colnames(df) <- sub("\\.", "-", colnames(df))
-      prcomp(t(df), scale. = TRUE)
-    })
-    pcs <- reactive({
-      colnames(as.data.frame(pcaResult()$x))
-    })
-
-    # Update selectInput choices with available principal components
-    observeEvent(pcs(), {
-      updateSelectInput(session, "pcX", choices = pcs(), selected = pcs()[1])
-      updateSelectInput(session, "pcY", choices = pcs(), selected = pcs()[2])
-    }, once = TRUE)
-    # Render the PCA plot using the precomputed PCA result
+    rownames(normCount) <- normCount$"GeneSymbol"
+    normCount <- normCount[, -1]
+    #colnames(normCount) <- gsub("\\.", "-", colnames(normCount))
+    pcaResult <- prcomp(t(normCount), scale. = TRUE)
     output$pcaPlot <- renderPlot({
-      req(input$pcX, input$pcY)
-      createPCAPlot(pcaResult(), colData, input$pcX, input$pcY)
-     
+      createPCAPlot(pcaResult, colData, enableClustering = input$toggleClustering)
     })
     outputOptions(output, "pcaPlot", suspendWhenHidden = FALSE)
   })
 }
-
 
 #' @title gseaeFCModuleUI
 #' @description GSEA module
