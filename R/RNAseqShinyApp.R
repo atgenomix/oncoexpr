@@ -107,7 +107,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         )
       ),
       tabPanel(
-        title = "PCA",
+        title = "Principal Component Analysis",
         mainPanel(
           width = 12,
           pcaModuleUI("pca1")
