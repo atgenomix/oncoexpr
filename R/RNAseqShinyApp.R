@@ -257,14 +257,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           org <- tolower(Sys.getenv("SPARK_USER"))
           print(org)
           c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+          print(c)
           db_list <- dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-          print(db_list)
+          print(db_list[["namespace"]][1])
           on.exit(sparklyr::spark_disconnect(sc_conn))
-          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[1]))
+          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
           init_tbls <- show_init_tbls$tableName
-          DBI::dbExecute(sc_conn, paste0("USE ", db_list[1]))
+          DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
+          print(init_tbls[3])
           query_normcount <- paste0("SELECT * FROM ", init_tbls[3])
           normcount_init <- DBI::dbGetQuery(sc_conn, query_normcount)
+          print(1)
         },
         globals = list(
           master = master, method = method, version = version
@@ -274,20 +277,21 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       b_ <- future_promise(
         {
+
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           org <- tolower(Sys.getenv("SPARK_USER"))
           print(org)
           c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
           db_list <- dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-          print(db_list)
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          print(db_list[["namespace"]][1])
           on.exit(sparklyr::spark_disconnect(sc_conn))
-          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[1]))
+          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
           init_tbls <- show_init_tbls$tableName
-          DBI::dbExecute(sc_conn, paste0("USE ", db_list[1]))
-          query_exacttest <- paste0("SELECT * FROM ", init_tbls[2])
+          DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
+          print(init_tbls[2])
+          query_exacttest <- paste0("SELECT * FROM ", init_tbls[2])          
           exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-
+          print(2)
           end_time <- Sys.time()
 
         },
@@ -300,19 +304,20 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       c_ <- future_promise(
         {
+          print(3)
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           org <- tolower(Sys.getenv("SPARK_USER"))
-          print(org)
           c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
           db_list <- dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-          print(db_list)
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          print(db_list[["namespace"]][1])
           on.exit(sparklyr::spark_disconnect(sc_conn))
-          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[1]))
+          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
           init_tbls <- show_init_tbls$tableName
-          DBI::dbExecute(sc_conn, paste0("USE ", db_list[1]))
+          DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
+          print(init_tbls[1])
           query_coldata <- paste0("SELECT * FROM ", init_tbls[1])
           coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+          
         },
         globals = list(
           master = master, method = method, version = version
