@@ -475,7 +475,7 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
 
 pcaModuleUI <- function(id) {
   ns <- NS(id)
-  tabPanel("PCA",
+  tabPanel("Principal Component Analysis",
            sidebarLayout(
              sidebarPanel(
                checkboxInput(ns("toggleClustering"), "Enable Clustering", value = FALSE)
