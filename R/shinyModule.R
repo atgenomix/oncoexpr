@@ -398,8 +398,6 @@ dbBrowserServer <- function(id, sc) {
     observe({
       org <- tolower(Sys.getenv("SPARK_USER"))
       c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-      print("c")
-      print(c)
       db_list <- dbGetQuery(sc, sprintf("SHOW DATABASES %s", c))
       print("db_list")
       updateSelectInput(
