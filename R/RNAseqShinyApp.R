@@ -32,6 +32,9 @@
 #' @import purrr
 #' @import shinycssloaders
 #' @import shinyjs
+#' @import factoextra
+#' @import ggforce
+#' @import ggrepel
 #' @importFrom ggpubr color_palette
 #' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
