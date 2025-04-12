@@ -256,9 +256,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           org <- tolower(Sys.getenv("SPARK_USER"))
           print(org)
-          c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+          c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
           print(c)
-          db_list <- dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
+          db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
           print(db_list[["namespace"]][1])
           on.exit(sparklyr::spark_disconnect(sc_conn))
           show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
@@ -281,8 +281,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           org <- tolower(Sys.getenv("SPARK_USER"))
           print(org)
-          c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-          db_list <- dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
+          c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+          db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
           print(db_list[["namespace"]][1])
           on.exit(sparklyr::spark_disconnect(sc_conn))
           show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
@@ -307,8 +307,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           print(3)
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           org <- tolower(Sys.getenv("SPARK_USER"))
-          c <- ifelse(str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-          db_list <- dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
+          c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+          db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
           print(db_list[["namespace"]][1])
           on.exit(sparklyr::spark_disconnect(sc_conn))
           show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
@@ -337,7 +337,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           
         }) %...!% (function(e) {
           shinyjs::enable("dbBrowser1-selected_db")
-          #showNotification(paste("Error:", e$message), type="error")
+          showNotification(paste("Error:", e$message), type="error")
           })
       
 
