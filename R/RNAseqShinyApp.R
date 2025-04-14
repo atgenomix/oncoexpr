@@ -598,12 +598,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     })
 
     observe({
-      req(results$coldata, results$normcount_data, results$exacttest_data)
       deg_table_round <- DEG_table()
+      req(deg_table_round)
       deg_table_round$logFC <- if (is.numeric(deg_table_round$logFC)) round(deg_table_round$logFC, 5) else deg_table_round$logFC
       deg_table_round$logCPM <- if (is.numeric(deg_table_round$logCPM)) round(deg_table_round$logCPM, 5) else deg_table_round$logCPM
-      deg_table_round$PValue <- formatC(is.numeric(deg_table_round$PValue), format="e", digits = 5)
-      
+      deg_table_round$PValue <- formatC(deg_table_round$PValue, format="e", digits = 5)
+      deg_table_round$FDR <- formatC(deg_table_round$FDR, format="e", digits = 5)
+
       output$DEG_table <- renderDT(
         {
           datatable(
