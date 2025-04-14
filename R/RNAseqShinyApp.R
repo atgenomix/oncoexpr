@@ -579,37 +579,45 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
       })
 
+
       withProgress(message = "Stage 4: Rounding numeric data", value = 0, {
-        t0_round <- Sys.time()
-        message(sprintf("[Stage4] Rounding start at %s", t0_round))
+          t0_round <- Sys.time()
+          message(sprintf("[Stage4] Rounding start at %s", t0_round))
 
-        results$normcount_data <- as.data.frame(lapply(
-          results$normcount_data,
-          function(x) if (is.numeric(x)) round(x, 4) else x
-        ))
 
-        results$exacttest_data$logFC <- if (is.numeric(results$exacttest_data$logFC)) round(results$exacttest_data$logFC, 4) else results$exacttest_data$logFC
-        results$exacttest_data$logCPM <- if (is.numeric(results$exacttest_data$logCPM)) round(results$exacttest_data$logCPM, 4) else results$exacttest_data$logCPM
 
-        t1_round <- Sys.time()
-        message(sprintf(
-          "[Stage4] Rounding completed at %s (Duration: %.2f seconds)",
-          t1_round, as.numeric(difftime(t1_round, t0_round, units = "secs"))
-        ))
+          t1_round <- Sys.time()
+          message(sprintf(
+            "[Stage4] Rounding completed at %s (Duration: %.2f seconds)",
+            t1_round, as.numeric(difftime(t1_round, t0_round, units = "secs"))
+          ))
 
-        setProgress(value = 1, detail = "Rounding complete")
+          setProgress(value = 1, detail = "Rounding complete")
       })
 
 
       wide_data(NULL)
       DEG_table(NULL)
+
+      observe({
+          req(results$exacttest_data, results$normcount_data, results$coldata)
+          DEG_table(results$exacttest_data)
+          wide_data(results$normcount_data)
+          maeColData(results$coldata)
+          message("assign reactiveVal: DEG_table, wide_data, maeColData")
+      })
       output$wide_table_dt <- DT::renderDataTable({
-        req(wide_data())
-        print("send wide data to UI")
-        DT::datatable(
-          wide_data(),
-          options = list(pageLength = 20, autoWidth = TRUE)
-        )
+          req(wide_data())
+          normCount_round <- as.data.frame(lapply(
+            wide_data(),
+            function(x) if (is.numeric(x)) round(x, 4) else x
+          ))
+
+          print("send wide data to UI")
+          DT::datatable(
+            normCount_round,
+            options = list(pageLength = 20, autoWidth = TRUE)
+          )
       })
 
       message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
@@ -659,10 +667,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observe({
       req(results$coldata, results$normcount_data, results$exacttest_data)
+      deg_table_round <- DEG_table()
+      deg_table_round$logFC <- if (is.numeric(deg_table_round$logFC)) round(deg_table_round$logFC, 5) else deg_table_round$logFC
+      deg_table_round$logCPM <- if (is.numeric(deg_table_round$logCPM)) round(deg_table_round$logCPM, 5) else deg_table_round$logCPM
+
       output$DEG_table <- renderDT(
         {
           datatable(
-            DEG_table(),
+            deg_table_round,
             options = list(pageLength = 20, autoWidth = TRUE)
           )
         },
@@ -709,18 +721,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
       interactivePlotsServer("volcano_plots", volcanoData = volcanoData, exprData = exprData, params = params, selectedGene = selected_gene)
     })
-    
-
-
-    observe({
-      req(results$exacttest_data, results$normcount_data, results$coldata)
-      DEG_table(results$exacttest_data)
-      wide_data(results$normcount_data)
-      maeColData(results$coldata)
-      message("assign reactiveVal: DEG_table, wide_data, maeColData")
-    })
-
-
 
     geneListReactive <- eventReactive(input$run_DEG, {
       req(DEG_table(), maeColData(), wide_data())
