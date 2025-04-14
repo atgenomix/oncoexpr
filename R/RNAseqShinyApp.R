@@ -596,13 +596,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
     })
-    
+
     observe({
       req(results$coldata, results$normcount_data, results$exacttest_data)
       deg_table_round <- DEG_table()
       deg_table_round$logFC <- if (is.numeric(deg_table_round$logFC)) round(deg_table_round$logFC, 5) else deg_table_round$logFC
       deg_table_round$logCPM <- if (is.numeric(deg_table_round$logCPM)) round(deg_table_round$logCPM, 5) else deg_table_round$logCPM
-
+      deg_table_round$PValue <- formatC(is.numeric(deg_table_round$PValue), format="e", digits = 5)
+      
       output$DEG_table <- renderDT(
         {
           datatable(
