@@ -266,39 +266,39 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
   return(p)
 }
 
-#' @title PCAplot
-#' @description PCA plot for RNAseq expression
-#' @param pcaResult pca table
-#' @param colData gene symbol
-#' @param pcX x axis PC dimension
-#' @param pcY y axis PC dimension
-#' @return PCA plot
-#' @export
-#'
-createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
-  # Convert PCA results to data frame
-  pcaData <- as.data.frame(pcaResult$x)
-  pcaData$Sample <- rownames(pcaData)
+# #' @title PCAplot
+# #' @description PCA plot for RNAseq expression
+# #' @param pcaResult pca table
+# #' @param colData gene symbol
+# #' @param pcX x axis PC dimension
+# #' @param pcY y axis PC dimension
+# #' @return PCA plot
+# #' @export
+# #'
+# createPCAPlot <- function(pcaResult, colData, pcX, pcY) {
+#   # Convert PCA results to data frame
+#   pcaData <- as.data.frame(pcaResult$x)
+#   pcaData$Sample <- rownames(pcaData)
 
-  # Standardize sample names by replacing dots with dashes
-  #pcaData$Sample <- gsub("\\.", "-", pcaData$Sample)
+#   # Standardize sample names by replacing dots with dashes
+#   #pcaData$Sample <- gsub("\\.", "-", pcaData$Sample)
 
-  # Merge PCA results with colData based on sample IDs
-  mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
-  missing <- mergedData[is.na(mergedData$subCode), "Sample"]
-  if (length(missing) > 0) {
-    message("Missing group annotation for samples: ", paste(missing, collapse = ", "))
-  }
-  # Create the PCA plot with ggplot2, mapping color to the group (subCode)
-  ggplot(mergedData, aes_string(x = pcX, y = pcY, label = "Sample", color = "subCode")) +
-    geom_point(size = 3) +
-    geom_text(vjust = -0.5) +
-    labs(
-      title = paste("PCA Plot:", pcX, "vs", pcY),
-      x = pcX, y = pcY, color = "Group"
-    ) +
-    theme_minimal()
-}
+#   # Merge PCA results with colData based on sample IDs
+#   mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
+#   missing <- mergedData[is.na(mergedData$subCode), "Sample"]
+#   if (length(missing) > 0) {
+#     message("Missing group annotation for samples: ", paste(missing, collapse = ", "))
+#   }
+#   # Create the PCA plot with ggplot2, mapping color to the group (subCode)
+#   ggplot(mergedData, aes_string(x = pcX, y = pcY, label = "Sample", color = "subCode")) +
+#     geom_point(size = 3) +
+#     geom_text(vjust = -0.5) +
+#     labs(
+#       title = paste("PCA Plot:", pcX, "vs", pcY),
+#       x = pcX, y = pcY, color = "Group"
+#     ) +
+#     theme_minimal()
+# }
 
 #' @title PCAplot with distance and cluster labeling
 #' @description PCA plot for RNAseq expression
@@ -342,7 +342,7 @@ createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers 
                         ggtheme = theme_minimal()
     )
     
-    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "PCA Plot (Original Groups)",
+    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "PCA Plot (Clustering)",
           x = xlab,
           y = ylab,
           color = "Group")

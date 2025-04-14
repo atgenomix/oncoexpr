@@ -478,10 +478,15 @@ pcaModuleUI <- function(id) {
   tabPanel("Principal Component Analysis",
            sidebarLayout(
              sidebarPanel(
-               checkboxInput(ns("toggleClustering"), "Enable Clustering", value = FALSE)
+                helpText("left： original group；right： clustering")
+               #checkboxInput(ns("toggleClustering"), "Enable Clustering", value = FALSE)
              ),
              mainPanel(
-               plotOutput(ns("pcaPlot"))
+                fluidRow(
+                 column(6, plotOutput(ns("pcaPlotOriginal"))),
+                 column(6, plotOutput(ns("pcaPlotClustering")))
+               )
+               #plotOutput(ns("pcaPlot"))
              )
            )
   )
@@ -501,10 +506,20 @@ pcaModuleServer <- function(id, normCount, colData) {
     normCount <- normCount[, -1]
     #colnames(normCount) <- gsub("\\.", "-", colnames(normCount))
     pcaResult <- prcomp(t(normCount), scale. = TRUE)
-    output$pcaPlot <- renderPlot({
-      createPCAPlot(pcaResult, colData, enableClustering = input$toggleClustering)
+
+    output$pcaPlotOriginal <- renderPlot({
+      createPCAPlot(pcaResult, colData, enableClustering = FALSE)
     })
-    outputOptions(output, "pcaPlot", suspendWhenHidden = FALSE)
+    
+    # Render 分群結果圖 (enableClustering = TRUE)
+    output$pcaPlotClustering <- renderPlot({
+      createPCAPlot(pcaResult, colData, enableClustering = TRUE)
+    })
+    
+    # 設定圖形輸出不因面板隱藏而暫停
+    outputOptions(output, "pcaPlotOriginal", suspendWhenHidden = FALSE)
+    outputOptions(output, "pcaPlotClustering", suspendWhenHidden = FALSE)
+
   })
 }
 
