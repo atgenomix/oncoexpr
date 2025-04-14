@@ -579,23 +579,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
       })
 
-
-      withProgress(message = "Stage 4: Rounding numeric data", value = 0, {
-          t0_round <- Sys.time()
-          message(sprintf("[Stage4] Rounding start at %s", t0_round))
-
-
-
-          t1_round <- Sys.time()
-          message(sprintf(
-            "[Stage4] Rounding completed at %s (Duration: %.2f seconds)",
-            t1_round, as.numeric(difftime(t1_round, t0_round, units = "secs"))
-          ))
-
-          setProgress(value = 1, detail = "Rounding complete")
-      })
-
-
       wide_data(NULL)
       DEG_table(NULL)
 
