@@ -476,13 +476,10 @@ mod_geneSelector_server <- function(id, deg_table, geneList) {
 pcaModuleUI <- function(id) {
   ns <- NS(id)
   tabPanel("Principal Component Analysis",
-           sidebarLayout(
-             mainPanel(
-                fluidRow(
-                 column(6, plotOutput(ns("pcaPlotOriginal"))),
-                 column(6, plotOutput(ns("pcaPlotClustering")))
-               )
-               #plotOutput(ns("pcaPlot"))
+           fluidPage(
+             fluidRow(
+               column(6, plotOutput(ns("pcaPlotOriginal"))),
+               column(6, plotOutput(ns("pcaPlotClustering")))
              )
            )
   )
