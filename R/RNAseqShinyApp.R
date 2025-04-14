@@ -239,111 +239,105 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
-    observeEvent(sc, {
-      req(sc)
-      print("dbbrowser initialized")
-      shinyjs::disable("dbBrowser1-selected_db")
-      results$db_info <- dbBrowserServer("dbBrowser1", sc)
-      showNotification("Waiting for initialization", type="message", duration = 10)
+    observeEvent(sc,
+      {
+        req(sc)
+        print("dbbrowser initialized")
+        shinyjs::disable("dbBrowser1-selected_db")
+        results$db_info <- dbBrowserServer("dbBrowser1", sc)
+        showNotification("Waiting for initialization", type = "message", duration = 10)
 
-      print("init")
-      #selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
-      #selected_db_name <- results$db_info$selected_db()
-      #selected_db_name <- "0408_b202406002_tvsnt_org_hhtwxpybru3ligh"
-      a_ <- future_promise(
-        {
+        print("init")
+        # selected_db_name <- "0325_b202406002_25vs25_cus_ejajocvzumxvupd"
+        # selected_db_name <- results$db_info$selected_db()
+        # selected_db_name <- "0408_b202406002_tvsnt_org_hhtwxpybru3ligh"
+        a_ <- future_promise(
+          {
+            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            org <- tolower(Sys.getenv("SPARK_USER"))
+            print(org)
+            c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+            print(c)
+            db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
+            print(db_list[["namespace"]][1])
+            on.exit(sparklyr::spark_disconnect(sc_conn))
+            show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
+            init_tbls <- show_init_tbls$tableName
+            DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
+            print(init_tbls[3])
+            query_normcount <- paste0("SELECT * FROM ", init_tbls[3])
+            normcount_init <- DBI::dbGetQuery(sc_conn, query_normcount)
+            print(1)
+          },
+          globals = list(
+            master = master, method = method, version = version
+          ),
+          seed = TRUE
+        )
 
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-          org <- tolower(Sys.getenv("SPARK_USER"))
-          print(org)
-          c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-          print(c)
-          db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-          print(db_list[["namespace"]][1])
-          on.exit(sparklyr::spark_disconnect(sc_conn))
-          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
-          init_tbls <- show_init_tbls$tableName
-          DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
-          print(init_tbls[3])
-          query_normcount <- paste0("SELECT * FROM ", init_tbls[3])
-          normcount_init <- DBI::dbGetQuery(sc_conn, query_normcount)
-          print(1)
-        },
-        globals = list(
-          master = master, method = method, version = version
-        ),
-        seed = TRUE
-      )
-
-      b_ <- future_promise(
-        {
-
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-          org <- tolower(Sys.getenv("SPARK_USER"))
-          print(org)
-          c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-          db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-          print(db_list[["namespace"]][1])
-          on.exit(sparklyr::spark_disconnect(sc_conn))
-          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
-          init_tbls <- show_init_tbls$tableName
-          DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
-          print(init_tbls[2])
-          query_exacttest <- paste0("SELECT * FROM ", init_tbls[2])          
-          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-          print(2)
-          end_time <- Sys.time()
-
-        },
-        globals = list(
-          master = master, method = method, version = version
-        ),
-        seed = TRUE
-      )
+        b_ <- future_promise(
+          {
+            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            org <- tolower(Sys.getenv("SPARK_USER"))
+            print(org)
+            c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+            db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
+            print(db_list[["namespace"]][1])
+            on.exit(sparklyr::spark_disconnect(sc_conn))
+            show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
+            init_tbls <- show_init_tbls$tableName
+            DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
+            print(init_tbls[2])
+            query_exacttest <- paste0("SELECT * FROM ", init_tbls[2])
+            exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+            print(2)
+            end_time <- Sys.time()
+          },
+          globals = list(
+            master = master, method = method, version = version
+          ),
+          seed = TRUE
+        )
 
 
-      c_ <- future_promise(
-        {
-          print(3)
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-          org <- tolower(Sys.getenv("SPARK_USER"))
-          c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-          db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-          print(db_list[["namespace"]][1])
-          on.exit(sparklyr::spark_disconnect(sc_conn))
-          show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
-          init_tbls <- show_init_tbls$tableName
-          DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
-          print(init_tbls[1])
-          query_coldata <- paste0("SELECT * FROM ", init_tbls[1])
-          coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
-          
-        },
-        globals = list(
-          master = master, method = method, version = version
-        ),
-        seed = TRUE
-      )
-       all_p <- promises::promise_all(
+        c_ <- future_promise(
+          {
+            print(3)
+            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            org <- tolower(Sys.getenv("SPARK_USER"))
+            c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
+            db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
+            print(db_list[["namespace"]][1])
+            on.exit(sparklyr::spark_disconnect(sc_conn))
+            show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
+            init_tbls <- show_init_tbls$tableName
+            DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
+            print(init_tbls[1])
+            query_coldata <- paste0("SELECT * FROM ", init_tbls[1])
+            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+          },
+          globals = list(
+            master = master, method = method, version = version
+          ),
+          seed = TRUE
+        )
+        all_p <- promises::promise_all(
           norm = a_,
           ex   = b_,
           col  = c_
         )
-        
+
         all_p %...>% (function(res_list) {
           shinyjs::enable("dbBrowser1-selected_db")
-          showNotification("Initialization complete. Check list!", type="message", duration = 10)
-        
-          
+          showNotification("Initialization complete. Check list!", type = "message", duration = 10)
         }) %...!% (function(e) {
           shinyjs::enable("dbBrowser1-selected_db")
-          showNotification(paste("Error:", e$message), type="error")
-          })
-      
+          showNotification(paste("Error:", e$message), type = "error")
+        })
+      },
+      ignoreInit = FALSE
+    )
 
-
-    }, ignoreInit = FALSE)
-    
     progressMod <- progressPopupServer("popupProgress")
 
     observeEvent(results$db_info$selected_db(), {
@@ -360,15 +354,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       results$normcount_data <- NULL
       results$coldata <- NULL
       output$ht_heatmap <- renderPlot({
-          grid::grid.newpage()
-          grid::grid.text("No data available.")
+        grid::grid.newpage()
+        grid::grid.text("No data available.")
       })
 
       selected_db_name <- results$db_info$selected_db()
       message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
 
       withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
-
         t0 <- Sys.time()
         message(sprintf("[Stage1] Start at %s", t0))
 
@@ -428,13 +421,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         setProgress(value = 1, detail = "Stage 1 complete")
         results$table_list <- tbl_list_query_prefix_time
-
       })
 
 
 
       req(normcount_tbls, exacttest_tbls, coldata_tbls)
-      
+
       t0_norm_launch <- Sys.time()
       message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
       normcount_promise <- future_promise(
@@ -526,7 +518,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           seed = TRUE
         )
       } else {
-
         normcount_promise %...>% (function(normcount) {
           future_promise(
             {
@@ -583,27 +574,44 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       DEG_table(NULL)
 
       observe({
-          req(results$exacttest_data, results$normcount_data, results$coldata)
-          DEG_table(results$exacttest_data)
-          wide_data(results$normcount_data)
-          maeColData(results$coldata)
-          message("assign reactiveVal: DEG_table, wide_data, maeColData")
+        req(results$exacttest_data, results$normcount_data, results$coldata)
+        DEG_table(results$exacttest_data)
+        wide_data(results$normcount_data)
+        maeColData(results$coldata)
+        message("assign reactiveVal: DEG_table, wide_data, maeColData")
       })
       output$wide_table_dt <- DT::renderDataTable({
-          req(wide_data())
-          normCount_round <- as.data.frame(lapply(
-            wide_data(),
-            function(x) if (is.numeric(x)) round(x, 4) else x
-          ))
+        req(wide_data())
+        normCount_round <- as.data.frame(lapply(
+          wide_data(),
+          function(x) if (is.numeric(x)) round(x, 4) else x
+        ))
 
-          print("send wide data to UI")
-          DT::datatable(
-            normCount_round,
-            options = list(pageLength = 20, autoWidth = TRUE)
-          )
+        print("send wide data to UI")
+        DT::datatable(
+          normCount_round,
+          options = list(pageLength = 20, autoWidth = TRUE)
+        )
       })
 
       message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
+    })
+    
+    observe({
+      req(results$coldata, results$normcount_data, results$exacttest_data)
+      deg_table_round <- DEG_table()
+      deg_table_round$logFC <- if (is.numeric(deg_table_round$logFC)) round(deg_table_round$logFC, 5) else deg_table_round$logFC
+      deg_table_round$logCPM <- if (is.numeric(deg_table_round$logCPM)) round(deg_table_round$logCPM, 5) else deg_table_round$logCPM
+
+      output$DEG_table <- renderDT(
+        {
+          datatable(
+            deg_table_round,
+            options = list(pageLength = 20, autoWidth = TRUE)
+          )
+        },
+        server = FALSE
+      )
     })
 
     observe({
@@ -648,22 +656,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       settingMAE(mae)
     })
 
-    observe({
-      req(results$coldata, results$normcount_data, results$exacttest_data)
-      deg_table_round <- DEG_table()
-      deg_table_round$logFC <- if (is.numeric(deg_table_round$logFC)) round(deg_table_round$logFC, 5) else deg_table_round$logFC
-      deg_table_round$logCPM <- if (is.numeric(deg_table_round$logCPM)) round(deg_table_round$logCPM, 5) else deg_table_round$logCPM
-
-      output$DEG_table <- renderDT(
-        {
-          datatable(
-            deg_table_round,
-            options = list(pageLength = 20, autoWidth = TRUE)
-          )
-        },
-        server = FALSE
-      )
-    })
 
     topGeneList <- reactiveVal(NULL)
     downGeneList <- reactiveVal(NULL)
@@ -709,9 +701,9 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(DEG_table(), maeColData(), wide_data())
       shinyjs::disable("dbBrowser1-selected_db")
       output$ht_heatmap <- renderPlot({
-          grid::grid.newpage()
-          grid::grid.text("No data available.")
-        })
+        grid::grid.newpage()
+        grid::grid.text("No data available.")
+      })
 
       DEG_table_data <- DEG_table()
       topGenes <- DEG_table_data[DEG_table_data$PValue < input$pval_cut & DEG_table_data$logFC > input$lfc_cut, "GeneSymbol"]
@@ -741,10 +733,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       geneListVec <- trimws(geneListVec)
 
       future_promise({
-    
         make_heatmap_mae(mae, geneListVec)
       }) %...>% (function(ht) {
-    
         if (!is.null(ht)) {
           makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
         } else {
@@ -753,14 +743,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             grid::grid.text("No data available.")
           })
         }
-      outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
+        outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
       }) %...!% (function(e) {
-    
         output$ht_heatmap <- renderPlot({
           grid::grid.newpage()
           grid::grid.text(paste("An error occurred:", e$message))
         })
-      outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
+        outputOptions(output, "ht_heatmap", suspendWhenHidden = FALSE)
       })
     })
 
@@ -880,7 +869,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       validate(need(result_G1_CC(), "Please update the DEG list, then wait while it loads..."))
       result_G1_CC()
     })
-    
+
     output$G1_BP <- renderPlot({
       validate(need(result_G1_BP(), "Please update the DEG list, then wait while it loads..."))
       result_G1_BP()
@@ -918,19 +907,17 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     outputOptions(output, "G2_MF", suspendWhenHidden = FALSE)
     outputOptions(output, "G1_KEGG", suspendWhenHidden = FALSE)
     outputOptions(output, "G2_KEGG", suspendWhenHidden = FALSE)
-    
+
     observe({
       req(result_G1_CC(), result_G1_BP(), result_G1_MF(), result_G2_CC(), result_G2_BP(), result_G2_MF(), result_G1_KEGG(), result_G2_KEGG())
-            shinyjs::enable("run_DEG")
-            shinyjs::enable("dbBrowser1-selected_db")
-            
+      shinyjs::enable("run_DEG")
+      shinyjs::enable("dbBrowser1-selected_db")
     })
 
     observeEvent(geneListReactive(), {
       req(DEG_table())
       gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up")
       gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down")
-
     })
     observe({
       req(DEG_table(), wide_data(), maeColData())
