@@ -477,10 +477,6 @@ pcaModuleUI <- function(id) {
   ns <- NS(id)
   tabPanel("Principal Component Analysis",
            sidebarLayout(
-             sidebarPanel(
-                helpText("left： original group；right： clustering")
-               #checkboxInput(ns("toggleClustering"), "Enable Clustering", value = FALSE)
-             ),
              mainPanel(
                 fluidRow(
                  column(6, plotOutput(ns("pcaPlotOriginal"))),
