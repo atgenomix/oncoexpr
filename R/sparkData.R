@@ -101,11 +101,9 @@ query_spark_rnaseqdata <- function(sc, use_table, mainCode_ = "BC026", subCode_ 
 #' @export
 #' 
 convert_long_to_wide <- function(data, mainCode_, subCode_) {
-  # 添加樣本名稱列
   data <- data %>%
     mutate(sample_name = paste(!!sym(mainCode_), !!sym(subCode_), sep = "_"))
   
-  # 轉換為寬表格，基因作為行，樣本作為列
   rna_expr <- data %>%
     select(Gene, sample_name, value) %>%
     pivot_wider(names_from = sample_name, values_from = value, values_fill = NULL)
