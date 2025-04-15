@@ -313,7 +313,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         normcount_future <- trigger_cluster_query_by_pattern(
           master, method, version,
-          pattern = "^normcounts",      # 或根據實際表格命名調整 pattern
+          pattern = "^normcounts",
           output_label = "init_tbl_normcount"
         )
 
@@ -334,7 +334,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           col  = coldata_future
         )
 
-        # 當所有 promise 完成時，更新 UI 並通知使用者
         all_promises %...>% (function(res_list) {
           shinyjs::enable("dbBrowser1-selected_db")
           showNotification("Initialization complete. Check list!", type = "message", duration = 10)
