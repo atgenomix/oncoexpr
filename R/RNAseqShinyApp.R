@@ -841,7 +841,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           )
         }) %...>% {
           if (!is.null(.)) {
-            var <- paste0(.$c, "_", "KEGG") # 例如 "G1_KEGG"
+            var <- paste0(.$c, "_", "KEGG")
             cat(var, " started at:", as.character(.$start_time), "\n")
             cat(var, " ended at:", as.character(.$end_time), "\n")
             cat(var, " elapsed:", as.character(.$elapsed), " seconds\n")
