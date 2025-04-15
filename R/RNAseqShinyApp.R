@@ -70,14 +70,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
   ui <- fluidPage(
     navbarPage(
       title = "RNAseq App",
-      # header = tagList(
-      #   tags$style(".shinybusy-overlay {opacity: 0.7; background-color: #7c7c7c;}"),
-      #   add_busy_spinner(
-      #     spin = "fading-circle",
-      #     position = "full-page",
-      #     timeout = 1000
-      #   )
-      # ),
       tabPanel(
         title = "Gene Expression Profile",
         layout_sidebar(
