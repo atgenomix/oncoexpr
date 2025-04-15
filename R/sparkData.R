@@ -225,5 +225,5 @@ trigger_cluster_query_by_pattern <- function(master, method, version, pattern, o
       result
     }
     
-  }, globals = list(master = master, method = method, version = version), seed = TRUE)
+  }, globals = list(master = master, method = method, version = version, verbose = verbose, pattern = pattern, output_label = output_label), seed = TRUE)
 }
