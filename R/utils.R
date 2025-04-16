@@ -386,12 +386,10 @@ convert_long_to_wide <- function(data, mainCode_, subCode_) {
 #' @export
 #' 
 generate_sample_info <- function(data, mainCode_, subCode_) {
-  # 提取 mainCode 和 subCode 並生成樣本代號
   sample_info <- data %>%
     distinct(!!sym(mainCode_), !!sym(subCode_)) %>%
     mutate(sample_id = paste0("S", sprintf("%03d", row_number())))
   
-  # 整理樣本資訊表格
   sample_info_table <- sample_info %>%
     select(sample_id, !!sym(mainCode_), !!sym(subCode_))
   
