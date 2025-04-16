@@ -1,51 +1,43 @@
-#' @title limma analysis with MAE input
-#' @description differential expression by limma
-#' @param mae multiple assays experiment
-#' @param assayName assay
-#' @param subCodeCol which col for comparasion
-#' @param coef coefficient for limma
-#' @param pval_cut p-value for cut-off label
-#' @param lfc_cut log fold-change cut-off label
-#' @param useAdjP adjusted p-value
-#' @return limma analysis table
+#' Compute Expression Data in Long Format
+#'
+#' This function converts a given expression matrix and associated sample metadata 
+#' (colData) into a long-format data frame suitable for downstream plotting.
+#' The function extracts gene expression values from the matrix and assigns each 
+#' sample a group based on the matching of sample names with the metadata.
+#'
+#' @param exprMatrix A numeric matrix or data frame of expression data, where rows represent genes
+#'   and columns represent samples. It is expected that one column is named "GeneSymbol" (or that row names
+#'   contain gene symbols) which will be used to annotate the genes.
+#' @param colData A data frame containing sample metadata. It must include a column named 
+#'   \code{subCode} representing the group labels. This function will also add a \code{mainCode} column 
+#'   to \code{colData} based on the column names of \code{exprMatrix} (excluding the "GeneSymbol" column).
+#'
+#' @return A data frame in long format with the following columns:
+#' \describe{
+#'   \item{GeneSymbol}{Gene names.}
+#'   \item{sample}{Sample identifiers.}
+#'   \item{expression}{Gene expression values.}
+#'   \item{group}{Group label corresponding to each sample, taken from \code{colData$subCode}.}
+#' }
+#'
+#' @examples
+#' \dontrun{
+#'   # Assuming normCount is an expression matrix and colData is a data frame with a 'subCode' column:
+#'   long_expr <- transfExprFormat(normCount, colData)
+#' }
+#'
 #' @export
-
-LimmaMAE <- function(mae,
-                     assayName = "RNAseq",
-                     # 假設分組資訊在 colData 中的 subCode 欄位
-                     subCodeCol = "subCode",
-                     coef = 2, # 要比較的係數 (group 的哪一層)
-                     pval_cut = 0.05,
-                     lfc_cut = 1,
-                     useAdjP = FALSE) {
-  rna_counts <- assays(mae[[assayName]])$max_TPM
-  sample_info <- colData(mae[[assayName]])
-  print(sample_info)
-  group <- factor(sample_info[[subCodeCol]])
-  print(group)
-
-  dge <- DGEList(counts = rna_counts, group = group)
-  dge <- calcNormFactors(dge)
-
-  design <- model.matrix(~group)
-
-  v <- voom(dge, design)
-
-  fit <- lmFit(v, design)
-  fit <- eBayes(fit)
-
-  dt <- decideTests(fit, p.value = pval_cut, lfc = lfc_cut)
-  sumDT <- summary(dt)
-
-  topTab <- topTable(fit, coef = coef, number = Inf)
-
-  return(list(
-    fit            = fit,
-    topTable       = topTab,
-    decideTests    = dt,
-    upDownSummary  = sumDT
-  ))
+transfExprFormat <- function(exprMatrix = normCount, colData = colData) {
+  df <- as.data.frame(exprMatrix)
+  colData$mainCode <- colnames(df)[-which(colnames(df) == "GeneSymbol")]
+  print(colnames(df))
+  long_df <- tidyr::pivot_longer(df, cols = -GeneSymbol, names_to = "sample", values_to = "expression")
+  long_df$group <- colData$subCode[match(long_df$sample, colData$mainCode)]
+  
+  return(long_df)
 }
+
+
 
 #' @title limma analysis with MAE input
 #' @description differential expression by limma
@@ -299,69 +291,3 @@ ggvolcano_custom_interactive <- function(df, geneName, pValCol = "PValue", logFC
 #     ) +
 #     theme_minimal()
 # }
-
-#' @title PCAplot with distance and cluster labeling
-#' @description PCA plot for RNAseq expression
-#' @param pcaResult pca table
-#' @param colData gene symbol
-#' @param enableClustering set clustering or not
-#' @param centers centers number (default = 2)
-#' @return PCA plot
-#' @export
-createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers = 2) {
-  pcaData <- as.data.frame(pcaResult$x)
-  pcaData$Sample <- rownames(pcaData)
-  
-  explained <- summary(pcaResult)$importance["Proportion of Variance", ]
-  xlab <- paste0("PC1 (", round(explained["PC1"] * 100, 1), "%)")
-  ylab <- paste0("PC2 (", round(explained["PC2"] * 100, 1), "%)")
-
-  x_range <- range(pcaData$PC1)
-  y_range <- range(pcaData$PC2)
-
-  x_padding <- 0.15 * diff(x_range)
-  y_padding <- 0.15 * diff(y_range)
-  x_lim <- c(x_range[1] - x_padding, x_range[2] + x_padding)
-  y_lim <- c(y_range[1] - y_padding, y_range[2] + y_padding)
-
-  if (enableClustering) {
-
-    clusterData <- pcaData[, c("PC1", "PC2")]
-    set.seed(123)
-    km.res <- kmeans(clusterData, centers = centers, nstart = 25)
-    
-    plot <- fviz_cluster(km.res,
-                        data = clusterData,
-                        stand = FALSE,
-                        ellipse.type = "norm", 
-                        star.plot = TRUE,
-                        repel = TRUE,
-                        geom = "point",
-                        show.clust.cent = TRUE,
-                        labelsize = 4,
-                        ggtheme = theme_minimal()
-    )
-    
-    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "PCA Plot (Clustering)",
-          x = xlab,
-          y = ylab,
-          color = "Group")
-    
-  } else {
-    mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
-    
-    plot <- ggplot(mergedData, aes(x = PC1, y = PC2, label = Sample, color = subCode)) +
-
-      coord_cartesian(xlim = x_lim, ylim = y_lim) +
-      geom_point(size = 3) +
-
-      ggrepel::geom_text_repel(size = 4, max.overlaps = 200) +
-      labs(title = "PCA Plot (Original Groups)",
-          x = xlab,
-          y = ylab,
-          color = "Group") +
-      theme_minimal()
-  }
-  
-  return(plot)
-}

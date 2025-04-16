@@ -255,3 +255,53 @@ get_latest_file_group_df <- function(filename_list) {
   
   return(df)
 }
+
+
+#' @title limma analysis with MAE input
+#' @description differential expression by limma
+#' @param mae multiple assays experiment
+#' @param assayName assay
+#' @param subCodeCol which col for comparasion
+#' @param coef coefficient for limma
+#' @param pval_cut p-value for cut-off label
+#' @param lfc_cut log fold-change cut-off label
+#' @param useAdjP adjusted p-value
+#' @return limma analysis table
+#' @export
+
+LimmaMAE <- function(mae,
+                     assayName = "RNAseq",
+                     # 假設分組資訊在 colData 中的 subCode 欄位
+                     subCodeCol = "subCode",
+                     coef = 2, # 要比較的係數 (group 的哪一層)
+                     pval_cut = 0.05,
+                     lfc_cut = 1,
+                     useAdjP = FALSE) {
+  rna_counts <- assays(mae[[assayName]])$max_TPM
+  sample_info <- colData(mae[[assayName]])
+  print(sample_info)
+  group <- factor(sample_info[[subCodeCol]])
+  print(group)
+
+  dge <- DGEList(counts = rna_counts, group = group)
+  dge <- calcNormFactors(dge)
+
+  design <- model.matrix(~group)
+
+  v <- voom(dge, design)
+
+  fit <- lmFit(v, design)
+  fit <- eBayes(fit)
+
+  dt <- decideTests(fit, p.value = pval_cut, lfc = lfc_cut)
+  sumDT <- summary(dt)
+
+  topTab <- topTable(fit, coef = coef, number = Inf)
+
+  return(list(
+    fit            = fit,
+    topTable       = topTab,
+    decideTests    = dt,
+    upDownSummary  = sumDT
+  ))
+}
