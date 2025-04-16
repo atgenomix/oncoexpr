@@ -62,7 +62,7 @@ progressPopupServer <- function(id) {
         res
       }) %...!% (function(e) {
         tasksDone(tasksDone() + 1)
-        stop(e)  # 保留錯誤給後續
+        stop(e)
       })
     }
     
