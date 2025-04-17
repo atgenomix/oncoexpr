@@ -239,88 +239,37 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         results$db_info <- dbBrowserServer("dbBrowser1", sc)
         showNotification("Waiting for initialization", type = "message", duration = 10)
 
-        print("init")
-
-        a_ <- future_promise(
-          {
-            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-            org <- tolower(Sys.getenv("SPARK_USER"))
-            print(org)
-            c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-            print(c)
-            db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-            print(db_list[["namespace"]][1])
-            on.exit(sparklyr::spark_disconnect(sc_conn))
-            show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
-            init_tbls <- show_init_tbls$tableName
-            DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
-            print(init_tbls[3])
-            query_normcount <- paste0("SELECT * FROM ", init_tbls[3])
-            normcount_init <- DBI::dbGetQuery(sc_conn, query_normcount)
-          },
-          globals = list(
-            master = master, method = method, version = version
-          ),
-          seed = TRUE
+        normcount_future <- trigger_cluster_query_by_pattern(
+          master, method, version,
+          pattern = "^normcounts",
+          output_label = "init_tbl_normcount"
         )
 
-        b_ <- future_promise(
-          {
-            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-            org <- tolower(Sys.getenv("SPARK_USER"))
-            print(org)
-            c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-            db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-            print(db_list[["namespace"]][1])
-            on.exit(sparklyr::spark_disconnect(sc_conn))
-            show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
-            init_tbls <- show_init_tbls$tableName
-            DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
-            print(init_tbls[2])
-            query_exacttest <- paste0("SELECT * FROM ", init_tbls[2])
-            exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-            end_time <- Sys.time()
-          },
-          globals = list(
-            master = master, method = method, version = version
-          ),
-          seed = TRUE
+        exacttest_future <- trigger_cluster_query_by_pattern(
+          master, method, version,
+          pattern = "^exacttest",
+          output_label = "init_tbl_exacttest"
         )
 
-
-        c_ <- future_promise(
-          {
-            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
-            org <- tolower(Sys.getenv("SPARK_USER"))
-            c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
-            db_list <- DBI::dbGetQuery(sc_conn, sprintf("SHOW DATABASES %s", c))
-            print(db_list[["namespace"]][1])
-            on.exit(sparklyr::spark_disconnect(sc_conn))
-            show_init_tbls <- DBI::dbGetQuery(sc_conn, paste0("SHOW TABLES IN ", db_list[["namespace"]][1]))
-            init_tbls <- show_init_tbls$tableName
-            DBI::dbExecute(sc_conn, paste0("USE ", db_list[["namespace"]][1]))
-            print(init_tbls[1])
-            query_coldata <- paste0("SELECT * FROM ", init_tbls[1])
-            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
-          },
-          globals = list(
-            master = master, method = method, version = version
-          ),
-          seed = TRUE
+        coldata_future <- trigger_cluster_query_by_pattern(
+          master, method, version,
+          pattern = "^coldata",
+          output_label = "init_tbl_coldata"
         )
-        all_p <- promises::promise_all(
-          norm = a_,
-          ex   = b_,
-          col  = c_
+        all_promises <- promises::promise_all(
+          norm = normcount_future,
+          ex   = exacttest_future,
+          col  = coldata_future
         )
 
-        all_p %...>% (function(res_list) {
+        all_promises %...>% (function(res_list) {
           shinyjs::enable("dbBrowser1-selected_db")
           showNotification("Initialization complete. Check list!", type = "message", duration = 10)
         }) %...!% (function(e) {
           shinyjs::enable("dbBrowser1-selected_db")
           showNotification(paste("Error:", e$message), type = "error")
         })
+
       },
       ignoreInit = FALSE
     )
