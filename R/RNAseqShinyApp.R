@@ -231,6 +231,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       }
     })
 
+    # init executors 
     observeEvent(sc,
       {
         req(sc)
@@ -238,8 +239,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         shinyjs::disable("dbBrowser1-selected_db")
         results$db_info <- dbBrowserServer("dbBrowser1", sc)
         showNotification("Waiting for initialization", type = "message", duration = 10)
-
-        print("init")
 
         normcount_future <- trigger_cluster_query_by_pattern(
           master, method, version,
@@ -278,262 +277,201 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     progressMod <- progressPopupServer("popupProgress")
 
+    #query tables from the database
     observeEvent(results$db_info$selected_db(), {
       req(results$db_info$selected_db())
       shinyjs::disable("dbBrowser1-selected_db")
-      output$wide_table_dt <- DT::renderDataTable({
-        data.frame()
-      })
-      output$DEG_table <- DT::renderDataTable({
-        data.frame()
-      })
-
-      results$exacttest_data <- NULL
-      results$normcount_data <- NULL
-      results$coldata <- NULL
-      output$ht_heatmap <- renderPlot({
-        grid::grid.newpage()
-        grid::grid.text("No data available.")
-      })
 
       selected_db_name <- results$db_info$selected_db()
-      message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
+      message(sprintf("[Stage0] DB selected → %s at %s",
+                      selected_db_name, Sys.time()))
 
-      withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
-        t0 <- Sys.time()
-        message(sprintf("[Stage1] Start at %s", t0))
-
+      # Stage 1: Listing & filtering tables
+      t_stage1 <- system.time({
         DBI::dbExecute(sc, paste0("USE ", selected_db_name))
-        tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
+        tbl_list_query <- DBI::dbGetQuery(sc,
+          paste0("SHOW TABLES IN ", selected_db_name))
         tbls <- tbl_list_query$tableName
-        t1 <- Sys.time()
-        message(sprintf(
-          "[Stage1] Fetched %d tables at %s (%.2f sec)",
-          length(tbls), t1, as.numeric(difftime(t1, t0, "secs"))
-        ))
-        setProgress(value = 0.2, detail = sprintf("Fetched %d tables", length(tbls)))
 
-        prefix <- c("^normcounts|^exacttest|^coldata")
-        tbl_list_query_prefix <- tbl_list_query[grepl(paste(prefix, collapse = "|"), tbls), ]
-        t2 <- Sys.time()
-        message(sprintf(
-          "[Stage1] Prefix filter → %d tables at %s (%.2f sec)",
-          nrow(tbl_list_query_prefix), t2, as.numeric(difftime(t2, t1, "secs"))
-        ))
-        setProgress(value = 0.4, detail = sprintf("Prefix filter: %d tables", nrow(tbl_list_query_prefix)))
-
-        tbls_with_prefix <- tbl_list_query_prefix$tableName
-        tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
-        t3 <- Sys.time()
-        message(sprintf(
-          "[Stage1] Time filter applied at %s (%.2f sec)",
-          t3, as.numeric(difftime(t3, t2, "secs"))
-        ))
-        setProgress(value = 0.6, detail = "Applied time filter")
-
-        if (any(tbls_with_time_filter$is_latest)) {
-          sel_idx <- tbls_with_time_filter$is_latest
-          message(sprintf("[Stage1] Latest tables found at %s", Sys.time()))
-        } else {
-          sel_idx <- !tbls_with_time_filter$is_latest
-          message(sprintf("[Stage1] No latest table, using all at %s", Sys.time()))
-        }
-        tbl_list_query_prefix_time <- tbl_list_query_prefix[sel_idx, ]
-        summary_table <- tbls_with_time_filter[sel_idx, ]
-        t4 <- Sys.time()
-        message(sprintf(
-          "[Stage1] Selected %d tables at %s (%.2f sec)",
-          nrow(tbl_list_query_prefix_time), t4, as.numeric(difftime(t4, t3, "secs"))
-        ))
-        setProgress(value = 0.8, detail = sprintf("Selected %d tables", nrow(tbl_list_query_prefix_time)))
-
-        tbls_final <- summary_table$file
-        normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_final, ignore.case = TRUE), "tableName"]
-        exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_final, ignore.case = TRUE), "tableName"]
-        coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_final, ignore.case = TRUE), "tableName"]
-        t5 <- Sys.time()
-        message(sprintf(
-          "[Stage1] Categorized tables at %s (%.2f sec)",
-          t5, as.numeric(difftime(t5, t4, "secs"))
-        ))
-
-        setProgress(value = 1, detail = "Stage 1 complete")
-        results$table_list <- tbl_list_query_prefix_time
+        prefix <- c("^normcounts", "^exacttest", "^coldata")
+        tbl_pref    <- tbl_list_query[grepl(paste(prefix, collapse="|"), tbls), ]
+        tbls_time   <- get_latest_file_group_df(tbl_pref$tableName)
+        sel         <- if (any(tbls_time$is_latest)) tbls_time$is_latest else rep(TRUE, nrow(tbls_time))
+        tbl_final_meta <- tbl_pref[sel, ]
       })
+      message(sprintf("[Stage1] Listing & filtering complete at %s (%.2f s)",
+                      Sys.time(), t_stage1["elapsed"]))
 
+      normcount_tbls <- tbl_final_meta$tableName[
+        grepl("^normcounts", tbl_final_meta$tableName, ignore.case=TRUE)]
+      exacttest_tbls <- tbl_final_meta$tableName[
+        grepl("^exacttest", tbl_final_meta$tableName, ignore.case=TRUE)]
+      coldata_tbls   <- tbl_final_meta$tableName[
+        grepl("^coldata", tbl_final_meta$tableName, ignore.case=TRUE)]
 
-
-      req(normcount_tbls, exacttest_tbls, coldata_tbls)
-
-      t0_norm_launch <- Sys.time()
-      message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
-      normcount_promise <- future_promise(
-        {
+      # Stage 2: Launching queries
+      t2_norm <- system.time({
+        normcount_promise <- future_promise({
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying normcounts table", start_time))
 
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          sc_conn <- sparklyr::spark_connect(master = master,
+                                              method = method,
+                                              version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
-
-          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
-          normcount <- normcount[, colnames(normcount) != "_c0"]
+          query_norm <- paste0("SELECT * FROM ", normcount_tbls[1])
+          normcount <- DBI::dbGetQuery(sc_conn, query_norm)
+          colnames(normcount)[colnames(normcount)=="genes"] <- "GeneSymbol"
+          normcount <- normcount[, colnames(normcount)!="_c0"]
 
           end_time <- Sys.time()
-          message(sprintf(
-            "[%s] Completed normcounts query (Duration: %.2f seconds)",
-            end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
-          ))
-
+          message(sprintf("[%s] Completed normcounts (%.2f s)",
+                          end_time,
+                          as.numeric(difftime(end_time, start_time, "secs"))))
           normcount
-        },
-        globals = list(
+        }, globals = list(
           master = master, method = method, version = version,
-          normcount_tbls = normcount_tbls, selected_db_name = selected_db_name
-        ),
-        seed = TRUE
-      )
+          normcount_tbls = normcount_tbls,
+          selected_db_name = selected_db_name
+        ), seed = TRUE)
+      })
+      progressMod$addPromise(normcount_promise, label = "normcount")
+      message(sprintf("[Stage2-norm] Launched at %s (%.2f s)",
+                      Sys.time(), t2_norm["elapsed"]))
 
-      t0_exact_launch <- Sys.time()
-      message(sprintf("[Stage2-exacttest] Launch at %s", t0_exact_launch))
-      exacttest_promise <- future_promise(
-        {
+      t2_exact <- system.time({
+        exacttest_promise <- future_promise({
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying exacttest table", start_time))
 
-          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          sc_conn <- sparklyr::spark_connect(master = master,
+                                              method = method,
+                                              version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
-          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
-
-          colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
-          exacttest <- exacttest[, colnames(exacttest) != "_c0"]
+          query_exact <- paste0("SELECT * FROM ", exacttest_tbls[1])
+          exacttest <- DBI::dbGetQuery(sc_conn, query_exact)
+          colnames(exacttest)[colnames(exacttest)=="genes"] <- "GeneSymbol"
+          exacttest <- exacttest[, colnames(exacttest)!="_c0"]
 
           end_time <- Sys.time()
-          message(sprintf(
-            "[%s] Completed exacttest query (Duration: %.2f seconds)",
-            end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
-          ))
-
+          message(sprintf("[%s] Completed exacttest (%.2f s)",
+                          end_time,
+                          as.numeric(difftime(end_time, start_time, "secs"))))
           exacttest
-        },
-        globals = list(
+        }, globals = list(
           master = master, method = method, version = version,
-          exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name
-        ),
-        seed = TRUE
-      )
+          exacttest_tbls = exacttest_tbls,
+          selected_db_name = selected_db_name
+        ), seed = TRUE)
+      })
+      progressMod$addPromise(exacttest_promise, label = "exacttest")
+      message(sprintf("[Stage2-exact] Launched at %s (%.2f s)",
+                      Sys.time(), t2_exact["elapsed"]))
 
-      t0_coldata_launch <- Sys.time()
-      message(sprintf("[Stage2-coldata] Launch at %s", t0_coldata_launch))
-      coldata_promise <- if (length(coldata_tbls) > 0) {
-        future_promise(
-          {
+      t2_coldata <- system.time({
+        coldata_promise <- if (length(coldata_tbls) > 0) {
+          future_promise({
             start_time <- Sys.time()
             message(sprintf("[%s] Start querying coldata table", start_time))
 
-            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            sc_conn <- sparklyr::spark_connect(master = master,
+                                                method = method,
+                                                version = version)
             on.exit(sparklyr::spark_disconnect(sc_conn))
             DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
-            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+            query_col <- paste0("SELECT * FROM ", coldata_tbls[1])
+            coldata <- DBI::dbGetQuery(sc_conn, query_col)
 
             end_time <- Sys.time()
-            message(sprintf(
-              "[%s] Completed coldata query (Duration: %.2f seconds)",
-              end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
-            ))
-
+            message(sprintf("[%s] Completed coldata (%.2f s)",
+                            end_time,
+                            as.numeric(difftime(end_time, start_time, "secs"))))
             coldata
-          },
-          globals = list(
+          }, globals = list(
             master = master, method = method, version = version,
-            coldata_tbls = coldata_tbls, selected_db_name = selected_db_name
-          ),
-          seed = TRUE
-        )
-      } else {
-        normcount_promise %...>% (function(normcount) {
-          future_promise(
-            {
-              start_time <- Sys.time()
-              message(sprintf("[%s] Generating random coldata", start_time))
-              coldata <- generate_colData_random(normcount, genecol = "GeneSymbol")
-              end_time <- Sys.time()
-              message(sprintf(
-                "[%s] Completed coldata generation (Duration: %.2f seconds)",
-                end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
-              ))
-              coldata
-            },
-            seed = TRUE
-          )
-        })
-      }
-      progressMod$addPromise(normcount_promise, label = "normcount")
+            coldata_tbls = coldata_tbls,
+            selected_db_name = selected_db_name
+          ), seed = TRUE)
+        } else {
+          normcount_promise %...>% (function(nc) future_promise({
+            start_time <- Sys.time()
+            message(sprintf("[%s] Generating random coldata", start_time))
+            cd <- generate_colData_random(nc, genecol="GeneSymbol")
+            end_time <- Sys.time()
+            message(sprintf("[%s] Completed random coldata (%.2f s)",
+                            end_time,
+                            as.numeric(difftime(end_time, start_time, "secs"))))
+            cd
+          }, seed = TRUE))
+        }
+      })
       progressMod$addPromise(coldata_promise, label = "coldata")
-      progressMod$addPromise(exacttest_promise, label = "exacttest")
+      message(sprintf("[Stage2-coldata] Launched at %s (%.2f s)",
+                      Sys.time(), t2_coldata["elapsed"]))
 
-
-      withProgress(message = "Stage 3: Collecting and processing data", value = 0, {
-        t0_collect <- Sys.time()
-        message(sprintf("[Stage3] Collection start at %s", t0_collect))
-
-        promise_all(
+      # Stage 3: Collecting data
+      t_stage3 <- system.time({
+        promises::promise_all(
           normcount_data = normcount_promise,
           exacttest_data = exacttest_promise,
           coldata        = coldata_promise
         ) %...>% with({
-          t1_collect <- Sys.time()
-          message(sprintf(
-            "[Stage3] Collection completed at %s (Duration: %.2f seconds)",
-            t1_collect, as.numeric(difftime(t1_collect, t0_collect, units = "secs"))
-          ))
-
           results$normcount_data <- normcount_data
           results$exacttest_data <- exacttest_data
-          results$coldata <- coldata
-
-          message("=== normcount_data ===")
-          print(head(results$normcount_data))
-          message("=== exacttest_data ===")
-          print(head(results$exacttest_data))
-          message("=== coldata ===")
-          print(head(results$coldata))
-
-          setProgress(value = 1, detail = "Data collected")
+          results$coldata        <- coldata
         })
       })
+      message(sprintf("[Stage3] Data collection complete at %s (%.2f s)",
+                      Sys.time(), t_stage3["elapsed"]))
 
-      wide_data(NULL)
-      DEG_table(NULL)
-
-      observe({
-        req(results$exacttest_data, results$normcount_data, results$coldata)
-        DEG_table(results$exacttest_data)
-        wide_data(results$normcount_data)
-        maeColData(results$coldata)
-        message("assign reactiveVal: DEG_table, wide_data, maeColData")
+      # Stage 4: Assigning reactive values
+      t_stage4 <- system.time({
+        observe({
+          req(results$exacttest_data, results$normcount_data, results$coldata)
+          DEG_table(results$exacttest_data)
+          wide_data(results$normcount_data)
+          maeColData(results$coldata)
+        })
       })
-      output$wide_table_dt <- DT::renderDataTable({
-        req(wide_data())
-        normCount_round <- as.data.frame(lapply(
-          wide_data(),
-          function(x) if (is.numeric(x)) round(x, 4) else x
-        ))
+      message(sprintf("[Stage4] Reactive values assigned at %s (%.2f s)",
+                      Sys.time(), t_stage4["elapsed"]))
 
-        print("send wide data to UI")
-        DT::datatable(
-          normCount_round,
-          options = list(pageLength = 20, autoWidth = TRUE)
-        )
+      # Stage 5: UI update
+      t_stage5 <- system.time({
+        output$wide_table_dt <- DT::renderDataTable({
+          req(wide_data())
+          normCount_round <- as.data.frame(lapply(
+            wide_data(),
+            function(x) if (is.numeric(x)) round(x, 4) else x
+          ))
+          DT::datatable(normCount_round,
+                        options = list(pageLength = 20, autoWidth = TRUE))
+        })
+        output$DEG_table <- DT::renderDataTable({
+          req(DEG_table())
+          deg_round <- DEG_table()
+          deg_round$logFC  <- if (is.numeric(deg_round$logFC)) round(deg_round$logFC, 5) else deg_round$logFC
+          deg_round$logCPM <- if (is.numeric(deg_round$logCPM)) round(deg_round$logCPM, 5) else deg_round$logCPM
+          deg_round$PValue <- formatC(deg_round$PValue, format="e", digits=5)
+          deg_round$FDR    <- formatC(deg_round$FDR,    format="e", digits=5)
+          DT::datatable(deg_round,
+                        options = list(pageLength = 20, autoWidth = TRUE))
+        })
+        shinyjs::enable("dbBrowser1-selected_db")
       })
+      message(sprintf("[Stage5] UI update complete at %s (%.2f s)",
+                      Sys.time(), t_stage5["elapsed"]))
 
-      message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
+      # Total
+      total_elapsed <- t_stage1["elapsed"] +
+                      t2_norm["elapsed"] + t2_exact["elapsed"] +
+                      t2_coldata["elapsed"] + t_stage3["elapsed"] +
+                      t_stage4["elapsed"] + t_stage5["elapsed"]
+      message(sprintf("[Total] All stages done in %.2f seconds", total_elapsed))
     })
+
 
     observe({
       deg_table_round <- DEG_table()
