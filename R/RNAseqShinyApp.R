@@ -64,7 +64,7 @@ NULL
 
 
 RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  plan(multisession, workers = 6)
+  plan(multisession, workers = 5)
   # plan(sequential)
   print(future::plan())
   ui <- fluidPage(
