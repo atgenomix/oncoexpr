@@ -672,6 +672,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
       future_promise({
         make_heatmap_mae(mae, geneListVec)
+        on.exit(dev.off())
       }) %...>% (function(ht) {
         if (!is.null(ht)) {
           makeInteractiveComplexHeatmap(input, output, session, ht, "ht")
