@@ -117,8 +117,11 @@ We welcome contributions via pull requests or issues. To contribute:
 
 ## 📄 License
 
-**License not yet specified.**  \
-Consider applying an OSI-approved license (MIT, GPLv3, etc.) for community use.
+This project is licensed under the **Apache License 2.0**.
+
+Copyright © 2025 Charles Chuang, atgenomix.
+
+See the [LICENSE](./LICENSE) file for details.
 
 ---
 
