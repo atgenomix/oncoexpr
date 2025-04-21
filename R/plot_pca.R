@@ -41,7 +41,7 @@ createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers 
                         ggtheme = theme_minimal()
     )
     
-    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "PCA Plot (Clustering)",
+    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "K‑Means Clustering",
           x = xlab,
           y = ylab,
           color = "Group")
@@ -55,7 +55,7 @@ createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers 
       geom_point(size = 3) +
 
       ggrepel::geom_text_repel(size = 4, max.overlaps = 200) +
-      labs(title = "PCA Plot (Original Groups)",
+      labs(title = "Cases vs. Controls",
           x = xlab,
           y = ylab,
           color = "Group") +
