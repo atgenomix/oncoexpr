@@ -46,12 +46,18 @@ pcaModuleServer <- function(id, normCount, colData) {
     pcaResult <- prcomp(t(normCount), scale. = TRUE)
 
     output$pcaPlotOriginal <- renderPlot({
-      createPCAPlot(pcaResult, colData, enableClustering = FALSE)
+      createPCAPlot(pcaResult, colData, enableClustering = FALSE)+
+        theme(
+          panel.border = element_rect(color = "cyan", fill = NA, size = 1)
+        )
     })
     
     # Render clustering (enableClustering = TRUE)
     output$pcaPlotClustering <- renderPlot({
-      createPCAPlot(pcaResult, colData, enableClustering = TRUE)
+      createPCAPlot(pcaResult, colData, enableClustering = TRUE)+
+        theme(
+          panel.border = element_rect(color = "cyan", fill = NA, size = 1)
+        )
     })
     
     outputOptions(output, "pcaPlotOriginal", suspendWhenHidden = FALSE)
