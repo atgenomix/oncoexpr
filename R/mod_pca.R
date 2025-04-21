@@ -35,12 +35,11 @@ pcaModuleServer <- function(id, normCount, colData) {
       createPCAPlot(pcaResult, colData, enableClustering = FALSE)
     })
     
-    # Render 分群結果圖 (enableClustering = TRUE)
+    # Render clustering (enableClustering = TRUE)
     output$pcaPlotClustering <- renderPlot({
       createPCAPlot(pcaResult, colData, enableClustering = TRUE)
     })
     
-    # 設定圖形輸出不因面板隱藏而暫停
     outputOptions(output, "pcaPlotOriginal", suspendWhenHidden = FALSE)
     outputOptions(output, "pcaPlotClustering", suspendWhenHidden = FALSE)
 
