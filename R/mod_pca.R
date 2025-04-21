@@ -28,6 +28,20 @@ pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
     rownames(normCount) <- normCount$"GeneSymbol"
     normCount <- normCount[, -1]
+    sample_n <- ncol(normCount)
+    if (sample_n < 3) {
+      output$pcaPlotOriginal <- renderPlot({
+        plot.new()
+        text(0.5, 0.5, "Insufficient samples to perform PCA.")
+      })
+      output$pcaPlotClustering <- renderPlot({
+        plot.new()
+        text(0.5, 0.5, "Insufficient samples to perform PCA.")
+      })
+      outputOptions(output, "pcaPlotOriginal",     suspendWhenHidden = FALSE)
+      outputOptions(output, "pcaPlotClustering",   suspendWhenHidden = FALSE)
+      return()
+    }
     #colnames(normCount) <- gsub("\\.", "-", colnames(normCount))
     pcaResult <- prcomp(t(normCount), scale. = TRUE)
 
