@@ -12,7 +12,7 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Depends: 
-    R (>= 4.4.2)
+    R (>= 4.4.1)
 Imports: 
     pcaPP (>= 2.0-5),
     reshape2 (>= 1.4.4),
