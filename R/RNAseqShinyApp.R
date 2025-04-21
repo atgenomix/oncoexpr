@@ -170,7 +170,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 )
               ),
               tabPanel(
-                "Gene Set Enrichment",
+                "Over-Representation Analysis (ORA)",
                 fluidRow(
                   column(
                     12,
@@ -179,8 +179,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("KEGG", withSpinner(plotOutput("G1_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G1_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G1_CC"))),
-                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_up")))
+                      tabPanel("CC", withSpinner(plotOutput("G1_CC")))
                     )
                   )
                 ),
@@ -192,12 +191,33 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                       tabPanel("KEGG", withSpinner(plotOutput("G2_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G2_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G2_CC"))),
+                      tabPanel("CC", withSpinner(plotOutput("G2_CC")))
+                    )
+                  )
+                )
+              ),
+              tabPanel(
+                "Gene Set Enrichment Analysis (GSEA)",
+                fluidRow(
+                  column(
+                    12,
+                    h4("Upregulated DEGs"),
+                    tabsetPanel(
+                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_up")))
+                    )
+                  )
+                ),
+                fluidRow(
+                  column(
+                    12,
+                    h4("Downregulated DEGs"),
+                    tabsetPanel(
                       tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_down")))
                     )
                   )
                 )
               )
+
             )
           )
         )
