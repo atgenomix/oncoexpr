@@ -44,8 +44,8 @@ createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers 
     plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "K‑Means Clustering",
           x = xlab,
           y = ylab,
-          color = "Cluster") + 
-          guides(shape = guide_none())
+          color = "Cluster")
+
     
   } else {
     mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
