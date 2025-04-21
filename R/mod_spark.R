@@ -29,12 +29,13 @@ dbBrowserServer <- function(id, sc) {
       c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
       print(c)
       db_list <- dbGetQuery(sc, sprintf("SHOW DATABASES %s", c))
+      choices <- db_list[["namespace"]]
       print("db_list")
       print(db_list[["namespace"]][1])
       updateSelectInput(
         session,
         "selected_db",
-        choices = db_list,
+        choices = choices,
         selected = ""
       )
     })
