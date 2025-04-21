@@ -123,7 +123,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             sliderInput("pointSize", "Point Size:",
               min = 1, max = 5, value = 2, step = 0.5
             ),
-            sliderInput("ptAlpha", "Transparent:",
+            sliderInput("ptAlpha", "Transparency:",
               min = 0.1, max = 1, value = 0.6, step = 0.1
             ),
             sliderInput("labelSize", "Gene Label Size:",
@@ -174,7 +174,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 fluidRow(
                   column(
                     12,
-                    h4("UPregulated DEGs"),
+                    h4("Upregulated DEGs"),
                     tabsetPanel(
                       tabPanel("KEGG", withSpinner(plotOutput("G1_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
@@ -187,7 +187,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 fluidRow(
                   column(
                     12,
-                    h4("DOWNregulated DEGs"),
+                    h4("Downregulated DEGs"),
                     tabsetPanel(
                       tabPanel("KEGG", withSpinner(plotOutput("G2_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
