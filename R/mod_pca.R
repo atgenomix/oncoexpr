@@ -33,12 +33,10 @@ pcaModuleServer <- function(id, normCount, colData) {
       output$pcaPlotOriginal <- renderPlot({
         plot.new()
         text(0.5, 0.5, "Insufficient samples to perform PCA.")
-        box(col = "cyan", lwd = 1)
       })
       output$pcaPlotClustering <- renderPlot({
         plot.new()
         text(0.5, 0.5, "Insufficient samples to perform PCA.")
-        box(col = "cyan", lwd = 1)
       })
       outputOptions(output, "pcaPlotOriginal",     suspendWhenHidden = FALSE)
       outputOptions(output, "pcaPlotClustering",   suspendWhenHidden = FALSE)
