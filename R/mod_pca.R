@@ -27,7 +27,7 @@ pcaModuleUI <- function(id) {
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
     rownames(normCount) <- normCount$"GeneSymbol"
-    normCount <- normCount[, -1]
+    normCount <- normCount[, setdiff(names(normCount), "GeneSymbol")]
     sample_n <- ncol(normCount)
     if (sample_n < 3) {
       output$pcaPlotOriginal <- renderPlot({
