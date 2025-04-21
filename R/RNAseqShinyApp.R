@@ -91,7 +91,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                   ),
                   tabPanel(
                     "DEG Table",
-                    downloadButton("download_DEG", "Download DEG CSV"),
+                    downloadButton("download_DEG", "Download"),
                     withSpinner((DT::dataTableOutput("DEG_table", width = "100%")))
                   )
                 )
