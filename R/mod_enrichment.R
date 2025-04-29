@@ -30,10 +30,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
   
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
-    
-
       local_pvalCutoff <- 0.05
-      
       if (direction == "up") {
         future_promise({
           start_time <- Sys.time()
