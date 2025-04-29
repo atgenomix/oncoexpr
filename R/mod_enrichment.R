@@ -33,12 +33,11 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
     
 
       local_pvalCutoff <- 0.05
-      local_deg <- isolate(DEG_table()) #total genes without filtering
       
       if (direction == "up") {
         future_promise({
           start_time <- Sys.time()
-
+          local_deg <- isolate(DEG_table()) #total genes without filtering
           deg_subset <- local_deg
           conv <- bitr(deg_subset$GeneSymbol,
                        fromType = "SYMBOL",
@@ -71,6 +70,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
       } else {  # direction == "down"
         future_promise({
           start_time <- Sys.time()
+          local_deg <- isolate(DEG_table()) 
           deg_subset <- local_deg
           conv <- bitr(deg_subset$GeneSymbol,
                        fromType = "SYMBOL",
