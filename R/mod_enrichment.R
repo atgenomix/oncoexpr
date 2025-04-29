@@ -46,9 +46,9 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           # deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
           # deg_subset <- deg_subset[!duplicated(deg_subset$ENTREZID), ]
           deg_subset <- deg_subset %>%
-                inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
-                filter(!is.na(ENTREZID)) %>%                            
-                distinct(ENTREZID, .keep_all = TRUE)    
+                dplyr::inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
+                dplyr::filter(!is.na(ENTREZID)) %>%                            
+                dplyr::distinct(ENTREZID, .keep_all = TRUE)    
           geneList <- deg_subset$logFC
           names(geneList) <- deg_subset$ENTREZID
           geneList <- sort(geneList, decreasing = TRUE)
@@ -91,9 +91,9 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           #deg_subset <- deg_subset[!duplicated(deg_subset$ENTREZID), ]
 
           deg_subset <- deg_subset %>%
-                inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
-                filter(!is.na(ENTREZID)) %>%                            
-                distinct(ENTREZID, .keep_all = TRUE)          
+                dplyr::inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
+                dplyr::filter(!is.na(ENTREZID)) %>%                            
+                dplyr::distinct(ENTREZID, .keep_all = TRUE)          
           geneList <- deg_subset$logFC
           names(geneList) <- deg_subset$ENTREZID
           geneList <- sort((-1) * geneList, decreasing = TRUE)
