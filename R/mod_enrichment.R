@@ -52,7 +52,6 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = "hsa",
-            nPerm = 1000,
             minGSSize = 10,
             maxGSSize = 500,
             pvalueCutoff = local_pvalCutoff,
@@ -84,7 +83,6 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = "hsa",
-            nPerm = 1000,
             minGSSize = 10,
             maxGSSize = 500,
             pvalueCutoff = local_pvalCutoff,
