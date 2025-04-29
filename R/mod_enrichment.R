@@ -1,4 +1,3 @@
-
 #' @title gseaeFCModuleUI
 #' @description GSEA module
 #' @param id module id for UI and Server
@@ -8,9 +7,9 @@
 gseaFCModuleUI <- function(id) {
   ns <- NS(id)
   tagList(
-    #numericInput(ns("pvalCutoff"), "P-value Cutoff:",
+    # numericInput(ns("pvalCutoff"), "P-value Cutoff:",
     #             value = 0.05, min = 0, max = 1, step = 0.001),
-    #actionButton(ns("runGSEA"), "Run GSEA"),
+    # actionButton(ns("runGSEA"), "Run GSEA"),
     DTOutput(ns("gseaTable")),
     plotOutput(ns("gseaPlot"))
   )
@@ -24,23 +23,25 @@ gseaFCModuleUI <- function(id) {
 #' @param direction direction of GSEA (up or down)
 #' @return GSEA module Server
 #' @export
-#' 
+#'
 gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
   direction <- match.arg(direction)
-  
+
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
-      local_pvalCutoff <- 0.05
-      if (direction == "up") {
-        future_promise({
+    local_pvalCutoff <- 0.05
+    if (direction == "up") {
+      future_promise(
+        {
           start_time <- Sys.time()
-          local_deg <- isolate(DEG_table()) #total genes without filtering
+          local_deg <- isolate(DEG_table()) # total genes without filtering
           deg_subset <- local_deg
           conv <- bitr(deg_subset$GeneSymbol,
-                       fromType = "SYMBOL",
-                       toType = "ENTREZID",
-                       OrgDb = "org.Hs.eg.db",
-                       drop = FALSE)
+            fromType = "SYMBOL",
+            toType = "ENTREZID",
+            OrgDb = "org.Hs.eg.db",
+            drop = FALSE
+          )
           deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
           deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
           geneList <- deg_subset$logFC
@@ -56,24 +57,30 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
             verbose = FALSE
           )
           end_time <- Sys.time()
-          list(r = gsea_res,
-               start_time = start_time,
-               end_time = end_time,
-               elapsed = as.numeric(difftime(end_time, start_time, units = "secs")))
-        }, seed = TRUE) %...>% {
-          result_GSEA_FC(.$r)
-          cat("GSEA_FC (upregulated) finished. Elapsed:", .$elapsed, "seconds\n")
-        }
-      } else {  # direction == "down"
-        future_promise({
+          list(
+            r = gsea_res,
+            start_time = start_time,
+            end_time = end_time,
+            elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+          )
+        },
+        seed = TRUE
+      ) %...>% {
+        result_GSEA_FC(.$r)
+        cat("GSEA_FC (upregulated) finished. Elapsed:", .$elapsed, "seconds\n")
+      }
+    } else { # direction == "down"
+      future_promise(
+        {
           start_time <- Sys.time()
-          local_deg <- isolate(DEG_table()) 
+          local_deg <- isolate(DEG_table())
           deg_subset <- local_deg
           conv <- bitr(deg_subset$GeneSymbol,
-                       fromType = "SYMBOL",
-                       toType = "ENTREZID",
-                       OrgDb = "org.Hs.eg.db",
-                       drop = FALSE)
+            fromType = "SYMBOL",
+            toType = "ENTREZID",
+            OrgDb = "org.Hs.eg.db",
+            drop = FALSE
+          )
           deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
           deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
           geneList <- deg_subset$logFC
@@ -89,16 +96,20 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
             verbose = FALSE
           )
           end_time <- Sys.time()
-          list(r = gsea_res,
-               start_time = start_time,
-               end_time = end_time,
-               elapsed = as.numeric(difftime(end_time, start_time, units = "secs")))
-        }, seed = TRUE) %...>% {
-          result_GSEA_FC(.$r)
-          cat("GSEA_FC (downregulated) finished. Elapsed:", .$elapsed, "seconds\n")
-        }
+          list(
+            r = gsea_res,
+            start_time = start_time,
+            end_time = end_time,
+            elapsed = as.numeric(difftime(end_time, start_time, units = "secs"))
+          )
+        },
+        seed = TRUE
+      ) %...>% {
+        result_GSEA_FC(.$r)
+        cat("GSEA_FC (downregulated) finished. Elapsed:", .$elapsed, "seconds\n")
       }
-    
+    }
+
     output$gseaTable <- renderDT({
       req(result_GSEA_FC())
       as.data.frame(result_GSEA_FC())
@@ -114,8 +125,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
       }
     })
     outputOptions(output, "gseaPlot", suspendWhenHidden = FALSE)
-    
+
     return(list(result = result_GSEA_FC))
   })
 }
-
