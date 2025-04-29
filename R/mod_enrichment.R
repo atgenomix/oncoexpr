@@ -38,9 +38,8 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
       if (direction == "up") {
         future_promise({
           start_time <- Sys.time()
-          #deg_subset <- local_deg[local_deg$PValue < local_pvalCutoff & local_deg$logFC > 0, ]
-          deg_subset <- local_deg #[local_deg$PValue < local_pvalCutoff & local_deg$logFC > 0, ]
 
+          deg_subset <- local_deg
           conv <- bitr(deg_subset$GeneSymbol,
                        fromType = "SYMBOL",
                        toType = "ENTREZID",
@@ -72,7 +71,6 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
       } else {  # direction == "down"
         future_promise({
           start_time <- Sys.time()
-          #deg_subset <- local_deg[local_deg$PValue < local_pvalCutoff & local_deg$logFC < 0, ]
           deg_subset <- local_deg
           conv <- bitr(deg_subset$GeneSymbol,
                        fromType = "SYMBOL",
