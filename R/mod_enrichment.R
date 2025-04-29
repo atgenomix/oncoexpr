@@ -52,6 +52,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = "hsa",
+            scoreType = "pos",
             minGSSize = 10,
             maxGSSize = 500,
             pvalueCutoff = local_pvalCutoff,
@@ -62,7 +63,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
                start_time = start_time,
                end_time = end_time,
                elapsed = as.numeric(difftime(end_time, start_time, units = "secs")))
-        }) %...>% {
+        }, seed = TRUE) %...>% {
           result_GSEA_FC(.$r)
           cat("GSEA_FC (upregulated) finished. Elapsed:", .$elapsed, "seconds\n")
         }
@@ -83,6 +84,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = "hsa",
+            scoreType = "pos",
             minGSSize = 10,
             maxGSSize = 500,
             pvalueCutoff = local_pvalCutoff,
@@ -93,7 +95,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
                start_time = start_time,
                end_time = end_time,
                elapsed = as.numeric(difftime(end_time, start_time, units = "secs")))
-        }) %...>% {
+        }, seed = TRUE) %...>% {
           result_GSEA_FC(.$r)
           cat("GSEA_FC (downregulated) finished. Elapsed:", .$elapsed, "seconds\n")
         }
