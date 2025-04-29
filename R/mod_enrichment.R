@@ -42,8 +42,13 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
             OrgDb = "org.Hs.eg.db",
             drop = FALSE
           )
-          deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
-          deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
+          # deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
+          # deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
+          # deg_subset <- deg_subset[!duplicated(deg_subset$ENTREZID), ]
+          deg_subset <- deg_subset %>%
+                inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
+                filter(!is.na(ENTREZID)) %>%                            
+                distinct(ENTREZID, .keep_all = TRUE)    
           geneList <- deg_subset$logFC
           names(geneList) <- deg_subset$ENTREZID
           geneList <- sort(geneList, decreasing = TRUE)
@@ -81,8 +86,14 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
             OrgDb = "org.Hs.eg.db",
             drop = FALSE
           )
-          deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
-          deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
+          #deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
+          #deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
+          #deg_subset <- deg_subset[!duplicated(deg_subset$ENTREZID), ]
+
+          deg_subset <- deg_subset %>%
+                inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
+                filter(!is.na(ENTREZID)) %>%                            
+                distinct(ENTREZID, .keep_all = TRUE)          
           geneList <- deg_subset$logFC
           names(geneList) <- deg_subset$ENTREZID
           geneList <- sort((-1) * geneList, decreasing = TRUE)
