@@ -18,7 +18,6 @@ This platform is designed to integrate seamlessly with the [**Atgenomix Seqslab 
 - **Dynamic Visualization** – Real-time rendering of volcano plots, violin plots, scatter plots, and heatmaps.
 - **Gene Set Enrichment** – GO (BP, CC, MF), KEGG, and GSEA visualization using `clusterProfiler` and `enrichplot`.
 - **PCA Explorer** – Perform and visualize Principal Component Analysis with optional clustering.
-- **Sample Filtering** – Intuitive group selection (e.g. tissue type, condition) for focused analysis.
 - **Modular UI** – Shiny modules for plot controls, filtering, and enrichment make extension easy.
 - **Asynchronous Execution** – Responsive UI powered by `future_promise` and task progress popups.
 
