@@ -216,6 +216,39 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                     )
                   )
                 )
+              ),
+              tabPanel(
+                title = "WGCNA",
+                sidebarLayout(
+                  sidebarPanel(
+                      h4("Sample Clustering"),
+                      selectInput("distMethod", "Distance Method",
+                          choices = c("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski"),
+                          selected = "euclidean"
+                      ),
+                      sliderInput("cutHeight", "Cutoff Height:", min = 0, max = 50, value = 15, step = 1),
+                      hr(),
+                      h4("Scale-Free Topology"),
+                      sliderInput("powerRange", "Power Vector:", min = 1, max = 30, value = c(1, 20)),
+                      numericInput("rsqCut", "RsquaredCut:", value = 0.8, min = 0, max = 1, step = 0.05),
+                      numericInput("selectedPower", "Selected Power:", value = 6, min = 1, max = 30),
+                      hr(),
+                      h4("Module Detection"),
+                      numericInput("deepSplit", "deepSplit:", value = 2, min = 0, max = 4, step = 1),
+                      numericInput("minModuleSize", "Min Module Size:", value = 30, min = 5, max = 200, step = 1),
+                      actionButton("runModules", "Detect Modules"),
+                      width = 3
+                  ),
+                  mainPanel(
+                      tabsetPanel(
+                          tabPanel("Sample Tree", sampleClustUI("sample")),
+                          tabPanel("Scale-Free Topology", sftUI("sft")),
+                          tabPanel("Gene Modules", geneModuleUI("mod")),
+                          tabPanel("Gene List", geneListUI("list"))
+                      ),
+                      width = 9
+                  )
+                )
               )
 
             )
@@ -884,6 +917,64 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(head(wide_data()))
       pcaModuleServer("pca1", wide_data(), maeColData())
     })
+    # 假設你的 RNA-seq 已經處理好，表達矩陣放在 reactiveVal wide_data()
+    observeEvent(wide_data(), {
+      validate(
+          need(exists("expression.data"), "Load 'expression.data' before running app.")
+        )
+        expression.data <- t(wide_data())
+        # 1) Data quality check: goodSamplesGenes
+        gsg <- goodSamplesGenes(expression.data, verbose = 0)
+        if (!gsg$allOK) {
+          # Filter out problematic samples/genes
+          expression.data <- expression.data[gsg$goodSamples, gsg$goodGenes]
+        }
+        
+        # 2) Numeric conversion with dimension validation
+        exprDataNumeric <- reactive({
+          mat <- expression.data
+          df <- as.data.frame(lapply(mat, as.numeric))
+          validate(
+            need(nrow(df) > 1 && ncol(df) > 1, 
+                "Filtered data has too few samples or genes to proceed.")
+          )
+          df
+        })
+
+        # 3) Call Shiny modules with cleaned data
+        sampleClustServer(
+          "sample", 
+          exprData = exprDataNumeric, 
+          distMethod = reactive(input$distMethod), 
+          cutHeight = reactive(input$cutHeight)
+        )
+
+        sftServer(
+          "sft", 
+          exprData = exprDataNumeric, 
+          powerRange = reactive(input$powerRange), 
+          rsqCut = reactive(input$rsqCut), 
+          selectedPower = reactive(input$selectedPower)
+        )
+
+        modulesObj <- geneModuleServer(
+          "mod", 
+          exprData = exprDataNumeric, 
+          power = reactive(input$selectedPower), 
+          deepSplit = reactive(input$deepSplit), 
+          minSize = reactive(input$minModuleSize), 
+          runTrigger = reactive(input$runModules)
+        )
+
+        geneListServer(
+          "list", 
+          exprData = exprDataNumeric, 
+          modulesObj = modulesObj
+        )
+    })
+
+
+
   }
 
   for_run <- shinyApp(ui = ui, server = server)
