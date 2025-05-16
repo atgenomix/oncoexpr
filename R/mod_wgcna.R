@@ -1,3 +1,9 @@
+#' @import shiny
+#' @import WGCNA
+#' @import DT
+#' @import plotly
+NULL
+
 #' @title Sample Clustering Shiny Module
 #' @description
 #' The `sampleClustUI()` function generates the UI for displaying a sample dendrogram,
