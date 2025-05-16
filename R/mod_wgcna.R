@@ -148,6 +148,8 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
       validate(need(!is.null(obj), "Click 'Run WGCNA' to detect modules."))
       tree <- obj$dendrograms[[1]]
       colors <- labels2colors(obj$colors)
+      names(colors) <- colnames(exprData())
+      print(paste("Number of modules detected:", length(unique(colors))))
       plotDendroAndColors(
         tree, colors, "Module",
         dendroLabels = FALSE,
