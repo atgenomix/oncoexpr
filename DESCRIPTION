@@ -46,6 +46,7 @@ Imports:
     progressr (>= 0.15.1),
     factoextra (>= 1.0.7),
     ggforce (>= 0.4.2),
+    WGCNA (>= 1.73)
 Suggests:
     edgeR,
     MultiAssayExperiment,
