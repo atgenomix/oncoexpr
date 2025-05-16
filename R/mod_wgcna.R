@@ -150,6 +150,7 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
       colors <- labels2colors(obj$colors)
       names(colors) <- colnames(exprData())
       print(paste("Number of modules detected:", length(unique(colors))))
+      print(dim(exprData()))
       plotDendroAndColors(
         tree, colors, "Module",
         dendroLabels = FALSE,
