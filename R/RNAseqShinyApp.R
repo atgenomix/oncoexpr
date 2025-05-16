@@ -226,6 +226,14 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         title = "WGCNA",
         sidebarLayout(
           sidebarPanel(
+              h4("Parallel Settings"),
+              numericInput(
+                "nThreads", "Number of Threads:",
+                value = parallel::detectCores() - 1,
+                min = 1,
+                max = parallel::detectCores(),
+                step = 1
+              ),
               h4("Sample Clustering"),
               selectInput("distMethod", "Distance Method",
                   choices = c("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski"),
@@ -917,10 +925,13 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(head(wide_data()))
       pcaModuleServer("pca1", wide_data(), maeColData())
     })
-
+    observe({
+      req(input$nThreads)
+      enableWGCNAThreads(input$nThreads)
+    })
     observeEvent(wide_data(), {
       req(wide_data())
-
+        enableWGCNAThreads()
         raw_df <- wide_data()
         if (!"GeneSymbol" %in% colnames(raw_df)) stop("wide_data() must contain 'GeneSymbol' column")
         rownames(raw_df) <- raw_df$GeneSymbol
@@ -930,7 +941,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         numeric_df <- raw_df[, sapply(raw_df, is.numeric), drop = FALSE]
         # Transpose to samples x genes matrix
         expr_mat <- t(as.matrix(expr_mat_raw))
-
+        #expr_mat <- as.data.frame(expr_mat[, sample(1:ncol(expr_mat), 2500, replace = FALSE)])
+        print(dim(expr_mat))
         # 1) Data quality check: require numeric matrix
         gsg <- goodSamplesGenes(expr_mat, verbose = 0)
         print(gsg$allOK)
