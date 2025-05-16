@@ -45,7 +45,7 @@ Imports:
     shinyjs (>= 2.1.0),
     progressr (>= 0.15.1),
     factoextra (>= 1.0.7),
-    ggforce (>= 0.4.2)
+    ggforce (>= 0.4.2),
 Suggests:
     edgeR,
     MultiAssayExperiment,
