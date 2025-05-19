@@ -941,6 +941,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         numeric_df <- raw_df[, sapply(raw_df, is.numeric), drop = FALSE]
         # Transpose to samples x genes matrix
         expr_mat <- t(as.matrix(expr_mat_raw))
+        # option for development
         #expr_mat <- as.data.frame(expr_mat[, sample(1:ncol(expr_mat), 2500, replace = FALSE)])
         print(dim(expr_mat))
         # 1) Data quality check: require numeric matrix

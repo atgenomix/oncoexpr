@@ -131,6 +131,8 @@ geneModuleUI <- function(id) {
 geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger) {
   moduleServer(id, function(input, output, session) {
     modulesObj <- eventReactive(runTrigger(), {
+      #nGenes <- ncol(exprData())
+      nGenes <- 4000
       withProgress(message = "Detecting modules...", value = 0, {
         blockwiseModules(
           exprData(),
@@ -139,6 +141,7 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
           deepSplit = deepSplit(),
           minModuleSize = minSize(),
           numericLabels = FALSE,
+          maxBlockSize = nGenes,
           verbose = 0
         )
       })
@@ -146,13 +149,25 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
     output$geneModulesPlot <- renderPlot({
       obj <- modulesObj()
       validate(need(!is.null(obj), "Click 'Run WGCNA' to detect modules."))
-      tree <- obj$dendrograms[[1]]
+      tree <- obj$dendrograms[[1]] # Use the first dendrogram
+      print(tree)
       colors <- labels2colors(obj$colors)
       names(colors) <- colnames(exprData())
-      print(paste("Number of modules detected:", length(unique(colors))))
-      print(dim(exprData()))
+      geneNames <- tree$labels
+      #subColors <- labels2colors(obj$colors)[geneNames]
+      #names(subColors) <- geneNames
+      subcolors <- obj$colors[obj$blockGenes[[1]]]
+      message("Number of modules detected: ", length(unique(colors)))
+      message("Total genes colored: ", length(colors))
+      message("exprData dimensions: ", 
+              paste(nrow(exprData()), ncol(exprData()), sep = " x "))
+      message("numbers of blocks: ",  length(obj$dendrograms))
+      message("number of genes in the first block: ", tree$size)
+      message("number of subcolors: ", length(subcolors) )
+      message("number of genes in the first block: ", length(obj$blockGenes[[1]]))
+
       plotDendroAndColors(
-        tree, colors, "Module",
+        tree, subcolors, "Module",
         dendroLabels = FALSE,
         hang = 0.03,
         addGuide = TRUE,
