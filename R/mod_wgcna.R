@@ -122,6 +122,7 @@ sftServer <- function(id, exprData, powerRange, rsqCut, selectedPower) {
 geneModuleUI <- function(id) {
   ns <- NS(id)
   tagList(
+    uiOutput(ns("blockSelector")),
     plotOutput(ns("geneModulesPlot"), height = "500px")
   )
 }
@@ -200,7 +201,11 @@ geneListUI <- function(id) {
   tagList(
     uiOutput(ns("moduleSelector")),
     DTOutput(ns("geneTable")),
-    downloadButton(ns("downloadGenes"), "Download CSV")
+    fluidRow(
+      column(6, downloadButton(ns("downloadGenes"), "Download Selected Module")),
+      column(6, downloadButton(ns("downloadAll"),   "Download All Modules"))
+    )
+    
   )
 }
 
@@ -231,6 +236,14 @@ geneListServer <- function(id, exprData, modulesObj) {
       filename = function() paste0("genes_module_", input$moduleColor, ".csv"),
       content = function(file) {
         write.csv(subset(df_all(), ModuleColor == input$moduleColor), file, row.names = FALSE)
+      }
+    )
+    output$downloadAll <- downloadHandler(
+      filename = function() {
+        "all_modules.csv"
+      },
+      content = function(file) {
+        write.csv(df_all(), file, row.names = FALSE)
       }
     )
   })
