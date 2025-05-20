@@ -164,15 +164,11 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
       validate(need(!is.null(obj), "Click 'Run WGCNA' to detect modules."))
       req(obj, input$block)
       b_ <- as.integer(input$block)
+      print(paste("Block:", b_))
       tree <- obj$dendrograms[[b_]] # Use the first dendrogram
-      print(tree)
-      #colors <- labels2colors(obj$colors)
-      colors <- obj$colors
+      colors <- labels2colors(obj$colors)
       names(colors) <- colnames(exprData())
-      
-      #geneNames <- tree$labels
-      #subcolors <- obj$colors[obj$blockGenes[[b_]]]
-      subcolors <- colors[ tree$labels ]
+      subcolors <- obj$colors[obj$blockGenes[[b_]]]
       message("Number of modules detected: ", length(unique(colors)))
       message("Total genes colored: ", length(colors))
       message("exprData dimensions: ", 
@@ -181,15 +177,13 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
       message("number of genes in the first block: ", tree$size)
       message("number of subcolors: ", length(subcolors) )
       message("number of genes in the first block: ", length(obj$blockGenes[[b_]]))
-
       plotDendroAndColors(
         tree, subcolors, "Module",
         dendroLabels = FALSE,
         hang = 0.03,
         addGuide = TRUE,
         guideHang = 0.05,
-        main = paste("Gene Dendrogram — Block", b_),
-        groupLabels = paste("Module Colors (Block", b_, ")"),
+        main = paste("Gene Dendrogram — Block", b_)
       )
     })
     modulesObj
