@@ -42,15 +42,18 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
     })
     sampleClusters <- reactive({
       tree <- sampleTree()
-      cutreeStatic(tree, cutHeight = cutHeight(), minSize = 2)  # minSize 可視狀況調整
+      cutreeStatic(tree, cutHeight = cutHeight(), minSize = 1)
     })
     
     filteredExprData <- reactive({
       clusters <- sampleClusters()
+      message("Current cutHeight: ", cutHeight())
+      message("sample clusters: ", clusters)      
       keepGroup <- which.max(table(clusters))
       exprData()[clusters == keepGroup, , drop = FALSE]
+      
     })
-    
+    message("filteredExprData: ", dim(filteredExprData))      
     output$dendro <- renderPlot({
       tree <- sampleTree()
       plot(tree,
