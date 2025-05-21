@@ -45,7 +45,8 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
     
     filteredExprData <- reactive({
       clusters <- sampleClusters()
-      exprData()[clusters == 1, , drop = FALSE]  # 只保留主群組 samples
+      keepGroup <- which.max(table(clusters))
+      exprData()[clusters == keepGroup, , drop = FALSE]
     })
     
     output$dendro <- renderPlot({
@@ -58,6 +59,7 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
     })
 
     return(filteredExprData)
+
   })
 }
 
