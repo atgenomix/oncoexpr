@@ -37,7 +37,9 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
     sampleTree <- reactive({
       dist(exprData(), method = distMethod()) |> hclust(method = "average")
     })
-    
+    maxHeight <- reactive({
+      max(sampleTree()$height)
+    })
     sampleClusters <- reactive({
       tree <- sampleTree()
       cutreeStatic(tree, cutHeight = cutHeight(), minSize = 2)  # minSize 可視狀況調整
@@ -58,7 +60,10 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
       abline(h = cutHeight(), col = "red", lwd = 2)
     })
 
-    return(filteredExprData)
+    return(list(
+      filteredExpr = filteredExprData,
+      maxHeight = maxHeight
+    ))
 
   })
 }
