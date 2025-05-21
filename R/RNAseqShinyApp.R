@@ -951,13 +951,6 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         if (!gsg$allOK) {
           expr_mat <- expr_mat[gsg$goodSamples, gsg$goodGenes]
         }
-        # expression.data <- t(wide_data())
-        # # 1) Data quality check: goodSamplesGenes
-        # gsg <- goodSamplesGenes(expression.data, verbose = 0)
-        # if (!gsg$allOK) {
-        #   # Filter out problematic samples/genes
-        #   expression.data <- expression.data[gsg$goodSamples, gsg$goodGenes]
-        # }
         
         # 2) Numeric conversion with dimension validation
         exprDataNumeric <- reactive({
