@@ -971,12 +971,24 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
 
         # 3) Call Shiny modules with cleaned data
-        filteredExpr <- sampleClustServer(
+        sampleOut <- sampleClustServer(
           "sample", 
           exprData = exprDataNumeric, 
           distMethod = reactive(input$distMethod), 
           cutHeight = reactive(input$cutHeight)
         )
+        
+        observeEvent(sampleOut$maxHeight(), {
+          maxH <- sampleOut$maxHeight()
+          updateSliderInput(
+            session,
+            "cutHeight",
+            min = 0,
+            max = ceiling(maxH),
+            step = 1,
+            value = min(input$cutHeight, ceiling(maxH))
+          )
+        })
 
         sftServer(
           "sft", 
