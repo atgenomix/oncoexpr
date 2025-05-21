@@ -992,7 +992,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         sftServer(
           "sft", 
-          exprData = filteredExpr, 
+          exprData = sampleOut$filteredExpr, 
           powerRange = reactive(input$powerRange), 
           rsqCut = reactive(input$rsqCut), 
           selectedPower = reactive(input$selectedPower)
@@ -1000,7 +1000,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         modulesObj <- geneModuleServer(
           "mod", 
-          exprData = filteredExpr, 
+          exprData = sampleOut$filteredExpr, 
           power = reactive(input$selectedPower), 
           deepSplit = reactive(input$deepSplit), 
           minSize = reactive(input$minModuleSize), 
@@ -1009,7 +1009,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         geneListServer(
           "list", 
-          exprData = filteredExpr, 
+          exprData = sampleOut$filteredExpr, 
           modulesObj = modulesObj
         )
     })
