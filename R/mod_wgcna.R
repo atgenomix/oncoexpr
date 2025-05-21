@@ -37,6 +37,17 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
     sampleTree <- reactive({
       dist(exprData(), method = distMethod()) |> hclust(method = "average")
     })
+    
+    sampleClusters <- reactive({
+      tree <- sampleTree()
+      cutreeStatic(tree, cutHeight = cutHeight(), minSize = 2)  # minSize 可視狀況調整
+    })
+    
+    filteredExprData <- reactive({
+      clusters <- sampleClusters()
+      exprData()[clusters == 1, , drop = FALSE]  # 只保留主群組 samples
+    })
+    
     output$dendro <- renderPlot({
       tree <- sampleTree()
       plot(tree,
@@ -45,6 +56,8 @@ sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
            cex.lab = 1.2, cex.axis = 1.2, cex.main = 1.5)
       abline(h = cutHeight(), col = "red", lwd = 2)
     })
+
+    return(filteredExprData)
   })
 }
 

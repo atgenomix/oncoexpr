@@ -929,6 +929,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       req(input$nThreads)
       enableWGCNAThreads(input$nThreads)
     })
+
     observeEvent(wide_data(), {
       req(wide_data())
         enableWGCNAThreads()
@@ -970,7 +971,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
         })
 
         # 3) Call Shiny modules with cleaned data
-        sampleClustServer(
+        filteredExpr <- sampleClustServer(
           "sample", 
           exprData = exprDataNumeric, 
           distMethod = reactive(input$distMethod), 
@@ -979,7 +980,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         sftServer(
           "sft", 
-          exprData = exprDataNumeric, 
+          exprData = filteredExpr, 
           powerRange = reactive(input$powerRange), 
           rsqCut = reactive(input$rsqCut), 
           selectedPower = reactive(input$selectedPower)
@@ -987,7 +988,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         modulesObj <- geneModuleServer(
           "mod", 
-          exprData = exprDataNumeric, 
+          exprData = filteredExpr, 
           power = reactive(input$selectedPower), 
           deepSplit = reactive(input$deepSplit), 
           minSize = reactive(input$minModuleSize), 
@@ -996,7 +997,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
         geneListServer(
           "list", 
-          exprData = exprDataNumeric, 
+          exprData = filteredExpr, 
           modulesObj = modulesObj
         )
     })
