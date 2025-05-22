@@ -38,13 +38,13 @@ createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers 
                         geom = "point",
                         show.clust.cent = TRUE,
                         labelsize = 4,
-                        ggtheme = theme_minimal()
+                        ggtheme = theme_minimal(),
+                        shape           = 19,
     )
-    
-    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "PCA Plot (Clustering)",
+
+    plot <- plot + coord_cartesian(xlim = x_lim, ylim = y_lim) + labs(title = "K‑Means Clustering",
           x = xlab,
-          y = ylab,
-          color = "Group")
+          y = ylab)
     
   } else {
     mergedData <- merge(pcaData, colData, by.x = "Sample", by.y = "mainCode", all.x = TRUE)
@@ -55,7 +55,7 @@ createPCAPlot <- function(pcaResult, colData, enableClustering = FALSE, centers 
       geom_point(size = 3) +
 
       ggrepel::geom_text_repel(size = 4, max.overlaps = 200) +
-      labs(title = "PCA Plot (Original Groups)",
+      labs(title = "Cases vs. Controls",
           x = xlab,
           y = ylab,
           color = "Group") +

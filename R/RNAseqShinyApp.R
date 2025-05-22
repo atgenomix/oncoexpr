@@ -91,7 +91,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                   ),
                   tabPanel(
                     "DEG Table",
-                    downloadButton("download_DEG", "Download DEG CSV"),
+                    downloadButton("download_DEG", "Download"),
                     withSpinner((DT::dataTableOutput("DEG_table", width = "100%")))
                   )
                 )
@@ -123,7 +123,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             sliderInput("pointSize", "Point Size:",
               min = 1, max = 5, value = 2, step = 0.5
             ),
-            sliderInput("ptAlpha", "Transparent:",
+            sliderInput("ptAlpha", "Transparency:",
               min = 0.1, max = 1, value = 0.6, step = 0.1
             ),
             sliderInput("labelSize", "Gene Label Size:",
@@ -170,35 +170,96 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
                 )
               ),
               tabPanel(
-                "Gene Set Enrichment",
+                "Over-Representation Analysis (ORA)",
                 fluidRow(
                   column(
                     12,
-                    h4("UPregulated DEGs"),
+                    h4("Upregulated DEGs"),
                     tabsetPanel(
                       tabPanel("KEGG", withSpinner(plotOutput("G1_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G1_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G1_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G1_CC"))),
-                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_up")))
+                      tabPanel("CC", withSpinner(plotOutput("G1_CC")))
                     )
                   )
                 ),
                 fluidRow(
                   column(
                     12,
-                    h4("DOWNregulated DEGs"),
+                    h4("Downregulated DEGs"),
                     tabsetPanel(
                       tabPanel("KEGG", withSpinner(plotOutput("G2_KEGG"))),
                       tabPanel("MF", withSpinner(plotOutput("G2_MF"))),
                       tabPanel("BP", withSpinner(plotOutput("G2_BP"))),
-                      tabPanel("CC", withSpinner(plotOutput("G2_CC"))),
-                      tabPanel("GSEA(KEGG)", withSpinner(gseaFCModuleUI("gsea_down")))
+                      tabPanel("CC", withSpinner(plotOutput("G2_CC")))
+                    )
+                  )
+                )
+              ),
+              tabPanel(
+                "Gene Set Enrichment Analysis (GSEA)",
+                fluidRow(
+                  column(
+                    12,
+                    h4("Upregulated DEGs"),
+                    tabsetPanel(
+                      tabPanel("KEGG", withSpinner(gseaFCModuleUI("gsea_up")))
+                    )
+                  )
+                ),
+                fluidRow(
+                  column(
+                    12,
+                    h4("Downregulated DEGs"),
+                    tabsetPanel(
+                      tabPanel("KEGG", withSpinner(gseaFCModuleUI("gsea_down")))
                     )
                   )
                 )
               )
+
             )
+          )
+        )
+      ),
+      tabPanel(
+        title = "WGCNA",
+        sidebarLayout(
+          sidebarPanel(
+              h4("Parallel Settings"),
+              numericInput(
+                "nThreads", "Number of Threads:",
+                value = parallel::detectCores() - 1,
+                min = 1,
+                max = parallel::detectCores(),
+                step = 1
+              ),
+              h4("Sample Clustering"),
+              selectInput("distMethod", "Distance Method",
+                  choices = c("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski"),
+                  selected = "euclidean"
+              ),
+              sliderInput("cutHeight", "Cutoff Height:", min = 0, max = 50, value = 15, step = 1),
+              hr(),
+              h4("Scale-Free Topology"),
+              sliderInput("powerRange", "Power Vector:", min = 1, max = 30, value = c(1, 20)),
+              numericInput("rsqCut", "RsquaredCut:", value = 0.8, min = 0, max = 1, step = 0.05),
+              numericInput("selectedPower", "Selected Power:", value = 6, min = 1, max = 30),
+              hr(),
+              h4("Module Detection"),
+              numericInput("deepSplit", "deepSplit:", value = 2, min = 0, max = 4, step = 1),
+              numericInput("minModuleSize", "Min Module Size:", value = 30, min = 5, max = 200, step = 1),
+              actionButton("runModules", "Detect Modules"),
+              width = 3
+          ),
+          mainPanel(
+              tabsetPanel(
+                  tabPanel("Sample Tree", sampleClustUI("sample")),
+                  tabPanel("Scale-Free Topology", sftUI("sft")),
+                  tabPanel("Gene Modules", geneModuleUI("mod")),
+                  tabPanel("Gene List", geneListUI("list"))
+              ),
+              width = 9
           )
         )
       )
@@ -864,6 +925,90 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       print(head(wide_data()))
       pcaModuleServer("pca1", wide_data(), maeColData())
     })
+    observe({
+      req(input$nThreads)
+      enableWGCNAThreads(input$nThreads)
+    })
+
+    observeEvent(wide_data(), {
+      req(wide_data())
+        enableWGCNAThreads()
+        raw_df <- wide_data()
+        if (!"GeneSymbol" %in% colnames(raw_df)) stop("wide_data() must contain 'GeneSymbol' column")
+        rownames(raw_df) <- raw_df$GeneSymbol
+        expr_mat_raw <- raw_df[, setdiff(colnames(raw_df), "GeneSymbol"), drop = FALSE]
+        print(dim(expr_mat_raw))
+        # Filter numeric columns only
+        numeric_df <- raw_df[, sapply(raw_df, is.numeric), drop = FALSE]
+        # Transpose to samples x genes matrix
+        expr_mat <- t(as.matrix(expr_mat_raw))
+        # option for development
+        #expr_mat <- as.data.frame(expr_mat[, sample(1:ncol(expr_mat), 2500, replace = FALSE)])
+        print(dim(expr_mat))
+        # 1) Data quality check: require numeric matrix
+        gsg <- goodSamplesGenes(expr_mat, verbose = 0)
+        print(gsg$allOK)
+        if (!gsg$allOK) {
+          expr_mat <- expr_mat[gsg$goodSamples, gsg$goodGenes]
+        }
+        
+        # 2) Numeric conversion with dimension validation
+        exprDataNumeric <- reactive({
+          mat <- as.data.frame(expr_mat)
+          df <- as.data.frame(lapply(mat, as.numeric))
+          validate(
+            need(nrow(df) > 1 && ncol(df) > 1, 
+                "Filtered data has too few samples or genes to proceed.")
+          )
+          df
+        })
+
+        # 3) Call Shiny modules with cleaned data
+        sampleOut <- sampleClustServer(
+          "sample", 
+          exprData = exprDataNumeric, 
+          distMethod = reactive(input$distMethod), 
+          cutHeight = reactive(input$cutHeight)
+        )
+        
+        observeEvent(sampleOut$maxHeight(), {
+          maxH <- sampleOut$maxHeight()
+          updateSliderInput(
+            session,
+            "cutHeight",
+            min = 0,
+            max = ceiling(maxH),
+            step = 1,
+            value = min(input$cutHeight, ceiling(maxH))
+          )
+        })
+
+        sftServer(
+          "sft", 
+          exprData = sampleOut$filteredExpr, 
+          powerRange = reactive(input$powerRange), 
+          rsqCut = reactive(input$rsqCut), 
+          selectedPower = reactive(input$selectedPower)
+        )
+
+        modulesObj <- geneModuleServer(
+          "mod", 
+          exprData = sampleOut$filteredExpr, 
+          power = reactive(input$selectedPower), 
+          deepSplit = reactive(input$deepSplit), 
+          minSize = reactive(input$minModuleSize), 
+          runTrigger = reactive(input$runModules)
+        )
+
+        geneListServer(
+          "list", 
+          exprData = sampleOut$filteredExpr, 
+          modulesObj = modulesObj
+        )
+    })
+
+
+
   }
 
   for_run <- shinyApp(ui = ui, server = server)

@@ -27,20 +27,39 @@ pcaModuleUI <- function(id) {
 pcaModuleServer <- function(id, normCount, colData) {
   moduleServer(id, function(input, output, session) {
     rownames(normCount) <- normCount$"GeneSymbol"
-    normCount <- normCount[, -1]
+    normCount <- normCount[, setdiff(names(normCount), "GeneSymbol")]
+    sample_n <- ncol(normCount)
+    if (sample_n < 3) {
+      output$pcaPlotOriginal <- renderPlot({
+        plot.new()
+        text(0.5, 0.5, "Insufficient samples to perform PCA.")
+      })
+      output$pcaPlotClustering <- renderPlot({
+        plot.new()
+        text(0.5, 0.5, "Insufficient samples to perform PCA.")
+      })
+      outputOptions(output, "pcaPlotOriginal",     suspendWhenHidden = FALSE)
+      outputOptions(output, "pcaPlotClustering",   suspendWhenHidden = FALSE)
+      return()
+    }
     #colnames(normCount) <- gsub("\\.", "-", colnames(normCount))
     pcaResult <- prcomp(t(normCount), scale. = TRUE)
 
     output$pcaPlotOriginal <- renderPlot({
-      createPCAPlot(pcaResult, colData, enableClustering = FALSE)
+      createPCAPlot(pcaResult, colData, enableClustering = FALSE)+
+        theme(
+          panel.border = element_rect(color = "cyan", fill = NA, size = 1)
+        )
     })
     
-    # Render 分群結果圖 (enableClustering = TRUE)
+    # Render clustering (enableClustering = TRUE)
     output$pcaPlotClustering <- renderPlot({
-      createPCAPlot(pcaResult, colData, enableClustering = TRUE)
+      createPCAPlot(pcaResult, colData, enableClustering = TRUE)+
+        theme(
+          panel.border = element_rect(color = "cyan", fill = NA, size = 1)
+        )
     })
     
-    # 設定圖形輸出不因面板隱藏而暫停
     outputOptions(output, "pcaPlotOriginal", suspendWhenHidden = FALSE)
     outputOptions(output, "pcaPlotClustering", suspendWhenHidden = FALSE)
 

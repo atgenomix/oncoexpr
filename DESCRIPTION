@@ -11,6 +11,8 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Depends: 
+    R (>= 4.4.1)
 Imports: 
     pcaPP (>= 2.0-5),
     reshape2 (>= 1.4.4),
@@ -43,7 +45,9 @@ Imports:
     shinyjs (>= 2.1.0),
     progressr (>= 0.15.1),
     factoextra (>= 1.0.7),
-    ggforce (>= 0.4.2)
+    ggforce (>= 0.4.2),
+    WGCNA (>= 1.73),
+    plotly (>= 4.10.4)
 Suggests:
     edgeR,
     MultiAssayExperiment,

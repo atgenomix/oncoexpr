@@ -10,7 +10,7 @@ dbBrowserUI <- function(id) {
     selectInput(
       inputId = ns("selected_db"),
       label   = "",
-      choices = c("Please Waiting..." = "")
+      choices = c("Loading, please wait..." = "")
     ),
   )
 }
@@ -26,15 +26,29 @@ dbBrowserServer <- function(id, sc) {
     ns <- session$ns
     observe({
       org <- tolower(Sys.getenv("SPARK_USER"))
+      print("=====org=====")
+      print(org)
+      print("=====org=====")
       c <- ifelse(stringr::str_equal(org, ""), "", sprintf("LIKE '*_%s'", org))
       print(c)
       db_list <- dbGetQuery(sc, sprintf("SHOW DATABASES %s", c))
-      print("db_list")
-      print(db_list[["namespace"]][1])
+      #choices <- db_list[["namespace"]]
+      full_names <- db_list[["namespace"]]
+      print("full_names")
+      print(full_names)
+      #org <- "cus_ejajocvzumxvupd"
+      pattern <- paste0("_", org, "$")
+      print("pattern")
+      print(pattern)
+      display_labels <- sub(pattern, "", full_names)
+      print(display_labels)
+      choices <- setNames(full_names, display_labels) 
+      print(choices)
+      # UI will show names, not values
       updateSelectInput(
         session,
         "selected_db",
-        choices = db_list,
+        choices = choices,
         selected = ""
       )
     })
