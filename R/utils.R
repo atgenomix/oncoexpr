@@ -412,11 +412,11 @@ generate_sample_info <- function(data, mainCode_, subCode_) {
 #' @examples
 #' \dontrun{
 #' se <- readRDS("query_TCGA_BRCA.rds")
-#' tbls <- get_tables(se, assay_name = "tpm_unstrand")
+#' tbls <- query_se_tables(se, assay_name = "tpm_unstrand")
 #' str(tbls)
 #' }
 #' @export
-get_tables <- function(se, assay_name = NULL) {
+query_se_tables <- function(se, assay_name = NULL) {
   stopifnot(inherits(se, "SummarizedExperiment"))
 
   if (is.null(assay_name)) {
@@ -457,7 +457,7 @@ get_tables <- function(se, assay_name = NULL) {
 #' @examples
 #' \dontrun{
 #' se  <- readRDS("query_TCGA_BRCA.rds")
-#' gi  <- get_tables(se)$gene_info
+#' gi  <- query_se_tables(se)$gene_info
 #' pcs <- geneinfo_filter(gi, gene_biotype = "protein_coding")
 #' head(pcs)
 #' }
@@ -491,10 +491,10 @@ geneinfo_filter <- function(gene_info,
 #'
 #' Aligns a gene list produced by \code{\link{geneinfo_filter}} (or any
 #' similar data frame) with an expression matrix returned by
-#' \code{\link{get_tables}}, optionally replacing the rownames by gene
+#' \code{\link{query_se_tables}}, optionally replacing the rownames by gene
 #' symbols and guaranteeing matrix dimensions.
 #'
-#' @param tables A list created by \code{\link{get_tables}}.
+#' @param tables A list created by \code{\link{query_se_tables}}.
 #' @param genes_df A `data.frame` containing at least the `gene_id` column.
 #' @param id_col Name of the gene-ID column in `genes_df`.
 #' @param symbol_col Name of the symbol column in `genes_df`.
@@ -511,7 +511,7 @@ geneinfo_filter <- function(gene_info,
 #' @examples
 #' \dontrun{
 #' se  <- readRDS("query_TCGA_BRCA.rds")
-#' tbl <- get_tables(se, "tpm_unstrand")
+#' tbl <- query_se_tables(se, "tpm_unstrand")
 #'
 #' pcs <- geneinfo_filter(tbl$gene_info)      # protein-coding by default
 #' res <- subset_expr(tbl, pcs)
