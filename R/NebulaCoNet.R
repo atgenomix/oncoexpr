@@ -86,7 +86,7 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
                 width = 12,
                 tabsetPanel(
                   tabPanel(
-                    "normCount Table",
+                    "Expression Table",
                     withSpinner(DT::dataTableOutput("wide_table_dt", width = "100%"))
                   ),
                   tabPanel(
@@ -150,8 +150,8 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
       db_info = NULL,
       table_list = NULL,
       grouplist = NULL,
-      normcount_data = NULL,
-      exacttest_data = NULL,
+      expression_data = NULL,
+      geneinfo_data = NULL,
       coldata = NULL
     )
     volcano_res <- reactiveVal(NULL)
@@ -179,27 +179,27 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
         results$db_info <- dbBrowserServer("dbBrowser1", sc)
         showNotification("Waiting for initialization", type = "message", duration = 10)
 
-        normcount_future <- trigger_cluster_query_by_pattern(
+        expression_future <- trigger_cluster_query_by_pattern(
           master, method, version,
-          pattern = "^normcounts",
+          pattern = "^(normcounts|expression_matrix)",
           output_label = "init_tbl_normcount"
         )
 
-        exacttest_future <- trigger_cluster_query_by_pattern(
+        geneinfo_future <- trigger_cluster_query_by_pattern(
           master, method, version,
-          pattern = "^exacttest",
+          pattern = "^(exacttest|gene_info)",
           output_label = "init_tbl_exacttest"
         )
 
-        coldata_future <- trigger_cluster_query_by_pattern(
+        sampleinfo_future <- trigger_cluster_query_by_pattern(
           master, method, version,
-          pattern = "^coldata",
+          pattern = "^(coldata|sample_info)",
           output_label = "init_tbl_coldata"
         )
         all_promises <- promises::promise_all(
-          norm = normcount_future,
-          ex   = exacttest_future,
-          col  = coldata_future
+          expression_ = expression_future,
+          geneinfo_   = geneinfo_future,
+          sampleinfo_  = sampleinfo_future
         )
 
         all_promises %...>% (function(res_list) {
@@ -226,8 +226,8 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
         data.frame()
       })
 
-      results$exacttest_data <- NULL
-      results$normcount_data <- NULL
+      results$geneinfo_data <- NULL
+      results$expression_data <- NULL
       results$coldata <- NULL
       output$ht_heatmap <- renderPlot({
         grid::grid.newpage()
@@ -251,7 +251,8 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
         ))
         setProgress(value = 0.2, detail = sprintf("Fetched %d tables", length(tbls)))
 
-        prefix <- c("^normcounts|^exacttest|^coldata")
+        prefix <- c("^normcounts|^exacttest|^coldata|^expression_matrix|^gene_info|^sample_info")
+        
         tbl_list_query_prefix <- tbl_list_query[grepl(paste(prefix, collapse = "|"), tbls), ]
         t2 <- Sys.time()
         message(sprintf(
@@ -286,9 +287,9 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
         setProgress(value = 0.8, detail = sprintf("Selected %d tables", nrow(tbl_list_query_prefix_time)))
 
         tbls_final <- summary_table$file
-        normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_final, ignore.case = TRUE), "tableName"]
-        exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_final, ignore.case = TRUE), "tableName"]
-        coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_final, ignore.case = TRUE), "tableName"]
+        expression_tbls <- tbl_list_query_prefix_time[grepl("^(normcounts|expression_matrix)", tbls_final, ignore.case = TRUE), "tableName"]
+        geneinfo_tbls <- tbl_list_query_prefix_time[grepl("^(exacttest|gene_info)", tbls_final, ignore.case = TRUE), "tableName"]
+        sampleinfo_tbls <- tbl_list_query_prefix_time[grepl("^(coldata|sample_info)", tbls_final, ignore.case = TRUE), "tableName"]
         t5 <- Sys.time()
         message(sprintf(
           "[Stage1] Categorized tables at %s (%.2f sec)",
@@ -301,42 +302,42 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
 
 
 
-      req(normcount_tbls, exacttest_tbls, coldata_tbls)
+      req(expression_tbls, geneinfo_tbls, sampleinfo_tbls)
 
       t0_norm_launch <- Sys.time()
-      message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
-      normcount_promise <- future_promise(
+      message(sprintf("[Stage2-expression] Launch at %s", t0_norm_launch))
+      expression_promise <- future_promise(
         {
           start_time <- Sys.time()
-          message(sprintf("[%s] Start querying normcounts table", start_time))
+          message(sprintf("[%s] Start querying expression table", start_time))
 
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
-          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+          query_expression_matrix <- paste0("SELECT * FROM ", expression_tbls[1])
+          expression <- DBI::dbGetQuery(sc_conn, query_expression_matrix)
 
-          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
-          normcount <- normcount[, colnames(normcount) != "_c0"]
+          colnames(expression)[colnames(expression) == "genes"] <- "GeneSymbol"
+          expression <- expression[, colnames(expression) != "_c0"]
 
           end_time <- Sys.time()
           message(sprintf(
-            "[%s] Completed normcounts query (Duration: %.2f seconds)",
+            "[%s] Completed expression query (Duration: %.2f seconds)",
             end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
           ))
 
-          normcount
+          expression
         },
         globals = list(
           master = master, method = method, version = version,
-          normcount_tbls = normcount_tbls, selected_db_name = selected_db_name
+          expression_tbls = expression_tbls, selected_db_name = selected_db_name
         ),
         seed = TRUE
       )
 
       t0_exact_launch <- Sys.time()
       message(sprintf("[Stage2-exacttest] Launch at %s", t0_exact_launch))
-      exacttest_promise <- future_promise(
+      geneinfo_promise <- future_promise(
         {
           start_time <- Sys.time()
           message(sprintf("[%s] Start querying exacttest table", start_time))
@@ -344,7 +345,7 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
           sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
           on.exit(sparklyr::spark_disconnect(sc_conn))
           DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-          query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+          query_exacttest <- paste0("SELECT * FROM ", geneinfo_tbls[1])
           exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
 
           colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
@@ -360,14 +361,14 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
         },
         globals = list(
           master = master, method = method, version = version,
-          exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name
+          geneinfo_tbls = geneinfo_tbls, selected_db_name = selected_db_name
         ),
         seed = TRUE
       )
 
       t0_coldata_launch <- Sys.time()
       message(sprintf("[Stage2-coldata] Launch at %s", t0_coldata_launch))
-      coldata_promise <- if (length(coldata_tbls) > 0) {
+      sampleinfo_promise <- if (length(sampleinfo_tbls) > 0) {
         future_promise(
           {
             start_time <- Sys.time()
@@ -376,7 +377,7 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
             sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
             on.exit(sparklyr::spark_disconnect(sc_conn))
             DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
-            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+            query_coldata <- paste0("SELECT * FROM ", sampleinfo_tbls[1])
             coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
 
             end_time <- Sys.time()
@@ -389,17 +390,17 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
           },
           globals = list(
             master = master, method = method, version = version,
-            coldata_tbls = coldata_tbls, selected_db_name = selected_db_name
+            sampleinfo_tbls = sampleinfo_tbls, selected_db_name = selected_db_name
           ),
           seed = TRUE
         )
       } else {
-        normcount_promise %...>% (function(normcount) {
+        expression_promise %...>% (function(expression) {
           future_promise(
             {
               start_time <- Sys.time()
               message(sprintf("[%s] Generating random coldata", start_time))
-              coldata <- generate_colData_random(normcount, genecol = "GeneSymbol")
+              coldata <- generate_colData_random(expression, genecol = "GeneSymbol")
               end_time <- Sys.time()
               message(sprintf(
                 "[%s] Completed coldata generation (Duration: %.2f seconds)",
@@ -411,9 +412,9 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
           )
         })
       }
-      progressMod$addPromise(normcount_promise, label = "normcount")
-      progressMod$addPromise(coldata_promise, label = "coldata")
-      progressMod$addPromise(exacttest_promise, label = "exacttest")
+      progressMod$addPromise(expression_promise, label = "normcount")
+      progressMod$addPromise(sampleinfo_promise, label = "coldata")
+      progressMod$addPromise(geneinfo_promise, label = "exacttest")
 
 
       withProgress(message = "Stage 3: Collecting and processing data", value = 0, {
@@ -421,9 +422,9 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
         message(sprintf("[Stage3] Collection start at %s", t0_collect))
 
         promise_all(
-          normcount_data = normcount_promise,
-          exacttest_data = exacttest_promise,
-          coldata        = coldata_promise
+          expression_data = expression_promise,
+          geneinfo_data = geneinfo_promise,
+          coldata        = sampleinfo_promise
         ) %...>% with({
           t1_collect <- Sys.time()
           message(sprintf(
@@ -431,14 +432,14 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
             t1_collect, as.numeric(difftime(t1_collect, t0_collect, units = "secs"))
           ))
 
-          results$normcount_data <- normcount_data
-          results$exacttest_data <- exacttest_data
+          results$expression_data <- expression_data
+          results$geneinfo_data <- geneinfo_data
           results$coldata <- coldata
 
-          message("=== normcount_data ===")
-          print(head(results$normcount_data))
-          message("=== exacttest_data ===")
-          print(head(results$exacttest_data))
+          message("=== expression_data ===")
+          print(head(results$expression_data))
+          message("=== geneinfo_data ===")
+          print(head(results$geneinfo_data))
           message("=== coldata ===")
           print(head(results$coldata))
 
@@ -450,22 +451,22 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
       DEG_table(NULL)
 
       observe({
-        req(results$exacttest_data, results$normcount_data, results$coldata)
-        DEG_table(results$exacttest_data)
-        wide_data(results$normcount_data)
+        req(results$geneinfo_data, results$expression_data, results$coldata)
+        DEG_table(results$geneinfo_data)
+        wide_data(results$expression_data)
         maeColData(results$coldata)
         message("assign reactiveVal: DEG_table, wide_data, maeColData")
       })
       output$wide_table_dt <- DT::renderDataTable({
         req(wide_data())
-        normCount_round <- as.data.frame(lapply(
+        expression_round <- as.data.frame(lapply(
           wide_data(),
           function(x) if (is.numeric(x)) round(x, 4) else x
         ))
 
         print("send wide data to UI")
         DT::datatable(
-          normCount_round,
+          expression_round,
           options = list(pageLength = 20, autoWidth = TRUE)
         )
       })
