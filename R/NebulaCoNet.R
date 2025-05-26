@@ -1,28 +1,77 @@
-#' @title shiny app for RNAseq WGCNA analysis
-#' @description Simplified Shiny application keeping only data query (normcount, colData, DEG) and WGCNA modules
-#' @import sparklyr
-#' @import DBI
-#' @import SummarizedExperiment
+#' @import edgeR
+#' @import limma
 #' @import MultiAssayExperiment
-#' @import shiny
-#' @import shinyjs
+#' @import SummarizedExperiment
+#' @import pcaPP
+#' @import reshape2
+#' @import stringr
+#' @import readxl
+#' @import ggplot2
+#' @import tidyr
+#' @import tibble
+#' @import viridis
+#' @import RColorBrewer
+#' @import pheatmap
+#' @import ggrepel
+#' @import readr
+#' @import dplyr
+#' @import sparklyr
+#' @import org.Hs.eg.db
+#' @import enrichplot
+#' @import clusterProfiler
+#' @import DBI
 #' @import shinybusy
+#' @import shiny
+#' @import bslib
 #' @import DT
 #' @import InteractiveComplexHeatmap
-#' @import WGCNA
+#' @import ggiraph
+#' @import shinydashboard
+#' @import promises
+#' @import future
+#' @import purrr
+#' @import shinycssloaders
+#' @import shinyjs
+#' @import factoextra
+#' @import ggforce
+#' @import ggrepel
+#' @importFrom ggpubr color_palette
+#' @importFrom enrichplot color_palette
 #' @importFrom DT dataTableOutput renderDataTable
-#' @export
-NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
-  # Parallel plan
-  future::plan(future::multisession, workers = 5)
 
-  # UI definition
+#'
+NULL
+#' @keywords internal
+#' RNAseqShinyAppSpark
+#'
+#' This function creates a Shiny application for RNA sequencing data analysis using Spark.
+#' It provides an interactive interface for users to explore and analyze RNAseq data.
+#'
+
+#' @title shiny app for RNAseq for public use
+#' @description start the RNAseq shiny app with spark connection for shiny proxy at the seqslab console
+#' @return A Shiny application object.
+#'
+#' @examples
+#' \dontrun{
+#' library(sparklyr)
+#' sc <- spark_connect(master = "local")
+#' input_data <- read.csv("path/to/rnaseq_data.csv")
+#' RNAseqShinyAppSpark(input_data, sc, "RNAseq Analysis", 8080)
+#' }
+#'
+#' @export
+
+
+NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connect", version = "3.5") {
+  plan(multisession, workers = 5)
+  # plan(sequential)
+  print(future::plan())
   ui <- fluidPage(
     navbarPage(
-      title = "WGCNA App",
-      # Data query tab
+      title = "NebulaCoNet",
       tabPanel(
-        title = "Gene Expression Profile",
+        title = "Data Query",
         layout_sidebar(
           full_screen = TRUE,
           sidebar = sidebar(
@@ -31,204 +80,506 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
             dbBrowserUI("dbBrowser1")
           ),
           mainPanel(
-            width = 12,
-            tabsetPanel(
-              tabPanel(
-                "normCount Table",
-                withSpinner(DT::dataTableOutput("wide_table_dt", width = "100%"))
+            fluidRow(
+              useShinyjs(),
+              column(
+                width = 12,
+                tabsetPanel(
+                  tabPanel(
+                    "normCount Table",
+                    withSpinner(DT::dataTableOutput("wide_table_dt", width = "100%"))
+                  ),
+                  tabPanel(
+                    "DEG Table",
+                    downloadButton("download_DEG", "Download"),
+                    withSpinner((DT::dataTableOutput("DEG_table", width = "100%")))
+                  )
+                )
               ),
-              tabPanel(
-                "DEG Table",
-                downloadButton("download_DEG", "Download"),
-                withSpinner(DT::dataTableOutput("DEG_table", width = "100%"))
-              )
-            ),
-            progressPopupUI("popupProgress")
+              progressPopupUI("popupProgress")
+            )
           )
         )
       ),
-      # WGCNA tab
       tabPanel(
         title = "WGCNA",
         sidebarLayout(
           sidebarPanel(
-            h4("Parallel Settings"),
-            numericInput("nThreads", "Number of Threads:", value = parallel::detectCores() - 1, min = 1, max = parallel::detectCores(), step = 1),
-            h4("Sample Clustering"),
-            selectInput("distMethod", "Distance Method",
-                        choices = c("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski"),
-                        selected = "euclidean"),
-            sliderInput("cutHeight", "Cutoff Height:", min = 0, max = 50, value = 15, step = 1),
-            hr(),
-            h4("Scale-Free Topology"),
-            sliderInput("powerRange", "Power Vector:", min = 1, max = 30, value = c(1, 20)),
-            numericInput("rsqCut", "RsquaredCut:", value = 0.8, min = 0, max = 1, step = 0.05),
-            numericInput("selectedPower", "Selected Power:", value = 6, min = 1, max = 30),
-            hr(),
-            h4("Module Detection"),
-            numericInput("deepSplit", "deepSplit:", value = 2, min = 0, max = 4, step = 1),
-            numericInput("minModuleSize", "Min Module Size:", value = 30, min = 5, max = 200, step = 1),
-            actionButton("runModules", "Detect Modules"),
-            width = 3
+              h4("Parallel Settings"),
+              numericInput(
+                "nThreads", "Number of Threads:",
+                value = parallel::detectCores() - 1,
+                min = 1,
+                max = parallel::detectCores(),
+                step = 1
+              ),
+              h4("Sample Clustering"),
+              selectInput("distMethod", "Distance Method",
+                  choices = c("euclidean", "maximum", "manhattan", "canberra", "binary", "minkowski"),
+                  selected = "euclidean"
+              ),
+              sliderInput("cutHeight", "Cutoff Height:", min = 0, max = 50, value = 15, step = 1),
+              hr(),
+              h4("Scale-Free Topology"),
+              sliderInput("powerRange", "Power Vector:", min = 1, max = 30, value = c(1, 20)),
+              numericInput("rsqCut", "RsquaredCut:", value = 0.8, min = 0, max = 1, step = 0.05),
+              numericInput("selectedPower", "Selected Power:", value = 6, min = 1, max = 30),
+              hr(),
+              h4("Module Detection"),
+              numericInput("deepSplit", "deepSplit:", value = 2, min = 0, max = 4, step = 1),
+              numericInput("minModuleSize", "Min Module Size:", value = 30, min = 5, max = 200, step = 1),
+              actionButton("runModules", "Detect Modules"),
+              width = 3
           ),
           mainPanel(
-            width = 9,
-            tabsetPanel(
-              tabPanel("Sample Tree", sampleClustUI("sample")),
-              tabPanel("Scale-Free Topology", sftUI("sft")),
-              tabPanel("Gene Modules", geneModuleUI("mod")),
-              tabPanel("Gene List", geneListUI("list"))
-            )
+              tabsetPanel(
+                  tabPanel("Sample Tree", sampleClustUI("sample")),
+                  tabPanel("Scale-Free Topology", sftUI("sft")),
+                  tabPanel("Gene Modules", geneModuleUI("mod")),
+                  tabPanel("Gene List", geneListUI("list"))
+              ),
+              width = 9
           )
         )
       )
     )
   )
 
-  # Server logic
   server <- function(input, output, session) {
-    # Reactive storage
     results <- reactiveValues(
       db_info = NULL,
       table_list = NULL,
+      grouplist = NULL,
       normcount_data = NULL,
       exacttest_data = NULL,
       coldata = NULL
     )
+    volcano_res <- reactiveVal(NULL)
+    settingMAE <- reactiveVal(NULL)
+    DEG_table <- reactiveVal(NULL)
+    DEG_summary <- reactiveVal(NULL)
+    wide_data <- reactiveVal(NULL)
+    maeColData <- reactiveVal(NULL)
 
-    # Spark connection
+
     sc <- sparklyr::spark_connect(master = master, method = method, version = version)
+
     session$onSessionEnded(function() {
-      sparklyr::spark_disconnect(sc)
+      if (!is.null(sc)) {
+        sparklyr::spark_disconnect(sc)
+        message("Spark connection disconnected.")
+      }
     })
 
-    # Progress popup
-    progressMod <- progressPopupServer("popupProgress")
+    observeEvent(sc,
+      {
+        req(sc)
+        print("dbbrowser initialized")
+        shinyjs::disable("dbBrowser1-selected_db")
+        results$db_info <- dbBrowserServer("dbBrowser1", sc)
+        showNotification("Waiting for initialization", type = "message", duration = 10)
 
-    # Initialize DB browser and load table names
-    observeEvent(sc, {
-      results$db_info <- dbBrowserServer("dbBrowser1", sc)
-    }, ignoreInit = FALSE)
+        normcount_future <- trigger_cluster_query_by_pattern(
+          master, method, version,
+          pattern = "^normcounts",
+          output_label = "init_tbl_normcount"
+        )
 
-    # When a database is selected: query tables, select latest normcount/exacttest/coldata
-    observeEvent(results$db_info$selected_db(), {
-      req(results$db_info$selected_db())
-      dbName <- results$db_info$selected_db()
-      # Stage 1: list tables and filter
-      DBI::dbExecute(sc, paste0("USE ", dbName))
-      tbls <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", dbName))$tableName
-      prefixes <- c("^normcounts", "^exacttest", "^coldata")
-      filtered <- tbls[grepl(paste(prefixes, collapse="|"), tbls, ignore.case=TRUE)]
-      latest_df <- get_latest_file_group_df(filtered)
-      sel <- latest_df$is_latest
-      final_tbls <- latest_df$file[sel]
-      norm_tbl <- final_tbls[grepl("^normcounts", final_tbls, ignore.case=TRUE)][1]
-      exact_tbl <- final_tbls[grepl("^exacttest", final_tbls, ignore.case=TRUE)][1]
-      col_tbl   <- final_tbls[grepl("^coldata",   final_tbls, ignore.case=TRUE)][1]
+        exacttest_future <- trigger_cluster_query_by_pattern(
+          master, method, version,
+          pattern = "^exacttest",
+          output_label = "init_tbl_exacttest"
+        )
 
-      # Stage 2: launch queries asynchronously
-      norm_p <- future::future({
-        conn <- sparklyr::spark_connect(master=master, method=method, version=version)
-        on.exit(sparklyr::spark_disconnect(conn))
-        DBI::dbExecute(conn, paste0("USE ", dbName))
-        df <- DBI::dbGetQuery(conn, paste0("SELECT * FROM ", norm_tbl))
-        names(df)[names(df)=="genes"] <- "GeneSymbol"
-        df[ , names(df)!="_c0"]
-      })
-      exact_p <- future::future({
-        conn <- sparklyr::spark_connect(master=master, method=method, version=version)
-        on.exit(sparklyr::spark_disconnect(conn))
-        DBI::dbExecute(conn, paste0("USE ", dbName))
-        df <- DBI::dbGetQuery(conn, paste0("SELECT * FROM ", exact_tbl))
-        names(df)[names(df)=="genes"] <- "GeneSymbol"
-        df[ , names(df)!="_c0"]
-      })
-      col_p <- future::future({
-        conn <- sparklyr::spark_connect(master=master, method=method, version=version)
-        on.exit(sparklyr::spark_disconnect(conn))
-        DBI::dbExecute(conn, paste0("USE ", dbName))
-        DBI::dbGetQuery(conn, paste0("SELECT * FROM ", col_tbl))
-      })
+        coldata_future <- trigger_cluster_query_by_pattern(
+          master, method, version,
+          pattern = "^coldata",
+          output_label = "init_tbl_coldata"
+        )
+        all_promises <- promises::promise_all(
+          norm = normcount_future,
+          ex   = exacttest_future,
+          col  = coldata_future
+        )
 
-      progressMod$addPromise(norm_p, label="normcount")
-      progressMod$addPromise(exact_p, label="exacttest")
-      progressMod$addPromise(col_p,   label="coldata")
+        all_promises %...>% (function(res_list) {
+          shinyjs::enable("dbBrowser1-selected_db")
+          showNotification("Initialization complete. Check list!", type = "message", duration = 10)
+        }) %...!% (function(e) {
+          shinyjs::enable("dbBrowser1-selected_db")
+          showNotification(paste("Error:", e$message), type = "error")
+        })
 
-      # Stage 3: collect data
-      promises::promise_all(
-        norm = norm_p,
-        ex = exact_p,
-        col = col_p
-      ) %...>% (function(res) {
-        results$normcount_data <- res$norm
-        results$exacttest_data <- res$ex
-        results$coldata       <- res$col
-      })
-    })
-
-    # Render normCount table
-    output$wide_table_dt <- DT::renderDataTable({
-      df <- results$normcount_data
-      req(df)
-      df_round <- as.data.frame(lapply(df, function(x) if(is.numeric(x)) round(x,4) else x))
-      DT::datatable(df_round, options=list(pageLength=20, autoWidth=TRUE))
-    })
-
-    # Render DEG table and download handler
-    output$DEG_table <- DT::renderDataTable({
-      df <- results$exacttest_data
-      req(df)
-      df$logFC   <- round(df$logFC,5)
-      df$logCPM  <- round(df$logCPM,5)
-      df$PValue  <- formatC(df$PValue, format="e", digits=5)
-      df$FDR     <- formatC(df$FDR,    format="e", digits=5)
-      DT::datatable(df, options=list(pageLength=20, autoWidth=TRUE), server=FALSE)
-    })
-    output$download_DEG <- downloadHandler(
-      filename = function() paste0("DEG_table_", Sys.Date(), ".csv"),
-      content  = function(file) write.csv(results$exacttest_data, file, row.names=FALSE)
+      },
+      ignoreInit = FALSE
     )
 
-    # Assemble SummarizedExperiment and MultiAssayExperiment
-    observe({
-      req(results$normcount_data, results$exacttest_data, results$coldata)
-      assay_mat <- as.matrix(results$normcount_data[ , setdiff(names(results$normcount_data), "GeneSymbol")])
-      rownames(assay_mat) <- results$normcount_data$GeneSymbol
-      deg_mat   <- results$exacttest_data
-      rownames(deg_mat) <- deg_mat$GeneSymbol
-      col_tbl <- results$coldata
-      rownames(col_tbl) <- names(assay_mat)
-      se <- SummarizedExperiment(assays=list(normCount=assay_mat), colData=col_tbl, rowData=S4Vectors::DataFrame(deg_mat))
-      mae <- MultiAssayExperiment(experiments=list(RNAseq=se), colData=col_tbl)
-      # Store for WGCNA modules
-      settingMAE <- reactiveVal(mae)
-    })
+    progressMod <- progressPopupServer("popupProgress")
 
-    # Enable WGCNA threads
-    observe({ req(input$nThreads); enableWGCNAThreads(input$nThreads) })
-
-    # WGCNA analysis pipeline
-    observeEvent(results$normcount_data, {
-      df <- results$normcount_data
-      req(df)
-      rownames(df) <- df$GeneSymbol
-      expr <- t(as.matrix(df[ , setdiff(names(df), "GeneSymbol")]))
-      # Quality check
-      gsg <- WGCNA::goodSamplesGenes(expr, verbose=0)
-      if(!gsg$allOK) expr <- expr[gsg$goodSamples, gsg$goodGenes]
-      # Reactive expression for cleaned data
-      exprDataNumeric <- reactive({ as.data.frame(lapply(as.data.frame(expr), as.numeric)) })
-      # Call WGCNA modules
-      sampleOut <- sampleClustServer("sample", exprData=exprDataNumeric, distMethod=reactive(input$distMethod), cutHeight=reactive(input$cutHeight))
-      observeEvent(sampleOut$maxHeight(), {
-        updateSliderInput(session, "cutHeight", min=0, max=ceiling(sampleOut$maxHeight()), value=min(input$cutHeight, ceiling(sampleOut$maxHeight())))
+    observeEvent(results$db_info$selected_db(), {
+      req(results$db_info$selected_db())
+      shinyjs::disable("dbBrowser1-selected_db")
+      output$wide_table_dt <- DT::renderDataTable({
+        data.frame()
       })
-      sftServer("sft", exprData=sampleOut$filteredExpr, powerRange=reactive(input$powerRange), rsqCut=reactive(input$rsqCut), selectedPower=reactive(input$selectedPower))
-      modulesObj <- geneModuleServer("mod", exprData=sampleOut$filteredExpr, power=reactive(input$selectedPower), deepSplit=reactive(input$deepSplit), minSize=reactive(input$minModuleSize), runTrigger=reactive(input$runModules))
-      geneListServer("list", exprData=sampleOut$filteredExpr, modulesObj=modulesObj)
+      output$DEG_table <- DT::renderDataTable({
+        data.frame()
+      })
+
+      results$exacttest_data <- NULL
+      results$normcount_data <- NULL
+      results$coldata <- NULL
+      output$ht_heatmap <- renderPlot({
+        grid::grid.newpage()
+        grid::grid.text("No data available.")
+      })
+
+      selected_db_name <- results$db_info$selected_db()
+      message(sprintf("[DB Selected] %s at %s", selected_db_name, Sys.time()))
+
+      withProgress(message = "Stage 1: Listing & filtering tables", value = 0, {
+        t0 <- Sys.time()
+        message(sprintf("[Stage1] Start at %s", t0))
+
+        DBI::dbExecute(sc, paste0("USE ", selected_db_name))
+        tbl_list_query <- DBI::dbGetQuery(sc, paste0("SHOW TABLES IN ", selected_db_name))
+        tbls <- tbl_list_query$tableName
+        t1 <- Sys.time()
+        message(sprintf(
+          "[Stage1] Fetched %d tables at %s (%.2f sec)",
+          length(tbls), t1, as.numeric(difftime(t1, t0, "secs"))
+        ))
+        setProgress(value = 0.2, detail = sprintf("Fetched %d tables", length(tbls)))
+
+        prefix <- c("^normcounts|^exacttest|^coldata")
+        tbl_list_query_prefix <- tbl_list_query[grepl(paste(prefix, collapse = "|"), tbls), ]
+        t2 <- Sys.time()
+        message(sprintf(
+          "[Stage1] Prefix filter → %d tables at %s (%.2f sec)",
+          nrow(tbl_list_query_prefix), t2, as.numeric(difftime(t2, t1, "secs"))
+        ))
+        setProgress(value = 0.4, detail = sprintf("Prefix filter: %d tables", nrow(tbl_list_query_prefix)))
+
+        tbls_with_prefix <- tbl_list_query_prefix$tableName
+        tbls_with_time_filter <- get_latest_file_group_df(tbls_with_prefix)
+        t3 <- Sys.time()
+        message(sprintf(
+          "[Stage1] Time filter applied at %s (%.2f sec)",
+          t3, as.numeric(difftime(t3, t2, "secs"))
+        ))
+        setProgress(value = 0.6, detail = "Applied time filter")
+
+        if (any(tbls_with_time_filter$is_latest)) {
+          sel_idx <- tbls_with_time_filter$is_latest
+          message(sprintf("[Stage1] Latest tables found at %s", Sys.time()))
+        } else {
+          sel_idx <- !tbls_with_time_filter$is_latest
+          message(sprintf("[Stage1] No latest table, using all at %s", Sys.time()))
+        }
+        tbl_list_query_prefix_time <- tbl_list_query_prefix[sel_idx, ]
+        summary_table <- tbls_with_time_filter[sel_idx, ]
+        t4 <- Sys.time()
+        message(sprintf(
+          "[Stage1] Selected %d tables at %s (%.2f sec)",
+          nrow(tbl_list_query_prefix_time), t4, as.numeric(difftime(t4, t3, "secs"))
+        ))
+        setProgress(value = 0.8, detail = sprintf("Selected %d tables", nrow(tbl_list_query_prefix_time)))
+
+        tbls_final <- summary_table$file
+        normcount_tbls <- tbl_list_query_prefix_time[grepl("^normcounts", tbls_final, ignore.case = TRUE), "tableName"]
+        exacttest_tbls <- tbl_list_query_prefix_time[grepl("^exacttest", tbls_final, ignore.case = TRUE), "tableName"]
+        coldata_tbls <- tbl_list_query_prefix_time[grepl("^coldata", tbls_final, ignore.case = TRUE), "tableName"]
+        t5 <- Sys.time()
+        message(sprintf(
+          "[Stage1] Categorized tables at %s (%.2f sec)",
+          t5, as.numeric(difftime(t5, t4, "secs"))
+        ))
+
+        setProgress(value = 1, detail = "Stage 1 complete")
+        results$table_list <- tbl_list_query_prefix_time
+      })
+
+
+
+      req(normcount_tbls, exacttest_tbls, coldata_tbls)
+
+      t0_norm_launch <- Sys.time()
+      message(sprintf("[Stage2-normcount] Launch at %s", t0_norm_launch))
+      normcount_promise <- future_promise(
+        {
+          start_time <- Sys.time()
+          message(sprintf("[%s] Start querying normcounts table", start_time))
+
+          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          on.exit(sparklyr::spark_disconnect(sc_conn))
+          DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+          query_normcount <- paste0("SELECT * FROM ", normcount_tbls[1])
+          normcount <- DBI::dbGetQuery(sc_conn, query_normcount)
+
+          colnames(normcount)[colnames(normcount) == "genes"] <- "GeneSymbol"
+          normcount <- normcount[, colnames(normcount) != "_c0"]
+
+          end_time <- Sys.time()
+          message(sprintf(
+            "[%s] Completed normcounts query (Duration: %.2f seconds)",
+            end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
+          ))
+
+          normcount
+        },
+        globals = list(
+          master = master, method = method, version = version,
+          normcount_tbls = normcount_tbls, selected_db_name = selected_db_name
+        ),
+        seed = TRUE
+      )
+
+      t0_exact_launch <- Sys.time()
+      message(sprintf("[Stage2-exacttest] Launch at %s", t0_exact_launch))
+      exacttest_promise <- future_promise(
+        {
+          start_time <- Sys.time()
+          message(sprintf("[%s] Start querying exacttest table", start_time))
+
+          sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+          on.exit(sparklyr::spark_disconnect(sc_conn))
+          DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+          query_exacttest <- paste0("SELECT * FROM ", exacttest_tbls[1])
+          exacttest <- DBI::dbGetQuery(sc_conn, query_exacttest)
+
+          colnames(exacttest)[colnames(exacttest) == "genes"] <- "GeneSymbol"
+          exacttest <- exacttest[, colnames(exacttest) != "_c0"]
+
+          end_time <- Sys.time()
+          message(sprintf(
+            "[%s] Completed exacttest query (Duration: %.2f seconds)",
+            end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
+          ))
+
+          exacttest
+        },
+        globals = list(
+          master = master, method = method, version = version,
+          exacttest_tbls = exacttest_tbls, selected_db_name = selected_db_name
+        ),
+        seed = TRUE
+      )
+
+      t0_coldata_launch <- Sys.time()
+      message(sprintf("[Stage2-coldata] Launch at %s", t0_coldata_launch))
+      coldata_promise <- if (length(coldata_tbls) > 0) {
+        future_promise(
+          {
+            start_time <- Sys.time()
+            message(sprintf("[%s] Start querying coldata table", start_time))
+
+            sc_conn <- sparklyr::spark_connect(master = master, method = method, version = version)
+            on.exit(sparklyr::spark_disconnect(sc_conn))
+            DBI::dbExecute(sc_conn, paste0("USE ", selected_db_name))
+            query_coldata <- paste0("SELECT * FROM ", coldata_tbls[1])
+            coldata <- DBI::dbGetQuery(sc_conn, query_coldata)
+
+            end_time <- Sys.time()
+            message(sprintf(
+              "[%s] Completed coldata query (Duration: %.2f seconds)",
+              end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
+            ))
+
+            coldata
+          },
+          globals = list(
+            master = master, method = method, version = version,
+            coldata_tbls = coldata_tbls, selected_db_name = selected_db_name
+          ),
+          seed = TRUE
+        )
+      } else {
+        normcount_promise %...>% (function(normcount) {
+          future_promise(
+            {
+              start_time <- Sys.time()
+              message(sprintf("[%s] Generating random coldata", start_time))
+              coldata <- generate_colData_random(normcount, genecol = "GeneSymbol")
+              end_time <- Sys.time()
+              message(sprintf(
+                "[%s] Completed coldata generation (Duration: %.2f seconds)",
+                end_time, as.numeric(difftime(end_time, start_time, units = "secs"))
+              ))
+              coldata
+            },
+            seed = TRUE
+          )
+        })
+      }
+      progressMod$addPromise(normcount_promise, label = "normcount")
+      progressMod$addPromise(coldata_promise, label = "coldata")
+      progressMod$addPromise(exacttest_promise, label = "exacttest")
+
+
+      withProgress(message = "Stage 3: Collecting and processing data", value = 0, {
+        t0_collect <- Sys.time()
+        message(sprintf("[Stage3] Collection start at %s", t0_collect))
+
+        promise_all(
+          normcount_data = normcount_promise,
+          exacttest_data = exacttest_promise,
+          coldata        = coldata_promise
+        ) %...>% with({
+          t1_collect <- Sys.time()
+          message(sprintf(
+            "[Stage3] Collection completed at %s (Duration: %.2f seconds)",
+            t1_collect, as.numeric(difftime(t1_collect, t0_collect, units = "secs"))
+          ))
+
+          results$normcount_data <- normcount_data
+          results$exacttest_data <- exacttest_data
+          results$coldata <- coldata
+
+          message("=== normcount_data ===")
+          print(head(results$normcount_data))
+          message("=== exacttest_data ===")
+          print(head(results$exacttest_data))
+          message("=== coldata ===")
+          print(head(results$coldata))
+
+          setProgress(value = 1, detail = "Data collected")
+        })
+      })
+
+      wide_data(NULL)
+      DEG_table(NULL)
+
+      observe({
+        req(results$exacttest_data, results$normcount_data, results$coldata)
+        DEG_table(results$exacttest_data)
+        wide_data(results$normcount_data)
+        maeColData(results$coldata)
+        message("assign reactiveVal: DEG_table, wide_data, maeColData")
+      })
+      output$wide_table_dt <- DT::renderDataTable({
+        req(wide_data())
+        normCount_round <- as.data.frame(lapply(
+          wide_data(),
+          function(x) if (is.numeric(x)) round(x, 4) else x
+        ))
+
+        print("send wide data to UI")
+        DT::datatable(
+          normCount_round,
+          options = list(pageLength = 20, autoWidth = TRUE)
+        )
+      })
+
+      message(sprintf("[Process] Completed all stages on PID %s at %s", Sys.getpid(), Sys.time()))
     })
+
+    observe({
+      deg_table_round <- DEG_table()
+      req(deg_table_round)
+      deg_table_round$logFC <- if (is.numeric(deg_table_round$logFC)) round(deg_table_round$logFC, 5) else deg_table_round$logFC
+      deg_table_round$logCPM <- if (is.numeric(deg_table_round$logCPM)) round(deg_table_round$logCPM, 5) else deg_table_round$logCPM
+      deg_table_round$PValue <- formatC(deg_table_round$PValue, format="e", digits = 5)
+      deg_table_round$FDR <- formatC(deg_table_round$FDR, format="e", digits = 5)
+
+      output$DEG_table <- renderDT(
+        {
+          datatable(
+            deg_table_round,
+            options = list(pageLength = 20, autoWidth = TRUE)
+          )
+        },
+        server = FALSE
+      )
+    })
+
+    observe({
+      req(input$nThreads)
+      enableWGCNAThreads(input$nThreads)
+    })
+
+    observeEvent(wide_data(), {
+      req(wide_data())
+        enableWGCNAThreads()
+        raw_df <- wide_data()
+        if (!"GeneSymbol" %in% colnames(raw_df)) stop("wide_data() must contain 'GeneSymbol' column")
+        rownames(raw_df) <- raw_df$GeneSymbol
+        expr_mat_raw <- raw_df[, setdiff(colnames(raw_df), "GeneSymbol"), drop = FALSE]
+        print(dim(expr_mat_raw))
+        # Filter numeric columns only
+        numeric_df <- raw_df[, sapply(raw_df, is.numeric), drop = FALSE]
+        # Transpose to samples x genes matrix
+        expr_mat <- t(as.matrix(expr_mat_raw))
+        # option for development
+        #expr_mat <- as.data.frame(expr_mat[, sample(1:ncol(expr_mat), 2500, replace = FALSE)])
+        print(dim(expr_mat))
+        # 1) Data quality check: require numeric matrix
+        gsg <- goodSamplesGenes(expr_mat, verbose = 0)
+        print(gsg$allOK)
+        if (!gsg$allOK) {
+          expr_mat <- expr_mat[gsg$goodSamples, gsg$goodGenes]
+        }
+        
+        # 2) Numeric conversion with dimension validation
+        exprDataNumeric <- reactive({
+          mat <- as.data.frame(expr_mat)
+          df <- as.data.frame(lapply(mat, as.numeric))
+          validate(
+            need(nrow(df) > 1 && ncol(df) > 1, 
+                "Filtered data has too few samples or genes to proceed.")
+          )
+          df
+        })
+
+        # 3) Call Shiny modules with cleaned data
+        sampleOut <- sampleClustServer(
+          "sample", 
+          exprData = exprDataNumeric, 
+          distMethod = reactive(input$distMethod), 
+          cutHeight = reactive(input$cutHeight)
+        )
+        
+        observeEvent(sampleOut$maxHeight(), {
+          maxH <- sampleOut$maxHeight()
+          updateSliderInput(
+            session,
+            "cutHeight",
+            min = 0,
+            max = ceiling(maxH),
+            step = 1,
+            value = min(input$cutHeight, ceiling(maxH))
+          )
+        })
+
+        sftServer(
+          "sft", 
+          exprData = sampleOut$filteredExpr, 
+          powerRange = reactive(input$powerRange), 
+          rsqCut = reactive(input$rsqCut), 
+          selectedPower = reactive(input$selectedPower)
+        )
+
+        modulesObj <- geneModuleServer(
+          "mod", 
+          exprData = sampleOut$filteredExpr, 
+          power = reactive(input$selectedPower), 
+          deepSplit = reactive(input$deepSplit), 
+          minSize = reactive(input$minModuleSize), 
+          runTrigger = reactive(input$runModules)
+        )
+
+        geneListServer(
+          "list", 
+          exprData = sampleOut$filteredExpr, 
+          modulesObj = modulesObj
+        )
+    })
+
+
+
   }
 
-  # Run the app
-  shinyApp(ui=ui, server=server)
+  for_run <- shinyApp(ui = ui, server = server)
+  runapp <- runApp(for_run)
+
+  return(runapp)
 }
