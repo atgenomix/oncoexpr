@@ -34,7 +34,7 @@ sparkCorMatrix <- function(expr_df, sc, transpose = FALSE, feature_col = "featur
 #' @title Sample Clustering Shiny Module (Spark-accelerated)
 #' @rdname sampleClust
 #' @export
-sampleClustUI <- function(id) {
+sparksampleClustUI <- function(id) {
   ns <- NS(id)
   tagList(
     plotOutput(ns("dendro"), height = "400px")
@@ -43,7 +43,7 @@ sampleClustUI <- function(id) {
 
 #' @rdname sampleClust
 #' @export
-sampleClustServer <- function(id, exprData, cutHeight) {
+sparksampleClustServer <- function(id, exprData, cutHeight) {
   moduleServer(id, function(input, output, session) {
     sampleTree <- reactive({
       df <- exprData()
@@ -71,7 +71,7 @@ sampleClustServer <- function(id, exprData, cutHeight) {
 #' @title Scale-Free Topology Analysis Shiny Module (Spark compute + local WGCNA)
 #' @rdname sft
 #' @export
-sftUI <- function(id) {
+sparksftUI <- function(id) {
   ns <- NS(id)
   tagList(
     plotOutput(ns("sftPlot"), height = "400px")
@@ -80,7 +80,7 @@ sftUI <- function(id) {
 
 #' @rdname sft
 #' @export
-sftServer <- function(id, exprData, powerRange, rsqCut, selectedPower) {
+sparksftServer <- function(id, exprData, powerRange, rsqCut, selectedPower) {
   moduleServer(id, function(input, output, session) {
     sft_vals <- reactive({
       df <- exprData()
@@ -116,7 +116,7 @@ sftServer <- function(id, exprData, powerRange, rsqCut, selectedPower) {
 #' @title Module Detection Shiny Module (Spark compute correlation + local WGCNA)
 #' @rdname geneModule
 #' @export
-geneModuleUI <- function(id) {
+sparkgeneModuleUI <- function(id) {
   ns <- NS(id)
   tagList(
     uiOutput(ns("blockSelector")),
@@ -126,7 +126,7 @@ geneModuleUI <- function(id) {
 
 #' @rdname geneModule
 #' @export
-geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger) {
+sparkgeneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger) {
   moduleServer(id, function(input, output, session) {
     modulesObj <- eventReactive(runTrigger(), {
       df <- exprData()
