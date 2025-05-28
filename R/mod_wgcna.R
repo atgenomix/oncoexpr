@@ -13,7 +13,6 @@ NULL
 #' @param id `character(1)` Module namespace identifier.
 #' @param exprData `reactive` returning a data frame of numeric expression data
 #'   (samples in rows, genes in columns).
-#' @param distMethod `reactive` specifying the distance metric for `dist()`.
 #' @param cutHeight `reactive` numeric value indicating the height at which to draw
 #'   the horizontal cutoff line on the dendrogram.
 #'
@@ -32,44 +31,53 @@ sampleClustUI <- function(id) {
 
 #' @rdname sampleClust
 #' @export
-sampleClustServer <- function(id, exprData, distMethod, cutHeight) {
+sampleClustServer <- function(id, exprData, cutHeight) {
   moduleServer(id, function(input, output, session) {
     sampleTree <- reactive({
-      dist(exprData(), method = distMethod()) |> hclust(method = "average")
+      # Get the expression data (samples in rows, genes in columns)
+      df <- exprData()
+      # Compute Pearson correlation between samples on Spark by transposing data
+      corr_mat <- sparkCorMatrix(df, sc, transpose = TRUE)
+      # Convert correlation to distance and perform hierarchical clustering
+      dist_mat <- as.dist(1 - corr_mat)
+      hclust(dist_mat, method = "average")
     })
+
     maxHeight <- reactive({
       max(sampleTree()$height)
     })
+
     sampleClusters <- reactive({
       tree <- sampleTree()
       cutreeStatic(tree, cutHeight = cutHeight(), minSize = 1)
     })
-    
+
     filteredExprData <- reactive({
       clusters <- sampleClusters()
-      message("Current cutHeight: ", cutHeight())
-      message("sample clusters: ", clusters)      
       keepGroup <- which.max(table(clusters))
-      exprData()[clusters == keepGroup, , drop = FALSE]
-      
+      # Keep only samples from the largest cluster
+      df <- exprData()
+      df[clusters == keepGroup, , drop = FALSE]
     })
-    message("filteredExprData: ", dim(filteredExprData))      
+
     output$dendro <- renderPlot({
       tree <- sampleTree()
-      plot(tree,
-           main = "Sample Clustering to Detect Outliers",
-           sub = "", xlab = "",
-           cex.lab = 1.2, cex.axis = 1.2, cex.main = 1.5)
+      plot(
+        tree,
+        main = "Sample Clustering to Detect Outliers (Spark-accelerated)",
+        sub = "", xlab = "",
+        cex.lab = 1.2, cex.axis = 1.2, cex.main = 1.5
+      )
       abline(h = cutHeight(), col = "red", lwd = 2)
     })
 
     return(list(
       filteredExpr = filteredExprData,
-      maxHeight = maxHeight
+      maxHeight     = maxHeight
     ))
-
   })
 }
+
 
 #' @title Scale-Free Topology Analysis Shiny Module
 #' @description
