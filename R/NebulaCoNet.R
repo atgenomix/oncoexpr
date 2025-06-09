@@ -518,14 +518,14 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
             # option for development
             # expr_mat <- as.data.frame(expr_mat[, sample(1:ncol(expr_mat), 2500, replace = FALSE)])
             print(dim(expr_mat))
-            # 1) Data quality check: require numeric matrix
+            # 1 Data quality check: require numeric matrix
             gsg <- goodSamplesGenes(expr_mat, verbose = 0)
             print(gsg$allOK)
             if (!gsg$allOK) {
                 expr_mat <- expr_mat[gsg$goodSamples, gsg$goodGenes]
             }
 
-            # 2) Numeric conversion with dimension validation
+            # 2 Numeric conversion with dimension validation
             exprDataNumeric <- reactive({
                 mat <- as.data.frame(expr_mat)
                 df <- as.data.frame(lapply(mat, as.numeric))
@@ -538,7 +538,7 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
                 df
             })
 
-            # 3) Call Shiny modules with cleaned data
+            # 3 Call Shiny modules with cleaned data
             sampleOut <- sampleClustServer(
                 "sample",
                 exprData = exprDataNumeric,
@@ -581,8 +581,8 @@ NebulaCoNet <- function(master = "sc://172.18.0.1:15002", method = "spark_connec
                 modulesObj = modulesObj
             )
         })
+    
     }
-
     for_run <- shinyApp(ui = ui, server = server)
     runapp <- runApp(for_run)
 
