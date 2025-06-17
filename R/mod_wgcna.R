@@ -165,6 +165,7 @@ geneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTrigger
           deepSplit = deepSplit(),
           minModuleSize = minSize(),
           numericLabels = FALSE,
+          maxBlockSize = 1000,
           verbose = 0
         )
       })
