@@ -40,7 +40,7 @@ This platform is designed to integrate seamlessly with the [**Atgenomix Seqslab 
 install.packages(c(
   "shiny", "sparklyr", "promises", "future", "DT", "ggplot2", "shinyjs",
   "shinycssloaders", "InteractiveComplexHeatmap", "clusterProfiler",
-  "enrichplot", "org.Hs.eg.db", "MultiAssayExperiment", "SummarizedExperiment",
+  "enrichplot", "org.Hs.eg.db", "org.Mm.eg.db", "MultiAssayExperiment", "SummarizedExperiment",
   "factoextra", "ggiraph", "shinydashboard", "pcaPP", "dplyr", "tidyr", "viridis",
   "reshape2", "stringr", "readr", "readxl", "tibble", "RColorBrewer", "pheatmap",
   "ggrepel", "bslib"

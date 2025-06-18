@@ -60,8 +60,6 @@ dbBrowserServer <- function(id, sc) {
 }
 
 
-
-
 #' @title UI for connecting to spark
 #' @description spark connection shiny UI
 #' @param id id

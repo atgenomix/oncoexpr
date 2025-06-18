@@ -17,6 +17,7 @@
 #' @import dplyr
 #' @import sparklyr
 #' @import org.Hs.eg.db
+#' @import org.Mm.eg.db
 #' @import enrichplot
 #' @import clusterProfiler
 #' @import DBI
@@ -77,7 +78,15 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
           sidebar = sidebar(
             style = "min-height: 600px; overflow-y: auto;",
             h4("Analysis Runs"),
-            dbBrowserUI("dbBrowser1")
+            dbBrowserUI("dbBrowser1"),
+            h4("Enrichment Database"),
+            selectInput(
+              inputId = "enrichment_db",
+              label   = "",
+              choices = c("Human (org.Hs.eg.db)" = "org.Hs.eg.db",
+                          "Mouse (org.Mm.eg.db)" = "org.Mm.eg.db"),
+              selected = "org.Hs.eg.db"
+            )
           ),
           mainPanel(
             fluidRow(
@@ -281,6 +290,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     DEG_summary <- reactiveVal(NULL)
     wide_data <- reactiveVal(NULL)
     maeColData <- reactiveVal(NULL)
+    enrichment_db <- reactive({input$enrichment_db})
     
     if (is.null(master)) {
       if (Sys.getenv("SPARK_CONNECT_ENDPOINT") != "") {
@@ -797,7 +807,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               save_path_ = NULL,
               save_filename_ = NULL,
               mode_ = mode,
-              showCategory_ = 10
+              showCategory_ = 10,
+              enrichment_db = enrichment_db(),
             )
             end_time <- Sys.time()
             list(
@@ -848,7 +859,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             gene_list_ = unique(gene_list),
             save_path_ = NULL,
             save_filename_ = NULL,
-            showCategory_ = 10
+            showCategory_ = 10,
+            enrichment_db = enrichment_db(),
           )
           end_time <- Sys.time()
           list(
@@ -923,8 +935,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(geneListReactive(), {
       req(DEG_table())
-      gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up")
-      gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down")
+      gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up", enrichment_db = enrichment_db(),)
+      gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down", enrichment_db = enrichment_db(),)
     })
     observe({
       req(DEG_table(), wide_data(), maeColData())
