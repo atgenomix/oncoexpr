@@ -808,7 +808,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
               save_filename_ = NULL,
               mode_ = mode,
               showCategory_ = 10,
-              enrichment_db = enrichment_db(),
+              enrichment_db = enrichment_db()
             )
             end_time <- Sys.time()
             list(
@@ -935,8 +935,8 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
 
     observeEvent(geneListReactive(), {
       req(DEG_table())
-      gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up", enrichment_db = enrichment_db(),)
-      gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down", enrichment_db = enrichment_db(),)
+      gseaFCModuleServer("gsea_up", DEG_table = DEG_table, direction = "up", enrichment_db = enrichment_db())
+      gseaFCModuleServer("gsea_down", DEG_table = DEG_table, direction = "down", enrichment_db = enrichment_db())
     })
     observe({
       req(DEG_table(), wide_data(), maeColData())
