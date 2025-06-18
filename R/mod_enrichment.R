@@ -24,12 +24,17 @@ gseaFCModuleUI <- function(id) {
 #' @return GSEA module Server
 #' @export
 #'
-gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
+gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enrichment_db = "org.Hs.eg.db") {
   direction <- match.arg(direction)
 
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
     local_pvalCutoff <- 0.05
+    kegg_organism <- if (identical(enrichment_db, "org.Mm.eg.db")) {
+      "mmu"
+    } else {
+      "hsa"
+    }
     if (direction == "up") {
       future_promise(
         {
@@ -39,7 +44,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           conv <- bitr(deg_subset$GeneSymbol,
             fromType = "SYMBOL",
             toType = "ENTREZID",
-            OrgDb = "org.Hs.eg.db",
+            OrgDb = enrichment_db,
             drop = FALSE
           )
           # deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
@@ -54,7 +59,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           geneList <- sort(geneList, decreasing = TRUE)
           gsea_res <- gseKEGG(
             geneList = geneList,
-            organism = "hsa",
+            organism = kegg_organism,
             scoreType = "pos",
             minGSSize = 10,
             maxGSSize = 500,
@@ -83,7 +88,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           conv <- bitr(deg_subset$GeneSymbol,
             fromType = "SYMBOL",
             toType = "ENTREZID",
-            OrgDb = "org.Hs.eg.db",
+            OrgDb = enrichment_db,
             drop = FALSE
           )
           #deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
@@ -99,7 +104,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down")) {
           geneList <- sort((-1) * geneList, decreasing = TRUE)
           gsea_res <- gseKEGG(
             geneList = geneList,
-            organism = "hsa",
+            organism = kegg_organism,
             scoreType = "pos",
             minGSSize = 10,
             maxGSSize = 500,
