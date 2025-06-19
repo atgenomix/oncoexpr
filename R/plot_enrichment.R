@@ -17,14 +17,13 @@ go_enrich_dotplot <- function(gene_list_, save_path_=NULL, save_filename_=NULL, 
                                qvalueCutoff = 0.2,
                                readable = TRUE)
   go_dotplot_ <- dotplot(go_enrich_result, showCategory = showCategory_, font.size = 15)
-  save_parameter <- paste0(save_path_, paste0(mode_,"_"), save_filename_)
-  if(length(save_path_)!=0){
+  save_parameter <- paste0(save_path_, paste0(mode_, "_"), save_filename_)
+  if (length(save_path_)!=0) {
     ggsave(save_parameter, plot(go_dotplot_), width = 32, height = 28,  units="cm", dpi = 300)
-  }else{
+  } else {
     print("not saving the figure")
   }
   return(go_dotplot_) 
-  
 }
 
 
