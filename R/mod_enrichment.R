@@ -108,6 +108,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
           set.seed(22)
           noise <- rnorm(length(geneList), mean = 0, sd = 1e-10)
           geneList <- geneList + noise
+          geneList <- sort(geneList, decreasing = TRUE)         
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = kegg_organism,
