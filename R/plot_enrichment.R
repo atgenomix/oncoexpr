@@ -13,8 +13,8 @@ go_enrich_dotplot <- function(gene_list_, save_path_=NULL, save_filename_=NULL, 
                                OrgDb = enrichment_db,
                                keyType = "ENTREZID",
                                ont = mode_,
-                               pvalueCutoff = 0.05, 
-                               qvalueCutoff = 0.2,
+                               pvalueCutoff = 1, 
+                               qvalueCutoff = 1,
                                readable = TRUE)
   go_dotplot_ <- dotplot(go_enrich_result, showCategory = showCategory_, font.size = 15)
   save_parameter <- paste0(save_path_, paste0(mode_, "_"), save_filename_)
@@ -44,15 +44,15 @@ kegg_enrich_dotplot <- function(gene_list_, save_path_=NULL, save_filename_=NULL
   } else {
     "hsa"
   }
-  kegg_enrich_result <- enrichKEGG(gene = gene_ids$ENTREZID, organism = organism, pvalueCutoff = 0.05)
+  kegg_enrich_result <- enrichKEGG(gene = gene_ids$ENTREZID, organism = organism, pvalueCutoff = 1)
   kegg_dotplot_ <- dotplot(kegg_enrich_result, showCategory = showCategory_ , font.size = 15)
   if(length(save_path_)!=0){
-    ggsave(   save_parameter, 
-              plot = kegg_dotplot_, 
-              width = 32, 
-              height = 28, 
-              units="cm", 
-              dpi = 300)
+    ggsave(save_parameter, 
+           plot = kegg_dotplot_, 
+           width = 32, 
+           height = 28, 
+           units="cm", 
+           dpi = 300)
   }else{
     print("not saving the figure")
   }

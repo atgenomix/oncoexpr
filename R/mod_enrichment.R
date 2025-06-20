@@ -29,8 +29,8 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
 
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
-    local_pvalCutoff <- 0.05
-    kegg_organism <- if (identical(enrichment_db, "org.Mm.eg.db")) {
+    local_pvalCutoff <- 0.5
+    kegg_organism <- if(identical(enrichment_db, "org.Mm.eg.db")) {
       "mmu"
     } else {
       "hsa"
@@ -50,21 +50,21 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
           # deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
           # deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
           # deg_subset <- deg_subset[!duplicated(deg_subset$ENTREZID), ]
-          deg_subset <- deg_subset %>%
+          geneList <- deg_subset %>%
                 dplyr::inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
                 dplyr::filter(!is.na(ENTREZID)) %>%                            
-                dplyr::distinct(ENTREZID, .keep_all = TRUE)    
-          geneList <- deg_subset$logFC
-          names(geneList) <- deg_subset$ENTREZID
-          geneList <- sort(geneList, decreasing = TRUE)
+                dplyr::distinct(ENTREZID, .keep_all = TRUE) %>%
+                dplyr::select(ENTREZID, logFC) %>%
+                deframe() %>%
+                sort(decreasing = TRUE)
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = kegg_organism,
             scoreType = "pos",
-            minGSSize = 10,
+            minGSSize = 1,
             maxGSSize = 500,
             pvalueCutoff = local_pvalCutoff,
-            verbose = FALSE
+            verbose = TRUE
           )
           end_time <- Sys.time()
           list(
@@ -94,22 +94,21 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
           #deg_subset <- merge(deg_subset, conv, by.x = "GeneSymbol", by.y = "SYMBOL")
           #deg_subset <- deg_subset[!is.na(deg_subset$ENTREZID), ]
           #deg_subset <- deg_subset[!duplicated(deg_subset$ENTREZID), ]
-
-          deg_subset <- deg_subset %>%
+          geneList <- deg_subset %>%
                 dplyr::inner_join(conv, by = c("GeneSymbol" = "SYMBOL")) %>%
                 dplyr::filter(!is.na(ENTREZID)) %>%                            
-                dplyr::distinct(ENTREZID, .keep_all = TRUE)          
-          geneList <- deg_subset$logFC
-          names(geneList) <- deg_subset$ENTREZID
-          geneList <- sort((-1) * geneList, decreasing = TRUE)
+                dplyr::distinct(ENTREZID, .keep_all = TRUE) %>%
+                dplyr::select(ENTREZID, logFC) %>%
+                deframe() %>%
+                sort(decreasing = TRUE)
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = kegg_organism,
             scoreType = "pos",
-            minGSSize = 10,
+            minGSSize = 1,
             maxGSSize = 500,
             pvalueCutoff = local_pvalCutoff,
-            verbose = FALSE
+            verbose = TRUE
           )
           end_time <- Sys.time()
           list(
