@@ -800,11 +800,12 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
       for (n in seq_along(groups_list)) {
         col <- groups_list[n]
         gene_list <- get(c("group1_fc_gene_profile", "group2_fc_gene_profile")[n])
+        gene_ids <- bitr(gene_list, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = enrichment_db_val)
         for (mode in c("CC", "BP", "MF")) {
           future_promise({
             start_time <- Sys.time()
             result <- go_enrich_dotplot(
-              gene_list_ = unique(gene_list),
+              gene_ids_ = unique(gene_ids),
               save_path_ = NULL,
               save_filename_ = NULL,
               mode_ = mode,
@@ -860,7 +861,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
             save_path_ = NULL,
             save_filename_ = NULL,
             showCategory_ = 10,
-            enrichment_db = enrichment_db_val,
+            enrichment_db = enrichment_db_val
           )
           end_time <- Sys.time()
           list(

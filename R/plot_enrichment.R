@@ -1,15 +1,14 @@
 #' @title Gene Ontology Enrichment Analysis
 #' @description a set of genes for enrichment analysis with Gene Ontology database
-#' @param gene_list_ a set of genes with specific expression level
+#' @param gene_ids a set of genes id with specific expression level
 #' @param save_path_ what path you want to save the files
 #' @param save_filename_ what name you call the files
 #' @param mode_ Gene Ontology mode such as MF, BP, CC
 #' @param showCategory_ the number of GO term you want to show in doplot, default: 10
 #' @return the dotplot for GO enrichment
 #' @export
-go_enrich_dotplot <- function(gene_list_, save_path_=NULL, save_filename_=NULL, mode_ = "BP", showCategory_ = 10, enrichment_db = "org.Hs.eg.db"){
-  gene_ids <- bitr(gene_list_, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = enrichment_db)
-  go_enrich_result <- enrichGO(gene = gene_ids$ENTREZID,
+go_enrich_dotplot <- function(gene_ids_, save_path_=NULL, save_filename_=NULL, mode_ = "BP", showCategory_ = 10, enrichment_db = "org.Hs.eg.db"){
+  go_enrich_result <- enrichGO(gene = gene_ids_$ENTREZID,
                                OrgDb = enrichment_db,
                                keyType = "ENTREZID",
                                ont = mode_,

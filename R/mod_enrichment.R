@@ -29,7 +29,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
 
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
-    local_pvalCutoff <- 0.5
+    local_pvalCutoff <- 0.99
     kegg_organism <- if(identical(enrichment_db, "org.Mm.eg.db")) {
       "mmu"
     } else {
