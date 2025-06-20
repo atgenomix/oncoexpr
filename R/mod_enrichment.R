@@ -29,7 +29,7 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
 
   moduleServer(id, function(input, output, session) {
     result_GSEA_FC <- reactiveVal(NULL)
-    local_pvalCutoff <- 0.99
+    local_pvalCutoff <-  1
     kegg_organism <- if(identical(enrichment_db, "org.Mm.eg.db")) {
       "mmu"
     } else {
@@ -57,6 +57,10 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
                 dplyr::select(ENTREZID, logFC) %>%
                 deframe() %>%
                 sort(decreasing = TRUE)
+          set.seed(22)
+          noise <- rnorm(length(geneList), mean = 0, sd = 1e-10)
+          geneList <- geneList + noise
+          geneList <- sort(geneList, decreasing = TRUE)
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = kegg_organism,
@@ -101,6 +105,9 @@ gseaFCModuleServer <- function(id, DEG_table, direction = c("up", "down"), enric
                 dplyr::select(ENTREZID, logFC) %>%
                 deframe() %>%
                 sort(decreasing = TRUE)
+          set.seed(22)
+          noise <- rnorm(length(geneList), mean = 0, sd = 1e-10)
+          geneList <- geneList + noise
           gsea_res <- gseKEGG(
             geneList = geneList,
             organism = kegg_organism,
