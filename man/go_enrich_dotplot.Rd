@@ -5,7 +5,7 @@
 \title{Gene Ontology Enrichment Analysis}
 \usage{
 go_enrich_dotplot(
-  gene_list_,
+  gene_ids_,
   save_path_ = NULL,
   save_filename_ = NULL,
   mode_ = "BP",
@@ -13,7 +13,7 @@ go_enrich_dotplot(
 )
 }
 \arguments{
-\item{gene_list_}{a set of genes with specific expression level}
+\item{gene_ids_}{a set of genes id with specific expression level}
 
 \item{save_path_}{what path you want to save the files}
 
