@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Wed Jun 25 12:56:10 CST 2025:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-0197-a571-87a9-000003676ee0 
+on database directory /Users/charleschuang/Desktop/atgenomix/ToolDev/oncoexpr/metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@42110406 
+Loaded from file:/Users/charleschuang/spark/spark-3.5.3-bin-hadoop3/jars/derby-10.14.2.0.jar
+java.vendor=Homebrew
+java.runtime.version=11.0.27+0
+user.dir=/Users/charleschuang/Desktop/atgenomix/ToolDev/oncoexpr
+os.name=Mac OS X
+os.arch=aarch64
+os.version=15.0.1
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''

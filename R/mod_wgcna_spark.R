@@ -168,7 +168,7 @@ sparkgeneModuleServer <- function(id, exprData, power, deepSplit, minSize, runTr
         minModuleSize = minSize(),
         numericLabels = FALSE,
         maxBlockSize = 5000,
-        verbose = 0
+        verbose = 1
       )
     })
 
