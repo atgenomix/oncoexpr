@@ -29,7 +29,7 @@
 #' @export
 transfExprFormat <- function(exprMatrix = normCount, colData = colData) {
   df <- as.data.frame(exprMatrix)
-  colData$mainCode <- colnames(df)[-which(colnames(df) == "GeneSymbol")]
+  #colData$mainCode <- colnames(df)[-which(colnames(df) == "GeneSymbol")]
   print(colnames(df))
   long_df <- tidyr::pivot_longer(df, cols = -GeneSymbol, names_to = "sample", values_to = "expression")
   long_df$group <- colData$subCode[match(long_df$sample, colData$mainCode)]
