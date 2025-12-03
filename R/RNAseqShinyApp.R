@@ -293,7 +293,7 @@ RNAseqShinyAppSpark <- function(master = "sc://172.18.0.1:15002", method = "spar
     enrichment_db <- reactive({input$enrichment_db})
     
 
-    datasets <- readRDS("~/Desktop/demo_local_rnaseq/demo.rds")
+    datasets <- readRDS(system.file("extdata/demo.rds", package = "oncoexpr"))
     exacttest <- datasets[[1]]
     normcount <- datasets[[2]]
     coldata <- datasets[[3]]
